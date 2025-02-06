@@ -1,5 +1,5 @@
 COMS 3270
-Assignment 1.1
+Assignment 1.01
 ---
 
 This program creates a randomly-generated 80x21 dungeon. It consists of stone ( ), 6-10 rooms (.)
@@ -13,7 +13,7 @@ Compile:
     make
 
 Run:
-    ./assignment1_1 (-b)
+    ./assignment1_01 (-b)
 
     Flags:
         -b: Optionally draws a border around the dungeon

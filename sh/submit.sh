@@ -6,7 +6,7 @@ if [ -z "${1+x}" ]; then
     exit 1
 fi
 
-if [ ! -f "readmes/assignment$1" ]; then
+if [ ! -f "readmes/assignment$1.txt" ]; then
     echo "err: assignment$1 has no readme"
     exit 1
 fi

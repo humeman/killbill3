@@ -1,0 +1,22 @@
+
+-- ASSIGNMENT 1.1 --
+2/3:
+    9a:  Created project structure and makefile.
+         Created some function signatures.
+         Created an empty dungeon grid.
+    10p: Added random room generation.
+2/4:
+    6p: Added walkways between rooms.
+    8p: Added up/down staircases.
+2/5:
+    5p: Refactored dungeon into a dynamically-allocated data structure,
+         containing width/height, room data, and cells.
+        Also changed cells from a char into a struct with a type enum
+         and hardness.
+        Created dungeon_init and dungeon_destroy for allocation, tested
+         for leaks with valgrind, and changed all methods to use this new
+         structure.
+        Added a random room count between pre-defined bounds. Extra rooms
+         above the minimum, 6, may be added (if possible & chosen).
+        Updated Makefile to compile files individually.
+        Added immutable flag, and set it on the outside of the dungeon.
