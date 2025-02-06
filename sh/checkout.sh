@@ -6,7 +6,7 @@ if [ -z "${1+x}" ]; then
     exit 1
 fi
 
-if [ "$x" = "latest" ]; then
+if [ "$1" = "latest" ]; then
     git checkout main
     exit 0
 fi
