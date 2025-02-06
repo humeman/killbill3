@@ -12,6 +12,9 @@ A submission target is provided in the Makefile to automatically create and test
 for an assignment.
 For example: `make submit assignment=1_01`
 
+## Time Travel
+Tags are created for each completed assignment. Run `git checkout 1_01` (for example) to view the repo as it was when a particular assignment was completed.
+
 ## Assignments
 * **Assignment 1.01**: Random dungeon generator
 
