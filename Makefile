@@ -19,3 +19,12 @@ submit:
 	else\
 		echo "err: this target is only available in the original repository, not a submitted tarball";\
 	fi
+
+# This target checks out the Git repo to what it was at the submission of a particular assignment.
+# If this is a submitted file, the script will not exist and it will not work.
+checkout:
+	@if [ -f "sh/checkout.sh" ]; then\
+		./sh/checkout.sh $(assignment);\
+	else\
+		echo "err: this target is only available in the original repository, not a submitted tarball";\
+	fi
