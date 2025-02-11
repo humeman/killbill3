@@ -7,7 +7,8 @@ typedef enum {
     CELL_TYPE_HALL = '#',
     CELL_TYPE_UP_STAIRCASE = '<',
     CELL_TYPE_DOWN_STAIRCASE = '>',
-    CELL_TYPE_EMPTY = '!'
+    CELL_TYPE_EMPTY = '!',
+    CELL_TYPE_PC = '@'
 } cell_type;
 
 typedef struct room {
