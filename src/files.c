@@ -164,8 +164,11 @@ int dungeon_save(dungeon *dungeon, FILE *f, int debug) {
             else if (dungeon->cells[x][y].type == CELL_TYPE_DOWN_STAIRCASE) down_count++;
         }
     }
-    uint32_t size = 1708 + dungeon->room_count * 4 + up_count * 2 + down_count * 2;
-    WRITE_UINT32(size, "file size", f, debug);
+    uint32_t file_size = 1708 + dungeon->room_count * 4 + up_count * 2 + down_count * 2;
+    WRITE_UINT32(file_size, "file size", f, debug);
+
+    WRITE_UINT16((dungeon->pc_x), "pc x", f, debug);
+    WRITE_UINT16((dungeon->pc_y), "pc y", f, debug);
 
     return 0;
 }

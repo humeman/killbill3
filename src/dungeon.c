@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <math.h>
 #include "dungeon.h"
+#include "macros.h"
 
 int dungeon_init(dungeon *dungeon, int width, int height, int max_rooms) {
     int i, j;
@@ -65,6 +66,18 @@ int fill_dungeon(dungeon *dungeon, int min_rooms, int room_count_randomness_max,
             if (dungeon->cells[x][y].type == CELL_TYPE_EMPTY) dungeon->cells[x][y].type = CELL_TYPE_STONE;
         }
     }
+
+    // Pick the PC's spawn point
+    int room_offset = rand();
+    int i, room_i;
+    for (i = 0; i < dungeon->room_count; i++) {
+        room_i = (i + room_offset) % dungeon->room_count;
+        if (!place_in_room(dungeon, dungeon->rooms[room_i], CELL_TYPE_PC, &x, &y)) break;
+    }
+    if (i == dungeon->room_count) RETURN_ERROR("failed to place PC within dungeon (rooms have no available space)");
+    dungeon->pc_x = x;
+    dungeon->pc_y = y;
+
     return 0;
 }
 
@@ -269,18 +282,20 @@ int connect_points(dungeon *dungeon, int x0, int y0, int x1, int y1) {
 
 int place_staircases(dungeon *dungeon) {
     if (dungeon->room_count < 1) return -1;
+
+    int tmpx, tmpy;
     
     // Pick a random location in a room for the up staircase.
     room room = dungeon->rooms[rand() % dungeon->room_count];
-    if (place_in_room(dungeon, room, CELL_TYPE_UP_STAIRCASE)) return 1;
+    if (place_in_room(dungeon, room, CELL_TYPE_UP_STAIRCASE, &tmpx, &tmpy)) return 1;
 
     // And again for down...
     room = dungeon->rooms[rand() % dungeon->room_count];
-    if (place_in_room(dungeon, room, CELL_TYPE_DOWN_STAIRCASE)) return 1;
+    if (place_in_room(dungeon, room, CELL_TYPE_DOWN_STAIRCASE, &tmpx, &tmpy)) return 1;
     return 0;
 }
 
-int place_in_room(dungeon *dungeon, room room, cell_type material) {
+int place_in_room(dungeon *dungeon, room room, cell_type material, int *x_loc, int *y_loc) {
     int x_offset = rand();
     int y_offset = rand();
     int i, j, x, y;
@@ -306,6 +321,8 @@ int place_in_room(dungeon *dungeon, room room, cell_type material) {
                 if (!dungeon->cells[x][y].mutable) continue;
                 
                 dungeon->cells[x][y].type = material;
+                *x_loc = x;
+                *y_loc = y;
                 placed = 1;
                 break;
             }

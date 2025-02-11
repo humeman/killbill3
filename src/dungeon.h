@@ -30,6 +30,8 @@ typedef struct dungeon {
     int room_count;
     int min_room_count;
     int max_room_count;
+    int pc_x;
+    int pc_y;
     room *rooms;
     cell **cells;
 } dungeon;
@@ -151,8 +153,10 @@ int place_staircases(dungeon *dungeon);
  * - dungeon: Dungeon grid to fill
  * - room: Room to place in
  * - material: Material to place
+ * - x_loc: Pointer to variable to store placed X coordinate in
+ * - y_loc: Pointer to variable to store placed Y coordinate in
  * Returns: 0 if successful
  */
-int place_in_room(dungeon *dungeon, room room, cell_type material);
+int place_in_room(dungeon *dungeon, room room, cell_type material, int *x_loc, int *y_loc);
 
 #endif

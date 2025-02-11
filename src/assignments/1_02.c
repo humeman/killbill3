@@ -86,19 +86,19 @@ int main(int argc, char* argv[]) {
     // print out the filled dungeon
     if (draw_border) {
         printf("*");
-        for (x = 0; x < DUNGEON_WIDTH; x++) printf("-");
+        for (x = 0; x < dungeon.width; x++) printf("-");
         printf("*\n");
     }
-    for (y = 0; y < DUNGEON_HEIGHT; y++) {
+    for (y = 0; y < dungeon.height; y++) {
         if (draw_border) printf("|");
-        for (x = 0; x < DUNGEON_WIDTH; x++)
+        for (x = 0; x < dungeon.width; x++)
             printf("%c", dungeon.cells[x][y].type);
         if (draw_border) printf("|");
         printf("\n");
     }
     if (draw_border) {
         printf("*");
-        for (x = 0; x < DUNGEON_WIDTH; x++) printf("-");
+        for (x = 0; x < dungeon.width; x++) printf("-");
         printf("*\n");
     }
 
