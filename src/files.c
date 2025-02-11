@@ -6,6 +6,56 @@
 #include "dungeon.h"
 #include "macros.h"
 
+#define FILE_HEADER "RLG327-S2025"
+#define FILE_VERSION 0
+#define DUNGEON_WIDTH 80
+#define DUNGEON_HEIGHT 21
+
+#define FILE_MATRIX_OFFSET 22
+#define FILE_ROOM_COUNT_OFFSET 1702
+
+// These would be functions, but in the interest of saving on lines of code by avoiding any extra error checks,
+// these are simple macros that expand out to the 3/4 lines necessary to read, convert, and validate data.
+
+// Reads a uint32 from f into the variable specified in 'var'.
+#define READ_UINT32(var, description, f, debug) { \
+    size_t size = fread(&var, sizeof (var), 1, f); \
+    if (size != 1) RETURN_ERROR("the specified file is not a valid RLG327 file (file ended too early)"); \
+    var = be32toh(var); \
+    if (debug) printf("debug: %s = %u\n", description, var); }
+
+// Reads a uint16 from f into the variable specified in 'var'.
+#define READ_UINT16(var, description, f, debug) { \
+    size_t size = fread(&var, sizeof (var), 1, f); \
+    if (size != 1) RETURN_ERROR("the specified file is not a valid RLG327 file (file ended too early)"); \
+    var = be16toh(var); \
+    if (debug) printf("debug: %s = %u\n", description, var); }
+
+// Reads a uint8 from f into the variable specified in 'var'.
+#define READ_UINT8(var, description, f, debug) { \
+    size_t size = fread(&var, sizeof (var), 1, f); \
+    if (size != 1) RETURN_ERROR("the specified file is not a valid RLG327 file (file ended too early)"); \
+    if (debug) printf("debug: %s = %u\n", description, var); }
+
+// Writes the uint32 variable 'var' into f.
+#define WRITE_UINT32(var, description, f, debug) { \
+    uint32_t be = htobe32(var); \
+    size_t size = fwrite(&be, sizeof (be), 1, f); \
+    if (size != 1) RETURN_ERROR("could not write to file"); \
+    if (debug) printf("debug: %s = %u, wrote %ld bytes\n", description, var, sizeof(var)); }
+
+// Writes the uint16 variable 'var' into f.
+#define WRITE_UINT16(var, description, f, debug) { \
+    uint16_t be = htobe16(var); \
+    size_t size = fwrite(&be, sizeof (be), 1, f); \
+    if (size != 1) RETURN_ERROR("could not write to file"); \
+    if (debug) printf("debug: %s = %u, wrote %ld bytes\n", description, var, sizeof(var)); }
+
+// Writes the uint8 variable 'var' into f.
+#define WRITE_UINT8(var, description, f, debug) { \
+    size_t size = fwrite(&var, sizeof (var), 1, f); \
+    if (size != 1) RETURN_ERROR("could not write to file"); \
+    if (debug) printf("debug: %s = %u, wrote %ld bytes\n", description, var, sizeof(var)); }
 
 int dungeon_init_from_file(dungeon *dungeon, FILE *f, int debug) {
     size_t size;
@@ -19,15 +69,15 @@ int dungeon_init_from_file(dungeon *dungeon, FILE *f, int debug) {
     if (strcmp(FILE_HEADER, header)) RETURN_ERROR("the specified file is not an RLG327 file (header mismatch)");
 
     uint32_t version;
-    READ_UINT32(version, "version");
+    READ_UINT32(version, "version", f, debug);
     if (version != 0) RETURN_ERROR("this program is incompatible with the provided file's version");
 
     uint32_t file_size;
-    READ_UINT32(file_size, "file size");
+    READ_UINT32(file_size, "file size", f, debug);
 
     uint8_t pc_x, pc_y;
-    READ_UINT8(pc_x, "pc x");
-    READ_UINT8(pc_y, "pc y");
+    READ_UINT8(pc_x, "pc x", f, debug);
+    READ_UINT8(pc_y, "pc y", f, debug);
 
     // An unfortunate consequence of the room count being stored after this is
     // that we need the room count to initialize the dungeon. This isn't ideal,
@@ -35,7 +85,7 @@ int dungeon_init_from_file(dungeon *dungeon, FILE *f, int debug) {
     if (fseek(f, FILE_ROOM_COUNT_OFFSET, SEEK_SET)) RETURN_ERROR("unexpected error while reading file (could not seek to room count)");
 
     uint16_t room_count;
-    READ_UINT16(room_count, "room count");
+    READ_UINT16(room_count, "room count", f, debug);
 
     if (dungeon_init(dungeon, DUNGEON_WIDTH, DUNGEON_HEIGHT, room_count)) RETURN_ERROR("could not initialize dungeon");
 
@@ -44,21 +94,21 @@ int dungeon_init_from_file(dungeon *dungeon, FILE *f, int debug) {
     uint8_t x, y;
     for (y = 0; y < DUNGEON_HEIGHT; y++) {
         for (x = 0; x < DUNGEON_WIDTH; x++) {
-            READ_UINT8(hardness, "cell matrix");
+            READ_UINT8(hardness, "cell matrix", f, debug);
             dungeon->cells[x][y].hardness = hardness;
             dungeon->cells[x][y].type = hardness == 0 ? CELL_TYPE_HALL : CELL_TYPE_STONE;
         }
     }
-    if (fseek(f, FILE_ROOM_COUNT_OFFSET + sizeof(room_count) , SEEK_SET)) RETURN_ERROR("unexpected error while reading file (could not seek past room count)");
+    if (fseek(f, FILE_ROOM_COUNT_OFFSET + sizeof(room_count), SEEK_SET)) RETURN_ERROR("unexpected error while reading file (could not seek past room count)");
 
     int i;
     uint8_t x0, y0, width, height;
     for (i = 0; i < room_count; i++) {
         if (debug) printf("debug: reading room %d\n", i);
-        READ_UINT8(x0, "room x0");
-        READ_UINT8(y0, "room y0");
-        READ_UINT8(width, "room width");
-        READ_UINT8(height, "room height");
+        READ_UINT8(x0, "room x0", f, debug);
+        READ_UINT8(y0, "room y0", f, debug);
+        READ_UINT8(width, "room width", f, debug);
+        READ_UINT8(height, "room height", f, debug);
 
         dungeon->rooms[i].x0 = x0;
         dungeon->rooms[i].y0 = y0;
@@ -72,20 +122,20 @@ int dungeon_init_from_file(dungeon *dungeon, FILE *f, int debug) {
     dungeon->room_count = room_count;
 
     uint16_t up_staircase_count;
-    READ_UINT16(up_staircase_count, "up staircase count");
+    READ_UINT16(up_staircase_count, "up staircase count", f, debug);
     for (i = 0; i < up_staircase_count; i++) {
         if (debug) printf("debug: reading up staircase %d\n", i);
-        READ_UINT8(x, "up staircase x");
-        READ_UINT8(y, "up staircase y");
+        READ_UINT8(x, "up staircase x", f, debug);
+        READ_UINT8(y, "up staircase y", f, debug);
 
         dungeon->cells[x][y].type = CELL_TYPE_UP_STAIRCASE;
     }
     uint16_t down_staircase_count;
-    READ_UINT16(down_staircase_count, "down staircase count");
+    READ_UINT16(down_staircase_count, "down staircase count", f, debug);
     for (i = 0; i < down_staircase_count; i++) {
         if (debug) printf("debug: reading down staircase %d\n", i);
-        READ_UINT8(x, "down staircase x");
-        READ_UINT8(y, "down staircase y");
+        READ_UINT8(x, "down staircase x", f, debug);
+        READ_UINT8(y, "down staircase y", f, debug);
         dungeon->cells[x][y].type = CELL_TYPE_DOWN_STAIRCASE;
     }
 
@@ -94,6 +144,28 @@ int dungeon_init_from_file(dungeon *dungeon, FILE *f, int debug) {
     return 0;
 }
 
-int dungeon_save(dungeon *dungeon, FILE *f) {
-    return 1;
+int dungeon_save(dungeon *dungeon, FILE *f, int debug) {
+    char* header = FILE_HEADER;
+    int header_size = strlen(header);
+    size_t size = fwrite(header, sizeof (*header), header_size, f);
+    if (size != header_size) RETURN_ERROR("could not write to file");
+    if (debug) printf("debug: header = %s, wrote %ld bytes\n", header, sizeof (*header) * header_size);
+
+    uint32_t version = FILE_VERSION;
+    WRITE_UINT32(version, "version", f, debug);
+
+    // File size calculation:
+    // 1708 + r * 4 + u * 2 + d * 2
+    int up_count = 0, down_count = 0;
+    int x, y;
+    for (x = 0; x < dungeon->width; x++) {
+        for (y = 0; y < dungeon->height; y++) {
+            if (dungeon->cells[x][y].type == CELL_TYPE_UP_STAIRCASE) up_count++;
+            else if (dungeon->cells[x][y].type == CELL_TYPE_DOWN_STAIRCASE) down_count++;
+        }
+    }
+    uint32_t size = 1708 + dungeon->room_count * 4 + up_count * 2 + down_count * 2;
+    WRITE_UINT32(size, "file size", f, debug);
+
+    return 0;
 }

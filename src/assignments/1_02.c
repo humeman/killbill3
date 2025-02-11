@@ -10,6 +10,8 @@
 #define ROOM_MIN_WIDTH 4
 #define ROOM_MIN_HEIGHT 3
 #define ROOM_MAX_RANDOMNESS 6
+#define DUNGEON_WIDTH 80
+#define DUNGEON_HEIGHT 21
 
 #define DEFAULT_PATH "/.rlg327/dungeon"
 
@@ -69,7 +71,7 @@ int main(int argc, char* argv[]) {
                 free(path);
                 return 1;
             }
-            if (dungeon_save(&dungeon, f)) {
+            if (dungeon_save(&dungeon, f, debug)) {
                 fprintf(stderr, "err: could not save dungeon to %s\n", path);
                 dungeon_destroy(&dungeon);
                 free(path);
