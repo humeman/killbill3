@@ -13,7 +13,7 @@
 
 #define DEFAULT_PATH "/.rlg327/dungeon"
 
-int prepare_args(int argc, char* argv[], int *draw_border, int *read, int *write, char **path);
+int prepare_args(int argc, char* argv[], int *draw_border, int *read, int *write, int *debug, char **path);
 
 int main(int argc, char* argv[]) {
     int x, y;
@@ -24,8 +24,9 @@ int main(int argc, char* argv[]) {
     int draw_border = 0; 
     int read = 0;
     int write = 0;
+    int debug = 0;
     char *path = NULL;
-    if (prepare_args(argc, argv, &draw_border, &read, &write, &path)) {
+    if (prepare_args(argc, argv, &draw_border, &read, &write, &debug, &path)) {
         return 1;
     }
 
@@ -37,7 +38,7 @@ int main(int argc, char* argv[]) {
             free(path);
             return 1;
         }
-        if (dungeon_init_from_file(&dungeon, f, 1)) {
+        if (dungeon_init_from_file(&dungeon, f, debug)) {
             fprintf(stderr, "err: could not load dungeon from file %s\n", path);
             free(path);
             fclose(f);
@@ -105,7 +106,7 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-int prepare_args(int argc, char* argv[], int *draw_border, int *read, int *write, char **path) {
+int prepare_args(int argc, char* argv[], int *draw_border, int *read, int *write, int *debug, char **path) {
     int i;
     int path_next = 0;
     int custom_path = 0;
@@ -132,12 +133,13 @@ int prepare_args(int argc, char* argv[], int *draw_border, int *read, int *write
         }
         else if (strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "--load") == 0) *read = 1;
         else if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--save") == 0) *write = 1;
+        else if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--debug") == 0) *debug = 1;
         else if (strcmp(argv[i], "-b") == 0 || strcmp(argv[i], "--border") == 0) *draw_border = 1;
         else if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--path") == 0) path_next = 1;
         else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
-            printf("usage: %s [-lwbh] [-p <path>]\n  -l/--load: load a rungeon\n  -s/--save: write a random dungeon\n", argv[0]);
+            printf("usage: %s [-lwbhd] [-p <path>]\n  -l/--load: load a rungeon\n  -s/--save: write a random dungeon\n", argv[0]);
             printf("  -b/--border: draw a border around the dungeon\n  -p/--path: override path to load/save ");
-            printf("(default ~/.cs327/dungeon)\n  -h/--help: display this message\n");
+            printf("(default ~/.cs327/dungeon)\n  -d/--debug: print debug logs\n  -h/--help: display this message\n");
             free(*path);
             return 1;
         }
