@@ -14,10 +14,10 @@ typedef enum {
 } cell_type;
 
 typedef struct room {
-    int x0;
-    int y0;
-    int x1;
-    int y1;
+    uint8_t x0;
+    uint8_t y0;
+    uint8_t x1;
+    uint8_t y1;
 } room;
 
 typedef struct cell {
@@ -39,8 +39,8 @@ typedef struct dungeon {
 } dungeon;
 
 typedef struct coordinates {
-    int x;
-    int y;
+    uint8_t x;
+    uint8_t y;
 } coordinates;
 
 /**

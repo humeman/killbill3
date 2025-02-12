@@ -189,7 +189,7 @@ int dungeon_save(dungeon *dungeon, FILE *f, int debug) {
     WRITE_UINT8((dungeon->pc_y), "pc y", f, debug);
 
     for (y = 0; y < DUNGEON_HEIGHT; y++) {
-        for (x = 0; x < DUNGEON_HEIGHT; x++) {
+        for (x = 0; x < DUNGEON_WIDTH; x++) {
             WRITE_UINT8((dungeon->cells[x][y].hardness), "cell matrix", f, debug);
         }
     }

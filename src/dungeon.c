@@ -6,10 +6,10 @@
 
 int dungeon_init(dungeon *dungeon, int width, int height, int max_rooms) {
     int i, j;
-    dungeon->width = width;
-    dungeon->height = height;
+    dungeon->width = (uint8_t) width;
+    dungeon->height = (uint8_t) height;
     dungeon->rooms = malloc(max_rooms * sizeof (room));
-    dungeon->max_room_count = max_rooms;
+    dungeon->max_room_count = (uint16_t) max_rooms;
     dungeon->room_count = 0;
     dungeon->min_room_count = 0;
     if (dungeon->rooms == NULL) return 1;
@@ -29,7 +29,7 @@ int dungeon_init(dungeon *dungeon, int width, int height, int max_rooms) {
     }
 
     for (i = 0; i < dungeon->width; i++) {
-        for (j = 0; j < dungeon -> height; j++) {
+        for (j = 0; j < dungeon->height; j++) {
             dungeon->cells[i][j].type = CELL_TYPE_EMPTY;
             dungeon->cells[i][j].hardness = 0;
             dungeon->cells[i][j].mutable = 1;
@@ -88,14 +88,18 @@ void fill_outside(dungeon *dungeon) {
     int i;
     for (i = 0; i < dungeon->width; i++) {
         dungeon->cells[i][0].type = CELL_TYPE_STONE;
+        dungeon->cells[i][0].hardness = 1;
         dungeon->cells[i][0].mutable = 0;
         dungeon->cells[i][dungeon->height - 1].type = CELL_TYPE_STONE;
+        dungeon->cells[i][dungeon->height - 1].hardness = 1;
         dungeon->cells[i][dungeon->height - 1].mutable = 0;
     }
     for (i = 1; i < dungeon->height - 1; i++) {
         dungeon->cells[0][i].type = CELL_TYPE_STONE;
+        dungeon->cells[0][i].hardness = 1;
         dungeon->cells[0][i].mutable = 0;
         dungeon->cells[dungeon->width - 1][i].type = CELL_TYPE_STONE;
+        dungeon->cells[dungeon->width - 1][i].hardness = 1;
         dungeon->cells[dungeon->width - 1][i].mutable = 0;
     }
 }
