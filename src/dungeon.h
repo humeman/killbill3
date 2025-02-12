@@ -1,6 +1,8 @@
 #ifndef DUNGEON_H
 #define DUNGEON_H
 
+#include <stdint.h>
+
 typedef enum {
     CELL_TYPE_STONE = ' ',
     CELL_TYPE_ROOM = '.',
@@ -20,21 +22,26 @@ typedef struct room {
 
 typedef struct cell {
     cell_type type;
-    int hardness;
-    int mutable;
+    uint8_t hardness;
+    uint8_t mutable;
 } cell;
 
 typedef struct dungeon {
-    int width;
-    int height;
-    int room_count;
-    int min_room_count;
-    int max_room_count;
-    int pc_x;
-    int pc_y;
+    uint8_t width;
+    uint8_t height;
+    uint16_t room_count;
+    uint16_t min_room_count;
+    uint16_t max_room_count;
+    uint8_t pc_x;
+    uint8_t pc_y;
     room *rooms;
     cell **cells;
 } dungeon;
+
+typedef struct coordinates {
+    int x;
+    int y;
+} coordinates;
 
 /**
  * Initializes a dungeon data structure. It is an error to use

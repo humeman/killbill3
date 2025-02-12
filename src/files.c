@@ -1,6 +1,7 @@
 #include <string.h>
 #include <endian.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "files.h"
 #include "dungeon.h"
@@ -158,17 +159,68 @@ int dungeon_save(dungeon *dungeon, FILE *f, int debug) {
     // 1708 + r * 4 + u * 2 + d * 2
     int up_count = 0, down_count = 0;
     int x, y;
-    for (x = 0; x < dungeon->width; x++) {
-        for (y = 0; y < dungeon->height; y++) {
-            if (dungeon->cells[x][y].type == CELL_TYPE_UP_STAIRCASE) up_count++;
-            else if (dungeon->cells[x][y].type == CELL_TYPE_DOWN_STAIRCASE) down_count++;
+    coordinates *up = NULL, *down = NULL;
+    for (x = 0; x < DUNGEON_WIDTH; x++) {
+        for (y = 0; y < DUNGEON_HEIGHT; y++) {
+            if (dungeon->cells[x][y].type == CELL_TYPE_UP_STAIRCASE) {
+                up_count++;
+                if (up == NULL)
+                    up = malloc(sizeof(*up));
+                else
+                    up = realloc(up, up_count * sizeof(*up));
+                up[up_count - 1].x = x;
+                up[up_count - 1].y = y;
+            } 
+            else if (dungeon->cells[x][y].type == CELL_TYPE_DOWN_STAIRCASE) {
+                down_count++;
+                if (down == NULL)
+                    down = malloc(sizeof(*down));
+                else
+                    down = realloc(down, down_count * sizeof(*down));
+                down[down_count - 1].x = x;
+                down[down_count - 1].y = y;
+            }
         }
     }
     uint32_t file_size = 1708 + dungeon->room_count * 4 + up_count * 2 + down_count * 2;
     WRITE_UINT32(file_size, "file size", f, debug);
 
-    WRITE_UINT16((dungeon->pc_x), "pc x", f, debug);
-    WRITE_UINT16((dungeon->pc_y), "pc y", f, debug);
+    WRITE_UINT8((dungeon->pc_x), "pc x", f, debug);
+    WRITE_UINT8((dungeon->pc_y), "pc y", f, debug);
 
+    for (y = 0; y < DUNGEON_HEIGHT; y++) {
+        for (x = 0; x < DUNGEON_HEIGHT; x++) {
+            WRITE_UINT8((dungeon->cells[x][y].hardness), "cell matrix", f, debug);
+        }
+    }
+
+    WRITE_UINT16((dungeon->room_count), "room count", f, debug);
+    int i;
+    for (i = 0; i < dungeon->room_count; i++) {
+        if (debug) printf("debug: writing room %d\n", i);
+        WRITE_UINT8((dungeon->rooms[i].x0), "room x0", f, debug);
+        WRITE_UINT8((dungeon->rooms[i].y0), "room y0", f, debug);
+        uint8_t width, height;
+        width = dungeon->rooms[i].x1 - dungeon->rooms[i].x0 + 1;
+        height = dungeon->rooms[i].y1 - dungeon->rooms[i].y0 + 1;
+        WRITE_UINT8(width, "room width", f, debug);
+        WRITE_UINT8(height, "room height", f, debug);
+    }
+
+    WRITE_UINT16(up_count, "up staircase count", f, debug);
+    for (i = 0; i < up_count; i++) {
+        if (debug) printf("debug: writing up staircase %d\n", i);
+        WRITE_UINT8((up[i].x), "up staircase x", f, debug);
+        WRITE_UINT8((up[i].y), "up staircase y", f, debug);
+    }
+    WRITE_UINT16(down_count, "down staircase count", f, debug);
+    for (i = 0; i < down_count; i++) {
+        if (debug) printf("debug: writing down staircase %d\n", i);
+        WRITE_UINT8((down[i].x), "down staircase x", f, debug);
+        WRITE_UINT8((down[i].y), "down staircase y", f, debug);
+    }
+
+    free(up);
+    free(down);
     return 0;
 }

@@ -63,7 +63,10 @@ int fill_dungeon(dungeon *dungeon, int min_rooms, int room_count_randomness_max,
     int x, y;
     for (x = 0; x < dungeon->width; x++) {
         for (y = 0; y < dungeon->height; y++) {
-            if (dungeon->cells[x][y].type == CELL_TYPE_EMPTY) dungeon->cells[x][y].type = CELL_TYPE_STONE;
+            if (dungeon->cells[x][y].type == CELL_TYPE_EMPTY) {
+                dungeon->cells[x][y].type = CELL_TYPE_STONE;
+                dungeon->cells[x][y].hardness = 1;
+            }
         }
     }
 
