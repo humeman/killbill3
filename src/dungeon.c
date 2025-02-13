@@ -4,6 +4,9 @@
 #include "dungeon.h"
 #include "macros.h"
 
+#define STONE_SEED_COUNT 10
+#define GAUSSIAN_CONVOLUTION_COUNT 2
+
 int dungeon_init(dungeon *dungeon, int width, int height, int max_rooms) {
     int i, j;
     dungeon->width = (uint8_t) width;
@@ -48,29 +51,41 @@ void dungeon_destroy(dungeon *dungeon) {
     free(dungeon->rooms);
 }
 
-int fill_dungeon(dungeon *dungeon, int min_rooms, int room_count_randomness_max, int room_min_width, int room_min_height, int room_size_randomness_max) {
+void write_dungeon_pgm(dungeon *dungeon) {
+    FILE* out;
+    out = fopen("dungeon.pgm", "w");
+    fprintf(out, "P5\n%u %u\n255\n", dungeon->width, dungeon->height);
+    int x, y;
+    for (y = 0; y < dungeon->height; y++) {
+        for (x = 0; x < dungeon->width; x++) {
+            fwrite(&(dungeon->cells[x][y].hardness), sizeof (uint8_t), 1, out);
+        }
+    }
+    fclose(out);
+}
+
+int fill_dungeon(dungeon *dungeon, int min_rooms, int room_count_randomness_max, int room_min_width, int room_min_height, int room_size_randomness_max, int debug) {
+    if (fill_stone(dungeon)) {
+        fprintf(stderr, "fill_stone failed\n");
+        return 1;
+    }
     dungeon->min_room_count = min_rooms;
     if (create_rooms(dungeon, min_rooms + (rand() % room_count_randomness_max), room_min_width, room_min_height, room_size_randomness_max)) {
         fprintf(stderr, "create_rooms failed\n");
         return 1;
     }
     fill_outside(dungeon);
-    connect_rooms(dungeon);
+    if (connect_rooms(dungeon)) {
+        fprintf(stderr, "connect_rooms failed\n");
+        return 1;
+    }
     if (place_staircases(dungeon)) {
         fprintf(stderr, "place_staircases failed\n");
         return 1;
     }
-    int x, y;
-    for (x = 0; x < dungeon->width; x++) {
-        for (y = 0; y < dungeon->height; y++) {
-            if (dungeon->cells[x][y].type == CELL_TYPE_EMPTY) {
-                dungeon->cells[x][y].type = CELL_TYPE_STONE;
-                dungeon->cells[x][y].hardness = 1;
-            }
-        }
-    }
 
     // Pick the PC's spawn point
+    int x, y;
     int room_offset = rand();
     int i, room_i;
     for (i = 0; i < dungeon->room_count; i++) {
@@ -84,22 +99,129 @@ int fill_dungeon(dungeon *dungeon, int min_rooms, int room_count_randomness_max,
     return 0;
 }
 
+// This struct is identical to the one in the Assignment 1.01 solution
+// code, Piazza post @80.
+typedef struct queue_node {
+    int x, y;
+    struct queue_node *next;
+} queue_node;
+
+// The Gaussian values ripped from Assignment 1.01's solution code.
+int gaussian[5][5] = {
+    {  1,  4,  7,  4,  1 },
+    {  4, 16, 26, 16,  4 },
+    {  7, 26, 41, 26,  7 },
+    {  4, 16, 26, 16,  4 },
+    {  1,  4,  7,  4,  1 }
+};
+
+// This function is partially based on 'smooth_hardness' provided in
+// the Assignment 1.01 solution code, Piazza post @80.
+// I might rewrite it before 1.03, but we'll see.
+int fill_stone(dungeon *dungeon) {
+    int x, y;
+    queue_node *head, *tail, *temp;
+
+    for (x = 0; x < dungeon->width; x++) {
+        for (y = 0; y < dungeon->height; y++) {
+            dungeon->cells[x][y].type = CELL_TYPE_STONE;
+            dungeon->cells[x][y].hardness = 0;
+            dungeon->cells[x][y].mutable = 1;
+        }
+    }
+
+    int i;
+    // Picks a random hardness and places it in a single random cell
+    // STONE_SEED_COUNT times, enqueuing them along the way.
+    int step = 255 / STONE_SEED_COUNT - 1;
+    for (i = 0; i < STONE_SEED_COUNT; i++) {
+        // Since we've just initialized everything to 0 and we have an
+        // 80x21 grid, this can't fail. Though it can technically run
+        // forever if we're really unlucky. Oh well.
+        do {
+            x = rand() % dungeon->width;
+            y = rand() % dungeon->height;
+        } while (dungeon->cells[x][y].hardness);
+
+        dungeon->cells[x][y].hardness = (i == 0 ? 1 : i * step);
+        if (i == 0) {
+            head = malloc(sizeof (*head));
+            tail = head;
+        }
+        else {
+            tail->next = malloc(sizeof (*tail));
+            tail = tail->next;
+        }
+        tail->next = NULL;
+        tail->x = x;
+        tail->y = y;
+    }
+
+    // Diffuses values out until every cell is filled.
+    int ix, iy;
+    while (head) {
+        x = head->x;
+        y = head->y;
+        i = dungeon->cells[x][y].hardness;
+
+        for (ix = x - 1; ix <= x + 1; ix++) {
+            for (iy = y - 1; iy <= y + 1; iy++) {
+                if (ix == x && iy == y) continue;
+                if (ix >= 0 && ix < dungeon->width && iy >= 0 && iy < dungeon->height
+                    && !dungeon->cells[ix][iy].hardness) {
+                    dungeon->cells[ix][iy].hardness = i;
+                    tail->next = malloc(sizeof (*tail));
+                    tail = tail->next;
+                    tail->next = NULL;
+                    tail->x = ix;
+                    tail->y = iy;
+                }
+            }
+        }
+        temp = head;
+        head = head->next;
+        free(temp);
+    }
+
+    // Applies a gaussian convolution to smooth it out.
+    int s, t, p, q;
+    for (i = 0; i < GAUSSIAN_CONVOLUTION_COUNT; i++) {
+        for (x = 0; x < dungeon->width; x++) {
+            for (y = 0; y < dungeon->height; y++) {
+                for (s = t = p = 0; p < 5; p++) {
+                    for (q = 0; q < 5; q++) {
+                        if (y + (p - 2) >= 0 && y + (p - 2) < dungeon->height &&
+                            x + (q - 2) >= 0 && x + (q - 2) < dungeon->width) {
+                            s += gaussian[p][q];
+                            t += dungeon->cells[x + (q - 2)][y + (p - 2)].hardness * gaussian[p][q];
+                        }
+                    }
+                }
+
+                dungeon->cells[x][y].hardness = t / s;
+            }
+        }
+    }
+
+    return 0;
+}
+
 void fill_outside(dungeon *dungeon) {
     int i;
     for (i = 0; i < dungeon->width; i++) {
         dungeon->cells[i][0].type = CELL_TYPE_STONE;
-        dungeon->cells[i][0].hardness = 1;
+        dungeon->cells[i][0].hardness = 255;
         dungeon->cells[i][0].mutable = 0;
         dungeon->cells[i][dungeon->height - 1].type = CELL_TYPE_STONE;
-        dungeon->cells[i][dungeon->height - 1].hardness = 1;
+        dungeon->cells[i][dungeon->height - 1].hardness = 255;
         dungeon->cells[i][dungeon->height - 1].mutable = 0;
     }
     for (i = 1; i < dungeon->height - 1; i++) {
         dungeon->cells[0][i].type = CELL_TYPE_STONE;
-        dungeon->cells[0][i].hardness = 1;
+        dungeon->cells[0][i].hardness = 255;
         dungeon->cells[0][i].mutable = 0;
         dungeon->cells[dungeon->width - 1][i].type = CELL_TYPE_STONE;
-        dungeon->cells[dungeon->width - 1][i].hardness = 1;
+        dungeon->cells[dungeon->width - 1][i].hardness = 255;
         dungeon->cells[dungeon->width - 1][i].mutable = 0;
     }
 }
@@ -146,7 +268,7 @@ int create_room(dungeon *dungeon, room *room, int room_width, int room_height) {
             for (jx = x - 1; jx < x + room_width + 1 && placed; jx++) {
                 for (jy = y - 1; jy < y + room_height + 1; jy++) {
                     if (jx < 0 || jx >= dungeon->width || jy < 0 || jy >= dungeon->height 
-                        || dungeon->cells[jx][jy].type != CELL_TYPE_EMPTY
+                        || dungeon->cells[jx][jy].type != CELL_TYPE_STONE
                         || !dungeon->cells[jx][jy].mutable) {
                         placed = 0;
                         break;
@@ -163,6 +285,7 @@ int create_room(dungeon *dungeon, room *room, int room_width, int room_height) {
                 for (jx = x; jx < x + room_width; jx++) {
                     for (jy = y; jy < y + room_height; jy++) {
                         dungeon->cells[jx][jy].type = CELL_TYPE_ROOM;
+                        dungeon->cells[jx][jy].hardness = 0;
                     }
                 }
             }
@@ -280,8 +403,9 @@ int connect_points(dungeon *dungeon, int x0, int y0, int x1, int y1) {
         if (direction == 0) x += x_direction;
         else y += y_direction;
 
-        if (dungeon->cells[x][y].type == CELL_TYPE_EMPTY) {
+        if (dungeon->cells[x][y].type == CELL_TYPE_STONE) {
             dungeon->cells[x][y].type = CELL_TYPE_HALL;
+            dungeon->cells[x][y].hardness = 0;
         }
     }
     return 0;
@@ -328,6 +452,7 @@ int place_in_room(dungeon *dungeon, room room, cell_type material, int *x_loc, i
                 if (!dungeon->cells[x][y].mutable) continue;
                 
                 dungeon->cells[x][y].type = material;
+                dungeon->cells[x][y].hardness = 0;
                 *x_loc = x;
                 *y_loc = y;
                 placed = 1;

@@ -141,6 +141,8 @@ int dungeon_init_from_file(dungeon *dungeon, FILE *f, int debug) {
     }
 
     dungeon->cells[pc_x][pc_y].type = CELL_TYPE_PC;
+    dungeon->pc_x = pc_x;
+    dungeon->pc_y = pc_y;
     
     return 0;
 }

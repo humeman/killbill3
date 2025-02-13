@@ -66,6 +66,15 @@ int dungeon_init(dungeon *dungeon, int width, int height, int max_rooms);
 void dungeon_destroy(dungeon *dungeon);
 
 /**
+ * Writes a .pgm file for the dungeon hardness map for debugging purposes.
+ * The file is saved as "dungeon.pgm".
+ * 
+ * Params:
+ * - dungeon: Dungeon to write
+ */
+void write_dungeon_pgm(dungeon *dungeon);
+
+/**
  * Fills a dungeon (2D array) with a randomly generated one.
  * 
  * Parameters:
@@ -76,10 +85,20 @@ void dungeon_destroy(dungeon *dungeon);
  * - room_min_height: Minimum room height.
  * - room_size_randomness_max: The maximum number that can be randomly 
  *      added to either dimension of the room size.
+ * - debug: Enables debug logs/files if 1.
  * 
  * Returns: 0 if successful
  */
-int fill_dungeon(dungeon *dungeon, int min_rooms, int room_count_randomness_max, int room_min_width, int room_min_height, int room_size_randomness_max);
+int fill_dungeon(dungeon *dungeon, int min_rooms, int room_count_randomness_max, int room_min_width, int room_min_height, int room_size_randomness_max, int debug);
+
+/**
+ * Fills the dungeon with randomly-generated stone. Overwrites everything
+ * while doing so -- only run on a blank dungeon.
+ * 
+ * Params:
+ * - dungeon: Dungeon to fill.
+ */
+int fill_stone(dungeon *dungeon);
 
 /**
  * Fills only the outside cell of a dungeon with stone.

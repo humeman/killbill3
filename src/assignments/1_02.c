@@ -56,31 +56,36 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 
-        if (fill_dungeon(&dungeon, ROOM_MIN_COUNT, ROOM_COUNT_MAX_RANDOMNESS, ROOM_MIN_WIDTH, ROOM_MIN_HEIGHT, ROOM_MAX_RANDOMNESS)) {
+        if (fill_dungeon(&dungeon, ROOM_MIN_COUNT, ROOM_COUNT_MAX_RANDOMNESS, ROOM_MIN_WIDTH, ROOM_MIN_HEIGHT, ROOM_MAX_RANDOMNESS, debug)) {
             fprintf(stderr, "err: could not generate dungeon\n");
             dungeon_destroy(&dungeon);
             free(path);
             return 1;
         }
+    }
 
-        if (write) {
-            f = fopen(path, "wb");
-            if (f == NULL) {
-                fprintf(stderr, "err: could not open file %s\n", path);
-                dungeon_destroy(&dungeon);
-                free(path);
-                return 1;
-            }
-            if (dungeon_save(&dungeon, f, debug)) {
-                fprintf(stderr, "err: could not save dungeon to %s\n", path);
-                dungeon_destroy(&dungeon);
-                free(path);
-                fclose(f);
-                return 1;
-            }
-            fclose(f);
-            printf("saved dungeon to %s\n", path);
+    if (write) {
+        f = fopen(path, "wb");
+        if (f == NULL) {
+            fprintf(stderr, "err: could not open file %s\n", path);
+            dungeon_destroy(&dungeon);
+            free(path);
+            return 1;
         }
+        if (dungeon_save(&dungeon, f, debug)) {
+            fprintf(stderr, "err: could not save dungeon to %s\n", path);
+            dungeon_destroy(&dungeon);
+            free(path);
+            fclose(f);
+            return 1;
+        }
+        fclose(f);
+        printf("saved dungeon to %s\n", path);
+    }
+
+    if (debug) {
+        write_dungeon_pgm(&dungeon);
+        printf("debug: wrote hardness map to dungeon.pgm\n");
     }
 
     // print out the filled dungeon
@@ -157,9 +162,9 @@ int prepare_args(int argc, char* argv[], int *draw_border, int *read, int *write
         return 1;
     }
 
-    // It's an error to read and write, or to specify a path without reading or writing
-    if ((*read && *write) || (custom_path && !*read && !*write)) {
-        fprintf(stderr, "err: specify one of -l/--load, -w/--write\n");
+    // It's an error to specify a path without reading or writing
+    if (custom_path && !*read && !*write) {
+        fprintf(stderr, "err: specify one of -l/--load, -w/--write with -p/--path\n");
         free(*path);
         return 1;
     }

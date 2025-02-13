@@ -10,6 +10,14 @@
          Added structure to main() to write files (although it currently
             returns an error code since it's unimplemented).
          Added a debug logging flag, -d/--debug.
+2/12:
+    5p:  Added a seeded, diffused, and smoothed hardness value for stone.
+          Adjusted generator functions to deal with that accordingly.
+         Added a feature to the debug flag that writes cell hardness to
+          dungeon.pgm for viewing.
+         Fixed a bug in the load function which lost the PC location after
+          several load/saves.
+         Fixed a bug that prevented both --load/--save at once.
 
 -- ASSIGNMENT 1.1 --
 2/3:
