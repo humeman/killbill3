@@ -2,16 +2,19 @@ COMS 3270
 Assignment 1.02
 ---
 
-This program creates random 80x21 dungeons and enables them to be saved and loaded using the .rlg327 file format. 
-All data from the file format is loaded and converted into the internal dungeon structure:
+This program creates random 80x21 dungeons (including smoothed hardness stone, rooms, halls, staircases, and PC) 
+and enables them to be saved and loaded using the .rlg327 file format. All data from the file format is loaded 
+and converted into the internal dungeon structure:
 - Cells, into dungeon.cells as type enum, hardness = 0: CELL_TYPE_HALL, > 0: CELL_TYPE_STONE 
 - Rooms, x0/y0 and width/height -> struct room, x0/y0 and x1/y1, area into dungeon.cells as CELL_TYPE_ROOM
 - PC location, into dungeon.pc_x and dungeon.pc_y, and dungeon.cells at that location as CELL_TYPE_PC
 - Up/down staircase count and x/y, into dungeon.cells as CELL_TYPE_[UP/DOWN]_STAIRCASE
 
-When no flags are applied, a random dungeon is generated and printed to the terminal. With the save flag, a file
-will be generated at the default path (~/.rlg327/dungeon). With the load flag, no dungeon will be generated -- instead,
+When no flags are applied, a random dungeon is generated and printed to the terminal. With the -s/--save flag, a file
+will be generated at the default path (~/.rlg327/dungeon). With the -l/--load flag, no dungeon will be generated -- instead,
 it will be loaded and displayed from the default path. Using the -p/--path flag, the default path can be overridden.
+Both flags can be provided to load then re-save a dungeon. Pass -d/--debug for debugging features -- additional logs and a
+PGM image of the cells' hardnesses.
 
 Compile:
     Run: make
@@ -24,6 +27,7 @@ Flags:
 
     -b, --border: Draws a border around the outside of the 80x21 area.
     -d, --debug: Prints debug messages while loading/saving.
+                 Also generates a "dungeon.pgm" hardness map after loading.
     -h, --help: Displays a help message.  
 
 Examples:
@@ -39,5 +43,5 @@ Examples:
     # Save to a custom path
     ./assignment1_02 -s -p my_dungeon.rlg327
 
-    # Load from a custom path, enabling a border and debug messages
+    # Load from a custom path, enabling a border and debug messages/PGM
     ./assignment1_02 -l -p my_dungeon.rlg327 -b -d
