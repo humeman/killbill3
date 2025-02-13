@@ -41,20 +41,20 @@
 // Writes the uint32 variable 'var' into f.
 #define WRITE_UINT32(var, description, f, debug) { \
     uint32_t be = htobe32(var); \
-    size_t size = fwrite(&be, sizeof (be), 1, f); \
+    size_t size = fwrite(&be, sizeof (uint32_t), 1, f); \
     if (size != 1) RETURN_ERROR("could not write to file"); \
     if (debug) printf("debug: %s = %u, wrote %ld bytes\n", description, var, sizeof(var)); }
 
 // Writes the uint16 variable 'var' into f.
 #define WRITE_UINT16(var, description, f, debug) { \
     uint16_t be = htobe16(var); \
-    size_t size = fwrite(&be, sizeof (be), 1, f); \
+    size_t size = fwrite(&be, sizeof (uint16_t), 1, f); \
     if (size != 1) RETURN_ERROR("could not write to file"); \
     if (debug) printf("debug: %s = %u, wrote %ld bytes\n", description, var, sizeof(var)); }
 
 // Writes the uint8 variable 'var' into f.
 #define WRITE_UINT8(var, description, f, debug) { \
-    size_t size = fwrite(&var, sizeof (var), 1, f); \
+    size_t size = fwrite(&var, sizeof (uint8_t), 1, f); \
     if (size != 1) RETURN_ERROR("could not write to file"); \
     if (debug) printf("debug: %s = %u, wrote %ld bytes\n", description, var, sizeof(var)); }
 
