@@ -20,7 +20,7 @@ files.o: src/files.c src/files.h
 
 # PHONY TARGETS
 clean:
-	rm -f assignment1_* *.o *.tar.gz
+	rm -f assignment1_* *.o *.tar.gz *.pgm
 
 # This target creates a tarball ready to submit to Canvas for a particular assignment.
 # If this is a submitted file, the script will not exist and it will not work.
