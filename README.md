@@ -19,3 +19,6 @@ Tags are created for each completed assignment. Run `git checkout 1_01` (for exa
 * **Assignment 1.01**: Random dungeon generator
 
     This program creates a randomly-generated dungeon with several rooms and corridors, and prints it out to the terminal.
+* **Assignment 1.02**: Dungeon load/save
+
+    This program enables loading/saving dungeons in an RLG327 file format. It also creates a PC character and adds debugging flags.

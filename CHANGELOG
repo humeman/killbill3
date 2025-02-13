@@ -5,11 +5,16 @@
          Wrote logic for reading command-line flags
          Added extra flag, -p, for a custom path
 2/10:
-    9p:  Completed and tested loading functionality against sample files.
+    9p:  Created macros for READ_UINT<size> to simplify code.
+         Completed and tested loading functionality against sample files.
          Created a header file for general macros, macros.h.
          Added structure to main() to write files (although it currently
             returns an error code since it's unimplemented).
          Added a debug logging flag, -d/--debug.
+2/11:
+    4p:  Created macros for WRITE_UINT<size>.
+         Completed dungeon save function.
+         Adjusted dungeon struct to use proper int sizes, uint<8/16>_t.
 
 -- ASSIGNMENT 1.1 --
 2/3:
