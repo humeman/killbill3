@@ -146,7 +146,7 @@ int prepare_args(int argc, char* argv[], int *draw_border, int *read, int *write
         else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             printf("usage: %s [-lwbhd] [-p <path>]\n  -l/--load: load a rungeon\n  -s/--save: write a random dungeon\n", argv[0]);
             printf("  -b/--border: draw a border around the dungeon\n  -p/--path: override path to load/save ");
-            printf("(default ~/.cs327/dungeon)\n  -d/--debug: print debug logs\n  -h/--help: display this message\n");
+            printf("(default ~/.rlg327/dungeon)\n  -d/--debug: enable debugging features\n  -h/--help: display this message\n");
             free(*path);
             return 1;
         }
