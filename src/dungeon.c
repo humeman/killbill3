@@ -24,9 +24,9 @@ int dungeon_init(dungeon *dungeon, int width, int height, int max_rooms) {
     for (i = 0; i < width; i++) {
         dungeon->cells[i] = malloc(height * sizeof(cell));
         if (dungeon->cells[i] == NULL) {
-            free(dungeon->cells);
             free(dungeon->rooms);
             for (j = 0; j < i; j++) free(dungeon->cells[j]);
+            free(dungeon->cells);
             return 1;
         }
     }
@@ -39,6 +39,45 @@ int dungeon_init(dungeon *dungeon, int width, int height, int max_rooms) {
         }
     }
 
+    dungeon->pathfinding_no_tunnel = malloc(dungeon->width * sizeof (uint32_t*));
+    if (dungeon->pathfinding_no_tunnel == NULL) {
+        free(dungeon->rooms);
+        for (j = 0; j < dungeon->width; j++) free(dungeon->cells[j]);
+        free(dungeon->cells);
+        return 1;
+    }
+    for (i = 0; i < dungeon->width; i++) {
+        dungeon->pathfinding_no_tunnel[i] = malloc(dungeon->height * sizeof (uint32_t));
+        if (dungeon->pathfinding_no_tunnel[i] == NULL) {
+            free(dungeon->rooms);
+            for (j = 0; j < dungeon->width; j++) free(dungeon->cells[j]);
+            free(dungeon->cells);
+            for (j = 0; j < i; j++) free(dungeon->pathfinding_no_tunnel[j]);
+            free(dungeon->pathfinding_no_tunnel);
+            return 1;
+        }
+    }
+
+    dungeon->pathfinding_tunnel = malloc(dungeon->width * sizeof (uint32_t*));
+    if (dungeon->pathfinding_tunnel == NULL) {
+        free(dungeon->rooms);
+        for (j = 0; j < dungeon->width; j++) free(dungeon->cells[j]);
+        free(dungeon->cells);
+        return 1;
+    }
+    for (i = 0; i < dungeon->width; i++) {
+        dungeon->pathfinding_tunnel[i] = malloc(dungeon->height * sizeof (uint32_t));
+        if (dungeon->pathfinding_tunnel[i] == NULL) {
+            free(dungeon->rooms);
+            for (j = 0; j < dungeon->width; j++) free(dungeon->cells[j]);
+            free(dungeon->cells);
+            for (j = 0; j < dungeon->width; j++) free(dungeon->pathfinding_no_tunnel[j]);
+            free(dungeon->pathfinding_no_tunnel);
+            for (j = 0; j < i; j++) free(dungeon->pathfinding_tunnel[j]);
+            free(dungeon->pathfinding_tunnel);
+            return 1;
+        }
+    }
     return 0;
 }
 
@@ -46,9 +85,13 @@ void dungeon_destroy(dungeon *dungeon) {
     int i;
     for (i = 0; i < dungeon->width; i++) {
         free(dungeon->cells[i]);
+        free(dungeon->pathfinding_no_tunnel[i]);
+        free(dungeon->pathfinding_tunnel[i]);
     }
     free(dungeon->cells);
     free(dungeon->rooms);
+    free(dungeon->pathfinding_no_tunnel);
+    free(dungeon->pathfinding_tunnel);
 }
 
 void write_dungeon_pgm(dungeon *dungeon) {

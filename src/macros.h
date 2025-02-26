@@ -1,3 +1,9 @@
+/**
+ * Simple macros used throughout the project.
+ * 
+ * Author: csenneff
+ */
+
 #ifndef MACROS_H
 #define MACROS_H
 

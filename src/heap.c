@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 
 #define INITIAL_CAPACITY 10
 
@@ -26,7 +27,7 @@ void heap_destroy(binary_heap *heap) {
     free(heap);
 }
 
-int heap_insert(binary_heap *heap, void *item, int priority) {
+int heap_insert(binary_heap *heap, void *item, uint32_t priority) {
     int i, parent;
     binary_heap_node temp;
     binary_heap_node *new;
@@ -88,7 +89,7 @@ int heap_remove(binary_heap *heap, void** item) {
     return 0;
 }
 
-int heap_decrease_priority(binary_heap *heap, int compare (void*, void*), void *target, int priority) {
+int heap_decrease_priority(binary_heap *heap, int compare (void*, void*), void *target, uint32_t priority) {
     int i, parent;
     binary_heap_node temp;
     // Find the item

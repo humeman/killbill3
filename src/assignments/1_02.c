@@ -96,8 +96,10 @@ int main(int argc, char* argv[]) {
     }
     for (y = 0; y < dungeon.height; y++) {
         if (draw_border) printf("|");
-        for (x = 0; x < dungeon.width; x++)
-            printf("%c", dungeon.cells[x][y].type);
+        for (x = 0; x < dungeon.width; x++) {
+            if (x == dungeon.pc_x && y == dungeon.pc_y) printf("%c", CELL_TYPE_PC);
+            else printf("%c", dungeon.cells[x][y].type);
+        }
         if (draw_border) printf("|");
         printf("\n");
     }

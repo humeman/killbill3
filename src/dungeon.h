@@ -1,3 +1,9 @@
+/**
+ * Structures and functions useful for the generation of the dungeon data structure.
+ * 
+ * Author: csenneff
+ */
+
 #ifndef DUNGEON_H
 #define DUNGEON_H
 
@@ -36,6 +42,8 @@ typedef struct dungeon {
     uint8_t pc_y;
     room *rooms;
     cell **cells;
+    uint32_t **pathfinding_no_tunnel;
+    uint32_t **pathfinding_tunnel;
 } dungeon;
 
 typedef struct coordinates {

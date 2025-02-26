@@ -1,3 +1,9 @@
+/**
+ * Functions for reading and writing dungeon data structures to the disk.
+ * 
+ * Author: csenneff
+ */
+
 #ifndef FILES_H
 #define FILES_H
 
