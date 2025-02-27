@@ -12,4 +12,13 @@
     return 1; \
 }
 
+#define PRINT_PADDED(message, width) { \
+    int padding = (width - strlen(message)) / 2 - 1; \
+    for (int i = 0; i < padding; i++) printf("="); \
+    printf(" %s ", message); \
+    for (int i = 0; i < padding; i++) printf("="); \
+    if (strlen(message) % 2 == 1) printf("="); \
+    printf("\n"); \
+}
+
 #endif

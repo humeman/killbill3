@@ -46,3 +46,19 @@
          Fixed a bug that prevented both --load/--save at once.
 
 -- ASSIGNMENT 1.03 --
+2/18:
+    11p: Created structure (header files, source files, submission format)
+          for Assignment 1.03. Wrote out heap function signatures and struct.
+2/24:
+    12p: Wrote out a heap structure and tested it against some simple code.
+2/26:
+    1p:  Updated the dungeon struct to include the two pathfinding maps.
+         Wrote a Dijkstra's implementation to fill both maps.
+         Updated main function to print the two additional maps, and removed
+          the -b/--border flag (not useful anymore).
+         Fixed a bug in the heap implementation where the remove function
+          used the incorrect l/r child indices.
+         Fixed a bug in the heap implementation where removed nodes were
+          not free'd, causing a memory leak.
+         Tested all of the sample saved dungeons against the program's output
+          using a script -- all match.

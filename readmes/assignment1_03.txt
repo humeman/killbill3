@@ -1,3 +1,47 @@
 COMS 3270
 Assignment 1.03
 ---
+
+This assignment randomly generates, loads, or saves random 80x21 dungeons (as Assignment 1.02 does),
+and prints them to the terminal, along with their tunneling and non-tunneling distance maps.
+- Tunneling maps: The last digit of the distance from a cell to the next cell closest to the PC,
+    excluding any rock cells. In the special case that a room/hall is not connected to the PC, the
+    affected cells are displayed with an 'X' to match the sample dungeons. Rock cells are displayed
+    as a space.
+- Non-tunneling maps: The cost of going from a cell to the next cell closest to the PC, where
+    room/hall cells have a cost of 1 and mutable rock cells have a cost of (1 + hardness/85).
+    Immutable (255) rock is displayed as a space.
+
+Headers are printed describing what each map is before they are printed. They are printed in the
+order: dungeon, tunneling map, non-tunneling map.
+
+The flags for this program work the same as Assignment 1.02. Regardless of what is provided
+ (besides the --help flag), all 3 dungeon views will be printed to the terminal.
+- Passing no flags will generate a random dungeon.
+- Passing -s/--save will save the generated dungeon as a .rlg327 file.
+- Passing -l/--load will load a dungeon from a .rlg327 file before printing.
+- Passing -s/--path <path> will override the default load/save path (from ~/.rlg327/dungeon).
+- Passing both -l/--load and -s/--save will load a dungeon, save it, and print it.
+
+Compile:
+    Run: make
+    This will generate an `assignment1_03` binary.
+
+Flags:
+    -s, --save: Saves the randomly-generated dungeon to the set path.
+    -l, --load: Loads a dungeon from the set path and prints it.
+    -p, --path [path]: Overrides the default path, ~/.rlg327/dungeon.
+
+    -d, --debug: Prints debug messages while loading/saving.
+                 Also generates a "dungeon.pgm" hardness map after loading.
+    -h, --help: Displays a help message.  
+
+Examples (relevant to this assignment):
+    # Just generate a dungeon and print all 3 maps
+    ./assignment1_03
+
+    # Load from the default path and print all 3 maps
+    ./assignment1_03 -l
+
+    # Load from a custom path and print all 3 maps
+    ./assignment1_03 -l -p my_dungeon.rlg327
