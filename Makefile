@@ -1,4 +1,7 @@
 # ASSIGNMENT BINARIES 
+assignment1_04: dungeon.o files.o heap.o pathfinding.o monster.o assignment1_04.o
+	gcc dungeon.o files.o heap.o pathfinding.o monster.o assignment1_04.o -o assignment1_04 -lm
+
 assignment1_03: dungeon.o files.o heap.o pathfinding.o assignment1_03.o
 	gcc dungeon.o files.o assignment1_03.o heap.o pathfinding.o -o assignment1_03 -lm
 
@@ -18,6 +21,9 @@ assignment1_02.o: src/assignments/1_02.c
 assignment1_03.o: src/assignments/1_03.c
 	gcc src/assignments/1_03.c -o assignment1_03.o -Wall -Werror -c -g
 
+assignment1_04.o: src/assignments/1_04.c
+	gcc src/assignments/1_04.c -o assignment1_04.o -Wall -Werror -c -g
+
 dungeon.o: src/dungeon.c src/dungeon.h
 	gcc src/dungeon.c -o dungeon.o -Wall -Werror -c -g
 
@@ -29,6 +35,9 @@ heap.o: src/heap.c src/heap.h
 
 pathfinding.o: src/pathfinding.c src/heap.h
 	gcc src/pathfinding.c -o pathfinding.o -Wall -Werror -c -g
+
+monster.o: src/monster.c src/monster.h
+	gcc src/monster.c -o monster.o -Wall -Werror -c -g
 
 # PHONY TARGETS
 clean:

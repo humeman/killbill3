@@ -22,3 +22,11 @@ Tags are created for each completed assignment. Run `git checkout 1_01` (for exa
 * **Assignment 1.02**: Dungeon load/save
 
     This program enables loading/saving dungeons in an RLG327 file format. It also creates a PC character and adds debugging flags.
+* **Assignment 1.03**: Pathfinding
+
+    This program adds pathfinding capabilities to the dungeon, generating two distance
+    maps (for tunneling and non-tunneling monsters) to the PC.
+* **Assignment 1.04**: Monsters
+
+    This program adds various random monsters to the dungeon and allows them to move,
+    with the dungeon refreshing continually until none remain.
