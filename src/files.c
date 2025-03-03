@@ -140,8 +140,8 @@ int dungeon_init_from_file(dungeon *dungeon, FILE *f, int debug) {
         dungeon->cells[x][y].type = CELL_TYPE_DOWN_STAIRCASE;
     }
 
-    dungeon->pc_x = pc_x;
-    dungeon->pc_y = pc_y;
+    dungeon->pc.x = pc_x;
+    dungeon->pc.y = pc_y;
     
     return 0;
 }
@@ -186,8 +186,8 @@ int dungeon_save(dungeon *dungeon, FILE *f, int debug) {
     uint32_t file_size = 1708 + dungeon->room_count * 4 + up_count * 2 + down_count * 2;
     WRITE_UINT32(file_size, "file size", f, debug);
 
-    WRITE_UINT8((dungeon->pc_x), "pc x", f, debug);
-    WRITE_UINT8((dungeon->pc_y), "pc y", f, debug);
+    WRITE_UINT8((dungeon->pc.x), "pc x", f, debug);
+    WRITE_UINT8((dungeon->pc.x), "pc y", f, debug);
 
     for (y = 0; y < DUNGEON_HEIGHT; y++) {
         for (x = 0; x < DUNGEON_WIDTH; x++) {

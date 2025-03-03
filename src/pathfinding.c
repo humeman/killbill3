@@ -35,8 +35,8 @@ int generate_pathfinding_map(dungeon *dungeon, uint32_t **grid, int allow_tunnel
     coordinates coords;
     int done[dungeon->width][dungeon->height];
     if (heap_init(&queue, sizeof (coordinates))) RETURN_ERROR("failed to initialize heap");
-    src_x = dungeon->pc_x;
-    src_y = dungeon->pc_y;
+    src_x = dungeon->pc.x;
+    src_y = dungeon->pc.y;
 
     // Set the source cell to distance 0, add to queue
     grid[src_x][src_y] = 0;

@@ -62,3 +62,11 @@
           not free'd, causing a memory leak.
          Tested all of the sample saved dungeons against the program's output
           using a script -- all match.
+
+-- ASSIGNMENT 1.04 --
+2/27:
+    12p: Created make target and general structure for Assignment 1.04.
+         Created "character.c/character.h" for characters and monsters.
+3/3:
+    9a:  Refactored dungeon code to use the new character structure for the PC.
+         Added a character map.

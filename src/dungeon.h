@@ -9,6 +9,8 @@
 
 #include <stdint.h>
 
+#include "character.h"
+
 typedef enum {
     CELL_TYPE_STONE = ' ',
     CELL_TYPE_ROOM = '.',
@@ -30,6 +32,7 @@ typedef struct cell {
     cell_type type;
     uint8_t hardness;
     uint8_t mutable;
+    character* character;
 } cell;
 
 typedef struct dungeon {
@@ -38,12 +41,11 @@ typedef struct dungeon {
     uint16_t room_count;
     uint16_t min_room_count;
     uint16_t max_room_count;
-    uint8_t pc_x;
-    uint8_t pc_y;
     room *rooms;
     cell **cells;
     uint32_t **pathfinding_no_tunnel;
     uint32_t **pathfinding_tunnel;
+    character pc;
 } dungeon;
 
 typedef struct coordinates {
@@ -192,5 +194,9 @@ int place_staircases(dungeon *dungeon);
  * Returns: 0 if successful
  */
 int place_in_room(dungeon *dungeon, room room, cell_type material, int *x_loc, int *y_loc);
+
+int random_location_in_room(dungeon *dungeon, room room, int *x_loc, int *y_loc);
+
+int random_location(dungeon *dungeon, int *x_loc, int *y_loc);
 
 #endif

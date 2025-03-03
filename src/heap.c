@@ -71,6 +71,14 @@ int heap_top(binary_heap *heap, void *item)
     return 0;
 }
 
+int heap_at(binary_heap *heap, int i, void *item)
+{
+    if (i >= heap->count || i < 0)
+        RETURN_ERROR("attempted to read heap item at invalid index");
+    memcpy(item, heap->items[i].item, heap->item_size);
+    return 0;
+}
+
 int heap_remove(binary_heap *heap, void *item)
 {
     int i, l, r, target;

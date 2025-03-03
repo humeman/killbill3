@@ -15,19 +15,16 @@ int dungeon_init(dungeon *dungeon, int width, int height, int max_rooms) {
     dungeon->max_room_count = (uint16_t) max_rooms;
     dungeon->room_count = 0;
     dungeon->min_room_count = 0;
-    if (dungeon->rooms == NULL) return 1;
+    if (dungeon->rooms == NULL) goto init_free;
     dungeon->cells = malloc(width * sizeof(cell*));
     if (dungeon->cells == NULL) {
-        free(dungeon->rooms);
-        return 1;
+        goto init_free_rooms;
     }
     for (i = 0; i < width; i++) {
         dungeon->cells[i] = malloc(height * sizeof(cell));
         if (dungeon->cells[i] == NULL) {
-            free(dungeon->rooms);
             for (j = 0; j < i; j++) free(dungeon->cells[j]);
-            free(dungeon->cells);
-            return 1;
+            goto init_free_cells;
         }
     }
 
@@ -36,49 +33,52 @@ int dungeon_init(dungeon *dungeon, int width, int height, int max_rooms) {
             dungeon->cells[i][j].type = CELL_TYPE_EMPTY;
             dungeon->cells[i][j].hardness = 0;
             dungeon->cells[i][j].mutable = 1;
+            dungeon->cells[i][j].character = NULL;
         }
     }
 
     dungeon->pathfinding_no_tunnel = malloc(dungeon->width * sizeof (uint32_t*));
     if (dungeon->pathfinding_no_tunnel == NULL) {
-        free(dungeon->rooms);
-        for (j = 0; j < dungeon->width; j++) free(dungeon->cells[j]);
-        free(dungeon->cells);
-        return 1;
+        goto init_free_all_cells;
     }
     for (i = 0; i < dungeon->width; i++) {
         dungeon->pathfinding_no_tunnel[i] = malloc(dungeon->height * sizeof (uint32_t));
         if (dungeon->pathfinding_no_tunnel[i] == NULL) {
-            free(dungeon->rooms);
-            for (j = 0; j < dungeon->width; j++) free(dungeon->cells[j]);
-            free(dungeon->cells);
             for (j = 0; j < i; j++) free(dungeon->pathfinding_no_tunnel[j]);
-            free(dungeon->pathfinding_no_tunnel);
-            return 1;
+            goto init_free_pathfinding_no_tunnel;
         }
     }
 
     dungeon->pathfinding_tunnel = malloc(dungeon->width * sizeof (uint32_t*));
     if (dungeon->pathfinding_tunnel == NULL) {
-        free(dungeon->rooms);
-        for (j = 0; j < dungeon->width; j++) free(dungeon->cells[j]);
-        free(dungeon->cells);
-        return 1;
+        goto init_free_all_pathfinding_no_tunnel;
     }
     for (i = 0; i < dungeon->width; i++) {
         dungeon->pathfinding_tunnel[i] = malloc(dungeon->height * sizeof (uint32_t));
         if (dungeon->pathfinding_tunnel[i] == NULL) {
-            free(dungeon->rooms);
-            for (j = 0; j < dungeon->width; j++) free(dungeon->cells[j]);
-            free(dungeon->cells);
-            for (j = 0; j < dungeon->width; j++) free(dungeon->pathfinding_no_tunnel[j]);
-            free(dungeon->pathfinding_no_tunnel);
             for (j = 0; j < i; j++) free(dungeon->pathfinding_tunnel[j]);
-            free(dungeon->pathfinding_tunnel);
-            return 1;
+            goto init_free_pathfinding_tunnel;
         }
     }
+
     return 0;
+
+    // init_free_all_pathfinding_tunnel:
+    for (j = 0; j < dungeon->width; j++) free(dungeon->pathfinding_tunnel[j]);
+    init_free_pathfinding_tunnel:
+    free(dungeon->pathfinding_tunnel);
+    init_free_all_pathfinding_no_tunnel:
+    for (j = 0; j < dungeon->width; j++) free(dungeon->pathfinding_no_tunnel[j]);
+    init_free_pathfinding_no_tunnel:
+    free(dungeon->pathfinding_no_tunnel);
+    init_free_all_cells:
+    for (j = 0; j < dungeon->width; j++) free(dungeon->cells[j]);
+    init_free_cells:
+    free(dungeon->cells);
+    init_free_rooms:
+    free(dungeon->rooms);
+    init_free:
+    RETURN_ERROR("failed to allocate dungon");
 }
 
 void dungeon_destroy(dungeon *dungeon) {
@@ -129,15 +129,14 @@ int fill_dungeon(dungeon *dungeon, int min_rooms, int room_count_randomness_max,
 
     // Pick the PC's spawn point
     int x, y;
-    int room_offset = rand();
-    int i, room_i;
-    for (i = 0; i < dungeon->room_count; i++) {
-        room_i = (i + room_offset) % dungeon->room_count;
-        if (!place_in_room(dungeon, dungeon->rooms[room_i], CELL_TYPE_PC, &x, &y)) break;
-    }
-    if (i == dungeon->room_count) RETURN_ERROR("failed to place PC within dungeon (rooms have no available space)");
-    dungeon->pc_x = x;
-    dungeon->pc_y = y;
+    if (random_location(dungeon, &x, &y)) RETURN_ERROR("failed to place PC within dungeon");
+    dungeon->pc.x = x;
+    dungeon->pc.y = y;
+    dungeon->cells[x][y].character = &(dungeon->pc);
+    dungeon->pc.display = CELL_TYPE_PC;
+    dungeon->pc.monster = NULL;
+    dungeon->pc.type = CHARACTER_PC;
+    dungeon->pc.speed = 10;
 
     return 0;
 }
@@ -470,13 +469,20 @@ int place_staircases(dungeon *dungeon) {
 }
 
 int place_in_room(dungeon *dungeon, room room, cell_type material, int *x_loc, int *y_loc) {
+    int x, y;
+    if (random_location_in_room(dungeon, room, &x, &y)) RETURN_ERROR("no available space in room");
+    dungeon->cells[x][y].type = material;
+    dungeon->cells[x][y].hardness = 0;
+    return 0;
+}
+
+int random_location_in_room(dungeon *dungeon, room room, int *x_loc, int *y_loc) {
     int x_offset = rand();
     int y_offset = rand();
     int i, j, x, y;
     int room_width = room.x1 - room.x0;
     int room_height = room.y1 - room.y0;
-    int placed = 0;
-    for (i = 0; i < room_width && !placed; i++) {
+    for (i = 0; i < room_width; i++) {
         x = room.x0 + (x_offset + i) % room_width;
         for (j = 0; j < room_height; j++) {
             y = room.y0 + (y_offset + j) % room_height;
@@ -494,15 +500,24 @@ int place_in_room(dungeon *dungeon, room room, cell_type material, int *x_loc, i
                 // And, we can't place in an immutable cell.
                 if (!dungeon->cells[x][y].mutable) continue;
                 
-                dungeon->cells[x][y].type = material;
-                dungeon->cells[x][y].hardness = 0;
                 *x_loc = x;
                 *y_loc = y;
-                placed = 1;
-                break;
+                return 0;
             }
         }
     }
 
-    return !placed;
+    return 1;
+}
+
+int random_location(dungeon *dungeon, int *x_loc, int *y_loc) {
+    int room_offset = rand();
+    int i;
+    room *room;
+
+    for (i = 0; i < dungeon->room_count; i++) {
+        room = dungeon->rooms + ((i + room_offset) % dungeon->room_count);
+        if (!random_location_in_room(dungeon, *room, x_loc, y_loc)) return 0;
+    }
+    RETURN_ERROR("no available space in dungeon");
 }
