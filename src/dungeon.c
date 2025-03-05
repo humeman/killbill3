@@ -7,7 +7,7 @@
 #define STONE_SEED_COUNT 10
 #define GAUSSIAN_CONVOLUTION_COUNT 2
 
-int dungeon_init(dungeon *dungeon, int width, int height, int max_rooms) {
+int dungeon_init(dungeon *dungeon, uint8_t width, uint8_t height, int max_rooms) {
     int i, j;
     dungeon->width = (uint8_t) width;
     dungeon->height = (uint8_t) height;
@@ -60,10 +60,13 @@ int dungeon_init(dungeon *dungeon, int width, int height, int max_rooms) {
             goto init_free_pathfinding_tunnel;
         }
     }
+    if (heap_init(&(dungeon->turn_queue), sizeof (character*))) {
+        goto init_free_all_pathfinding_tunnel;
+    }
 
     return 0;
 
-    // init_free_all_pathfinding_tunnel:
+    init_free_all_pathfinding_tunnel:
     for (j = 0; j < dungeon->width; j++) free(dungeon->pathfinding_tunnel[j]);
     init_free_pathfinding_tunnel:
     free(dungeon->pathfinding_tunnel);
@@ -91,7 +94,8 @@ void dungeon_destroy(dungeon *dungeon) {
     free(dungeon->cells);
     free(dungeon->rooms);
     free(dungeon->pathfinding_no_tunnel);
-    free(dungeon->pathfinding_tunnel);
+    free(dungeon->pathfinding_tunnel); 
+    heap_destroy(dungeon->turn_queue);
 }
 
 void write_dungeon_pgm(dungeon *dungeon) {
@@ -128,7 +132,7 @@ int fill_dungeon(dungeon *dungeon, int min_rooms, int room_count_randomness_max,
     }
 
     // Pick the PC's spawn point
-    int x, y;
+    uint8_t x, y;
     if (random_location(dungeon, &x, &y)) RETURN_ERROR("failed to place PC within dungeon");
     dungeon->pc.x = x;
     dungeon->pc.y = y;
@@ -161,7 +165,7 @@ int gaussian[5][5] = {
 // the Assignment 1.01 solution code, Piazza post @80.
 // I might rewrite it before 1.03, but we'll see.
 int fill_stone(dungeon *dungeon) {
-    int x, y;
+    uint8_t x, y;
     queue_node *head, *tail, *temp;
 
     for (x = 0; x < dungeon->width; x++) {
@@ -200,7 +204,7 @@ int fill_stone(dungeon *dungeon) {
     }
 
     // Diffuses values out until every cell is filled.
-    int ix, iy;
+    uint8_t ix, iy;
     while (head) {
         x = head->x;
         y = head->y;
@@ -268,7 +272,7 @@ void fill_outside(dungeon *dungeon) {
     }
 }
 
-int create_rooms(dungeon *dungeon, int count, int min_width, int min_height, int size_randomness_max) {
+int create_rooms(dungeon *dungeon, int count, uint8_t min_width, uint8_t min_height, int size_randomness_max) {
     int i;
     int room_width, room_height;
 
@@ -291,13 +295,13 @@ int create_rooms(dungeon *dungeon, int count, int min_width, int min_height, int
     return 0;
 }
 
-int create_room(dungeon *dungeon, room *room, int room_width, int room_height) {
+int create_room(dungeon *dungeon, room *room, uint8_t room_width, uint8_t room_height) {
     int x_offset = rand();
     int y_offset = rand();
 
-    int ix, iy;
-    int x, y;
-    int jx, jy;
+    uint8_t ix, iy;
+    uint8_t x, y;
+    int16_t jx, jy;
     int placed = 0;
     
     for (ix = 0; ix < dungeon->width && !placed; ix++) {
@@ -346,7 +350,7 @@ int connect_rooms(dungeon *dungeon) {
     room *a;
     room *b;
     room *current;
-    int ax, bx, ay, by;
+    uint8_t ax, bx, ay, by;
     double distance, max_distance;
     int done = 0;
     while (!done) {
@@ -383,10 +387,10 @@ int connect_rooms(dungeon *dungeon) {
         if (b == NULL) return 0;
 
         // Connect a random point from each room.
-        int ax = (a->x0 + (rand() % (a->x1 - a->x0)));
-        int ay = (a->y0 + (rand() % (a->y1 - a->y0)));
-        int bx = (b->x0 + (rand() % (b->x1 - b->x0)));
-        int by = (b->y0 + (rand() % (b->y1 - b->y0)));
+        ax = (a->x0 + (rand() % (a->x1 - a->x0)));
+        ay = (a->y0 + (rand() % (a->y1 - a->y0)));
+        bx = (b->x0 + (rand() % (b->x1 - b->x0)));
+        by = (b->y0 + (rand() % (b->y1 - b->y0)));
 
         if (connect_points(dungeon, ax, ay, bx, by)) {
             return 1;
@@ -401,19 +405,19 @@ int connect_rooms(dungeon *dungeon) {
     return 0;
 }
 
-int connect_points(dungeon *dungeon, int x0, int y0, int x1, int y1) {
+int connect_points(dungeon *dungeon, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1) {
     // We want to make these paths semi-random, since right angles are boring.
     // We know we're going to travel x_diff and y_diff overall -- just to mix
     // things up, we'll randomly switch between which (X or Y) we're moving
     // while drawing the path.
-    int x_direction = x1 - x0 >= 0 ? 1 : -1;
-    int y_direction = y1 - y0 >= 0 ? 1 : -1;
+    int8_t x_direction = x1 - x0 >= 0 ? 1 : -1;
+    int8_t y_direction = y1 - y0 >= 0 ? 1 : -1;
 
-    int direction;
-    int x = x0;
-    int y = y0;
+    int8_t direction;
+    uint8_t x = x0;
+    uint8_t y = y0;
 
-    int x_poss, y_poss;
+    uint8_t x_poss, y_poss;
 
     while (x != x1 || y != y1) {
         direction = rand() % 2;
@@ -456,7 +460,7 @@ int connect_points(dungeon *dungeon, int x0, int y0, int x1, int y1) {
 int place_staircases(dungeon *dungeon) {
     if (dungeon->room_count < 1) return -1;
 
-    int tmpx, tmpy;
+    uint8_t tmpx, tmpy;
     
     // Pick a random location in a room for the up staircase.
     room room = dungeon->rooms[rand() % dungeon->room_count];
@@ -468,20 +472,20 @@ int place_staircases(dungeon *dungeon) {
     return 0;
 }
 
-int place_in_room(dungeon *dungeon, room room, cell_type material, int *x_loc, int *y_loc) {
-    int x, y;
+int place_in_room(dungeon *dungeon, room room, cell_type material, uint8_t *x_loc, uint8_t *y_loc) {
+    uint8_t x, y;
     if (random_location_in_room(dungeon, room, &x, &y)) RETURN_ERROR("no available space in room");
     dungeon->cells[x][y].type = material;
     dungeon->cells[x][y].hardness = 0;
     return 0;
 }
 
-int random_location_in_room(dungeon *dungeon, room room, int *x_loc, int *y_loc) {
-    int x_offset = rand();
-    int y_offset = rand();
-    int i, j, x, y;
-    int room_width = room.x1 - room.x0;
-    int room_height = room.y1 - room.y0;
+int random_location_in_room(dungeon *dungeon, room room, uint8_t *x_loc, uint8_t *y_loc) {
+    uint8_t x_offset = rand();
+    uint8_t y_offset = rand();
+    uint8_t i, j, x, y;
+    uint8_t room_width = room.x1 - room.x0;
+    uint8_t room_height = room.y1 - room.y0;
     for (i = 0; i < room_width; i++) {
         x = room.x0 + (x_offset + i) % room_width;
         for (j = 0; j < room_height; j++) {
@@ -499,6 +503,9 @@ int random_location_in_room(dungeon *dungeon, room room, int *x_loc, int *y_loc)
 
                 // And, we can't place in an immutable cell.
                 if (!dungeon->cells[x][y].mutable) continue;
+
+                // Also, don't overwrite a character.
+                if (dungeon->cells[x][y].character) continue;
                 
                 *x_loc = x;
                 *y_loc = y;
@@ -510,7 +517,7 @@ int random_location_in_room(dungeon *dungeon, room room, int *x_loc, int *y_loc)
     return 1;
 }
 
-int random_location(dungeon *dungeon, int *x_loc, int *y_loc) {
+int random_location(dungeon *dungeon, uint8_t *x_loc, uint8_t *y_loc) {
     int room_offset = rand();
     int i;
     room *room;

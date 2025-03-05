@@ -63,29 +63,32 @@ int heap_insert(binary_heap *heap, void *item, uint32_t priority)
     return 0;
 }
 
-int heap_top(binary_heap *heap, void *item)
+int heap_top(binary_heap *heap, void *item, uint32_t *priority)
 {
     if (heap->count == 0)
         RETURN_ERROR("attempted to read top of heap while empty");
     memcpy(item, heap->items[0].item, heap->item_size);
+    *priority = heap->items[0].priority;
     return 0;
 }
 
-int heap_at(binary_heap *heap, int i, void *item)
+int heap_at(binary_heap *heap, int i, void *item, uint32_t *priority)
 {
     if (i >= heap->count || i < 0)
         RETURN_ERROR("attempted to read heap item at invalid index");
     memcpy(item, heap->items[i].item, heap->item_size);
+    *priority = heap->items[i].priority;
     return 0;
 }
 
-int heap_remove(binary_heap *heap, void *item)
+int heap_remove(binary_heap *heap, void *item, uint32_t *priority)
 {
     int i, l, r, target;
     binary_heap_node temp;
     if (heap->count == 0)
         RETURN_ERROR("attempted to remove top of heap while empty");
     memcpy(item, heap->items[0].item, heap->item_size);
+    *priority = heap->items[0].priority;
     free(heap->items[0].item);
     heap->items[0] = heap->items[heap->count - 1];
     heap->count--;

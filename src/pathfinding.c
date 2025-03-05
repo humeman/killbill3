@@ -30,7 +30,7 @@ int update_pathfinding(dungeon *dungeon) {
 int generate_pathfinding_map(dungeon *dungeon, uint32_t **grid, int allow_tunneling) {
     uint8_t x, y, x1, y1;
     uint8_t src_x, src_y;
-    uint32_t distance;
+    uint32_t distance, trash;
     binary_heap *queue;
     coordinates coords;
     int done[dungeon->width][dungeon->height];
@@ -62,7 +62,7 @@ int generate_pathfinding_map(dungeon *dungeon, uint32_t **grid, int allow_tunnel
 
     while (heap_size(queue) != 0) {
         // Extract the minimal cell
-        if (heap_remove(queue, (void*) &coords)) RETURN_ERROR("failed to extract top from heap");
+        if (heap_remove(queue, (void*) &coords, &trash)) RETURN_ERROR("failed to extract top from heap");
         x = coords.x;
         y = coords.y;
         done[x][y] = 1;

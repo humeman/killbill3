@@ -24,9 +24,9 @@ typedef struct {
 int heap_init(binary_heap **heap, int item_size);
 void heap_destroy(binary_heap *heap);
 int heap_insert(binary_heap *heap, void *item, uint32_t priority);
-int heap_top(binary_heap *heap, void *item);
-int heap_at(binary_heap *heap, int i, void *item);
-int heap_remove(binary_heap *heap, void *item);
+int heap_top(binary_heap *heap, void *item, uint32_t *priority);
+int heap_at(binary_heap *heap, int i, void *item, uint32_t *priority);
+int heap_remove(binary_heap *heap, void *item, uint32_t *priority);
 int heap_decrease_priority(binary_heap *heap, int (void*, void*), void *target, uint32_t priority);
 int heap_size(binary_heap *heap);
 

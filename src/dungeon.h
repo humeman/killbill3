@@ -9,7 +9,27 @@
 
 #include <stdint.h>
 
-#include "character.h"
+#include "heap.h"
+
+// Since these next 3 will be included in the dungeon struct,
+// I'm including them here so we don't have a dependency on character.h.
+typedef struct monster {
+    uint8_t attributes;
+} monster;
+
+typedef enum {
+    CHARACTER_PC,
+    CHARACTER_MONSTER
+} character_type;
+
+typedef struct character {
+    char display;
+    uint8_t x;
+    uint8_t y;
+    character_type type;
+    uint8_t speed;
+    monster *monster;
+} character;
 
 typedef enum {
     CELL_TYPE_STONE = ' ',
@@ -46,6 +66,7 @@ typedef struct dungeon {
     uint32_t **pathfinding_no_tunnel;
     uint32_t **pathfinding_tunnel;
     character pc;
+    binary_heap *turn_queue;
 } dungeon;
 
 typedef struct coordinates {
@@ -64,7 +85,7 @@ typedef struct coordinates {
  * - height: Height of dungeon to allocate
  * - max_rooms: Number of rooms to allocate
  */
-int dungeon_init(dungeon *dungeon, int width, int height, int max_rooms);
+int dungeon_init(dungeon *dungeon, uint8_t width, uint8_t height, int max_rooms);
 
 /**
  * Destroys a dungeon instance and frees any memory associated with it.
@@ -130,7 +151,7 @@ void fill_outside(dungeon *dungeon);
  * 
  * Returns: 0 if successful
  */
-int create_rooms(dungeon *dungeon, int count, int min_width, int min_height, int size_randomness_max);
+int create_rooms(dungeon *dungeon, int count, uint8_t min_width, uint8_t min_height, int size_randomness_max);
 
 /**
  * Places a single room of a particular width and height somewhere in the dungeon.
@@ -144,7 +165,7 @@ int create_rooms(dungeon *dungeon, int count, int min_width, int min_height, int
  * - room_height: Height of the room
  * Returns: 0 if successful
  */
-int create_room(dungeon *dungeon, room *room, int room_width, int room_height);
+int create_room(dungeon *dungeon, room *room, uint8_t room_width, uint8_t room_height);
 
 /**
  * Connects every room in the dungeon.
@@ -166,7 +187,7 @@ int connect_rooms(dungeon *dungeon);
  * - y1: Y point 1
  * Returns: 0 if successful
  */
-int connect_points(dungeon *dungeon, int x0, int y0, int x1, int y1);
+int connect_points(dungeon *dungeon, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1);
 
 /**
  * Places an up and down staircase somewhere on the map.
@@ -193,10 +214,10 @@ int place_staircases(dungeon *dungeon);
  * - y_loc: Pointer to variable to store placed Y coordinate in
  * Returns: 0 if successful
  */
-int place_in_room(dungeon *dungeon, room room, cell_type material, int *x_loc, int *y_loc);
+int place_in_room(dungeon *dungeon, room room, cell_type material, uint8_t *x_loc, uint8_t *y_loc);
 
-int random_location_in_room(dungeon *dungeon, room room, int *x_loc, int *y_loc);
+int random_location_in_room(dungeon *dungeon, room room, uint8_t *x_loc, uint8_t *y_loc);
 
-int random_location(dungeon *dungeon, int *x_loc, int *y_loc);
+int random_location(dungeon *dungeon, uint8_t *x_loc, uint8_t *y_loc);
 
 #endif

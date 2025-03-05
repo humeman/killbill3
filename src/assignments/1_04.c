@@ -6,6 +6,7 @@
 #include "../files.h"
 #include "../pathfinding.h"
 #include "../macros.h"
+#include "../character.h"
 
 #define ROOM_MIN_COUNT 6
 #define ROOM_COUNT_MAX_RANDOMNESS 4
@@ -56,13 +57,16 @@ int main(int argc, char* argv[]) {
             free(path);
             return 1;
         }
+        for (x = 0; x < dungeon.width; x++)
+            for (y = 0; y < dungeon.height; y++)
+                dungeon.cells[x][y].type = CELL_TYPE_STONE;
 
-        if (fill_dungeon(&dungeon, ROOM_MIN_COUNT, ROOM_COUNT_MAX_RANDOMNESS, ROOM_MIN_WIDTH, ROOM_MIN_HEIGHT, ROOM_MAX_RANDOMNESS, debug)) {
-            fprintf(stderr, "err: could not generate dungeon\n");
-            dungeon_destroy(&dungeon);
-            free(path);
-            return 1;
-        }
+        // if (fill_dungeon(&dungeon, ROOM_MIN_COUNT, ROOM_COUNT_MAX_RANDOMNESS, ROOM_MIN_WIDTH, ROOM_MIN_HEIGHT, ROOM_MAX_RANDOMNESS, debug)) {
+        //     fprintf(stderr, "err: could not generate dungeon\n");
+        //     dungeon_destroy(&dungeon);
+        //     free(path);
+        //     return 1;
+        // }
     }
 
     if (write) {
@@ -94,6 +98,19 @@ int main(int argc, char* argv[]) {
         dungeon_destroy(&dungeon);
         free(path);
         return 1;
+    }
+
+    has_los(&dungeon, 0, 0, 61, 19);
+    dungeon.cells[0][0].type = CELL_TYPE_PC;
+    dungeon.cells[61][19].type = CELL_TYPE_PC;
+
+    uint8_t ix, iy;
+    ix = 0;
+    iy = 0;
+    while (ix != 61 || iy != 19) {
+        next_xy(&dungeon, ix, iy, 61, 19, &ix, &iy);
+        printf("%d, %d\n", ix, iy);
+        dungeon.cells[ix][iy].type = CELL_TYPE_UP_STAIRCASE;
     }
 
     for (y = 0; y < dungeon.height; y++) {

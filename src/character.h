@@ -2,24 +2,7 @@
 #define CHARACTER_H
 
 #include <stdint.h>
-
-typedef struct monster {
-    uint8_t attributes;
-} monster;
-
-typedef enum {
-    CHARACTER_PC,
-    CHARACTER_MONSTER
-} character_type;
-
-typedef struct character {
-    char display;
-    uint8_t x;
-    uint8_t y;
-    character_type type;
-    uint8_t speed;
-    monster *monster;
-} character;
+#include "dungeon.h"
 
 /**
  * Updates the location of a character in the dungeon.
@@ -32,5 +15,10 @@ typedef struct character {
     (character)->x = x; \
     (character)->y = y; \
 }
+
+int generate_monsters(dungeon *dungeon, int count);
+void destroy_character(dungeon *dungeon, character *character);
+int has_los(dungeon *dungeon, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1);
+void next_xy(dungeon *dungeon, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t *next_x, uint8_t *next_y);
 
 #endif
