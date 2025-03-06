@@ -1,3 +1,49 @@
 COMS 3270
 Assignment 1.04
 ---
+
+This assignment builds upon the past assignments by adding monsters and a game loop.
+The PC and all monsters are now modeled under a "character" struct (as mentioned looking ahead in 1.06),
+which contains an optional pointer to a "monster" struct for monster type characters.
+Each character has a speed, and the game takes the lowest priority next turn based on that speed,
+ moves the character according to its attributes, and if that turn was for the PC redraws the screen.
+A character kills another character if it tries to move into its space.
+The PC wins if no characters are left; it loses if it gets killed.
+The PC will move around randomly onto non-stone spaces in the dungeon whenever it is its turn.
+Monsters will move according to any of the following (randomly added) attributes, based on the hex code
+ that the monster displays (where bit 3 = ERRATIC, 2 = TUNNELING, 1 = TELEPATHIC, 0 = INTELLIGENT):
+ - INTELLIGENT: Able to move according to the shortest path maps.
+ - TELEPATHIC: Always moves to the PC, whether it can see it or not. Otherwise, requires line of sight.
+                Line of sight applies if there is a straight line from a monster to the PC without any
+                stone in the way.
+ - TUNNELING: Can dig through stone.
+ - ERRATIC: 50% chance to move randomly (either into stone, if allowed, or onto a regular cell).
+
+Load/save still works. You can also still specify a custom path with -p/--path.
+You can specify a number of monsters with -n/--nummon, the default is 10.
+You can also override the FPS (effectively PC turns per second) with -f/--fps, the default is 4.
+
+Compile:
+    Run: make
+    This will generate an `assignment1_04` binary.
+
+Flags:
+    -s, --save: Saves the randomly-generated dungeon to the set path.
+    -l, --load: Loads a dungeon from the set path and prints it.
+    -p, --path [path]: Overrides the default path, ~/.rlg327/dungeon.
+    -n, --nummon [num]: Overrides the default monster count, 10.
+    -f, --fps [fps]: Overrides the default FPS, 4.
+
+    -d, --debug: Prints debug messages while loading/saving.
+                 Also generates a "dungeon.pgm" hardness map after loading.
+    -h, --help: Displays a help message.  
+
+Examples (relevant to this assignment):
+    # Regular game (random dungeon, 10 monsters, 4 fps)
+    ./assignment1_04
+
+    # Spawn 15 monsters
+    ./assignment1_04 -n 15
+
+    # Spawn 15 monsters, print 100 frames per second
+    ./assignment1_03 -n 15 -f 100

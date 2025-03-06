@@ -141,6 +141,7 @@ int fill_dungeon(dungeon *dungeon, int min_rooms, int room_count_randomness_max,
     dungeon->pc.monster = NULL;
     dungeon->pc.type = CHARACTER_PC;
     dungeon->pc.speed = 10;
+    dungeon->pc.dead = 0;
 
     return 0;
 }

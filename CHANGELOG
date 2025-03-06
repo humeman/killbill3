@@ -70,3 +70,18 @@
 3/3:
     9a:  Refactored dungeon code to use the new character structure for the PC.
          Added a character map.
+3/4:
+    3p:  Added functions to character.c to generate and destroy monsters.
+         Added functions to character.c to generate an approximate line between
+          two points and check if there is line of sight (no stone) between
+          those points. Also added a function to get the next coordinate along
+          that line.
+3/5 
+    11p: Wrote the logic for moving monsters around the game screen w/ lots of
+          debugging.
+         Discovered a bug in the line generation functions, so I rewrote them.
+          They now can handle reversed x0/x1 and vertical lines.
+         Added the main game loop.
+         Added the --fps and --nummon flags.
+         Added PC movement (it'll move randomly now).
+         Tested for and fixed some destroy_character/game end memory leaks with Valgrind.

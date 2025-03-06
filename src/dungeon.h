@@ -12,9 +12,12 @@
 #include "heap.h"
 
 // Since these next 3 will be included in the dungeon struct,
-// I'm including them here so we don't have a dependency on character.h.
+// I'm including them here so we don't have a (circular) dependency on character.h.
 typedef struct monster {
     uint8_t attributes;
+    uint8_t pc_seen;
+    uint8_t pc_last_seen_x;
+    uint8_t pc_last_seen_y;
 } monster;
 
 typedef enum {
@@ -29,7 +32,16 @@ typedef struct character {
     character_type type;
     uint8_t speed;
     monster *monster;
+    uint8_t dead;
 } character;
+// End of character stuff
+
+// For lack of a better place, this will go here too.
+typedef enum {
+    GAME_RESULT_RUNNING = 0,
+    GAME_RESULT_WIN = 1,
+    GAME_RESULT_LOSE = 2
+} game_result;
 
 typedef enum {
     CELL_TYPE_STONE = ' ',
@@ -38,7 +50,8 @@ typedef enum {
     CELL_TYPE_UP_STAIRCASE = '<',
     CELL_TYPE_DOWN_STAIRCASE = '>',
     CELL_TYPE_EMPTY = '!',
-    CELL_TYPE_PC = '@'
+    CELL_TYPE_PC = '@',
+    CELL_TYPE_DEBUG = 'X'
 } cell_type;
 
 typedef struct room {
