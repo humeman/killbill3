@@ -85,3 +85,5 @@
          Added the --fps and --nummon flags.
          Added PC movement (it'll move randomly now).
          Tested for and fixed some destroy_character/game end memory leaks with Valgrind.
+
+-- ASSIGNMENT 1.05 --

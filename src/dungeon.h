@@ -43,15 +43,15 @@ typedef enum {
     GAME_RESULT_LOSE = 2
 } game_result;
 
+#define CELL_TYPES 7
 typedef enum {
-    CELL_TYPE_STONE = ' ',
-    CELL_TYPE_ROOM = '.',
-    CELL_TYPE_HALL = '#',
-    CELL_TYPE_UP_STAIRCASE = '<',
-    CELL_TYPE_DOWN_STAIRCASE = '>',
-    CELL_TYPE_EMPTY = '!',
-    CELL_TYPE_PC = '@',
-    CELL_TYPE_DEBUG = 'X'
+    CELL_TYPE_STONE,
+    CELL_TYPE_ROOM,
+    CELL_TYPE_HALL,
+    CELL_TYPE_UP_STAIRCASE,
+    CELL_TYPE_DOWN_STAIRCASE,
+    CELL_TYPE_EMPTY,
+    CELL_TYPE_DEBUG
 } cell_type;
 
 typedef struct room {
