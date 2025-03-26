@@ -1,6 +1,8 @@
 #ifndef GAME_H
 #define GAME_H
 
-void run();
+#include "dungeon.h"
+
+int game_start(dungeon *dungeon);
 
 #endif

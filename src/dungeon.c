@@ -137,7 +137,7 @@ int fill_dungeon(dungeon *dungeon, int min_rooms, int room_count_randomness_max,
     dungeon->pc.x = x;
     dungeon->pc.y = y;
     dungeon->cells[x][y].character = &(dungeon->pc);
-    dungeon->pc.display = CELL_TYPE_PC;
+    dungeon->pc.display = '@';
     dungeon->pc.monster = NULL;
     dungeon->pc.type = CHARACTER_PC;
     dungeon->pc.speed = 10;
