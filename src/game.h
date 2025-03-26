@@ -3,6 +3,6 @@
 
 #include "dungeon.h"
 
-int game_start(dungeon *dungeon);
+int game_start(dungeon *dungeon, int nummon);
 
 #endif

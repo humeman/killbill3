@@ -87,3 +87,39 @@
          Tested for and fixed some destroy_character/game end memory leaks with Valgrind.
 
 -- ASSIGNMENT 1.05 --
+3/25:
+    12p: Created basic structure for Assignment 1.05, including linking ncurses
+          and a new game.c/game.h and 1_05.c.
+         Added enums/constants for all the colors, symbols, and keybinds we're
+          using. Moved character choices into the game renderer, the actual stored
+          type ints are now arbitrary. 
+    2p:  Got basic ncurses rendering working -- the dungeon is now drawn to the
+          screen properly with colors.
+3/26:
+    12p: Created the monster menu in its entirety. Dungeon still doesn't move.
+          Includes some basic rendering macros, for centering text and such.
+         Began the basic work to accept keybinds from the user. Can now toggle
+          the monster menu and scroll up/down.
+         Added the keybinds to move the PC around. It can now 'eat' the monsters,
+          but the game won't end when they're all dead.
+         Added back the turn system. The game now takes all the monsters' turns
+          until the PC comes around, then redraws and requests the next input.
+         Added in the win/lose screens, drawn with ASCII art stored in macros.h.
+          When they show up, the user presses a key to exit.
+         Moved some common macros to macros.h so they're not repeated.
+         Implemented staircases, which reinitialize the dungeon and move the PC
+          to the respective staircase in the new map that makes sense.
+    4p:  Final testing.
+          Fixed a bug in the map loader which only manifested with the new PC
+           rendering system -- the loaded coordinates displayed (in the character
+           struct only) incorrectly.
+          Fixed an issue where using stairs in a loaded map had the potential to
+           crash the game, since the room count matched exactly what the file 
+           specified though the configured random room count could be higher. 
+          Cleaned up some debugging stuff.
+          Fixed some inconsistencies with the dungeon_init function which led
+           to uninitialized PC values being used if the map was loaded, not
+           generated.
+          Memory leak fixes with Valgrind. This is a fair bit harder now since
+           ncurses doesn't free everything. :(
+           https://www.manpagez.com/man/3/exit_curses/

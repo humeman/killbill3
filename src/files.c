@@ -88,7 +88,7 @@ int dungeon_init_from_file(dungeon *dungeon, FILE *f, int debug) {
     uint16_t room_count;
     READ_UINT16(room_count, "room count", f, debug);
 
-    if (dungeon_init(dungeon, DUNGEON_WIDTH, DUNGEON_HEIGHT, room_count)) RETURN_ERROR("could not initialize dungeon");
+    if (dungeon_init(dungeon, DUNGEON_WIDTH, DUNGEON_HEIGHT, MAX(room_count, ROOM_MIN_COUNT + ROOM_COUNT_MAX_RANDOMNESS))) RETURN_ERROR("could not initialize dungeon");
 
     if (fseek(f, FILE_MATRIX_OFFSET, SEEK_SET)) RETURN_ERROR("unexpected error while reading file (could not seek to dungeon matrix)");
     uint8_t hardness;
@@ -142,6 +142,11 @@ int dungeon_init_from_file(dungeon *dungeon, FILE *f, int debug) {
 
     dungeon->pc.x = pc_x;
     dungeon->pc.y = pc_y;
+    dungeon->pc.dead = 0;
+    dungeon->pc.display = '@';
+    dungeon->pc.monster = NULL;
+    dungeon->pc.type = CHARACTER_PC;
+    dungeon->cells[pc_x][pc_y].character = &(dungeon->pc);
     
     return 0;
 }
@@ -187,7 +192,7 @@ int dungeon_save(dungeon *dungeon, FILE *f, int debug) {
     WRITE_UINT32(file_size, "file size", f, debug);
 
     WRITE_UINT8((dungeon->pc.x), "pc x", f, debug);
-    WRITE_UINT8((dungeon->pc.x), "pc y", f, debug);
+    WRITE_UINT8((dungeon->pc.y), "pc y", f, debug);
 
     for (y = 0; y < DUNGEON_HEIGHT; y++) {
         for (x = 0; x < DUNGEON_WIDTH; x++) {

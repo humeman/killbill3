@@ -165,7 +165,7 @@ void next_xy(dungeon *dungeon, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, u
     }
 }
 
-int next_turn(dungeon *dungeon, game_result *result) {
+int next_turn(dungeon *dungeon, game_result *result, int *was_pc) {
     character *character = NULL;
     uint32_t priority;
     uint8_t x, y, next_x, next_y, min, x_offset, y_offset;
@@ -190,29 +190,13 @@ int next_turn(dungeon *dungeon, game_result *result) {
     x = character->x;
     y = character->y;
 
-    // PC movement (it'll randomly move around open space)
+    // If this was the PC's turn, signal that back to the caller
+    // Previously for random movement, but now we'll render the changes
+    // and wait for user input
     if (character == &(dungeon->pc)) {
-        // Move around randomly
-        x_offset = rand();
-        y_offset = rand();
-        for (i = 0; i < 3; i++) {
-            x1 = dungeon->pc.x - 1 + (i + x_offset) % 3;
-            for (j = 0; j < 3; j++) {
-                y1 = dungeon->pc.y - 1 + (j + y_offset) % 3;
-                if (x1 == x && y1 == y) continue;
-                if (x1 < 0 || x1 >= dungeon->width || y1 < 0 || y1 >= dungeon->height) continue;
-                if (dungeon->cells[x1][y1].type == CELL_TYPE_STONE) continue;
-                // Try to move there
-                if (dungeon->cells[x1][y1].character) {
-                    dungeon->cells[x1][y1].character->dead = 1;
-                }
-                UPDATE_CHARACTER(dungeon->cells, character, x1, y1);
-                if (update_pathfinding(dungeon)) RETURN_ERROR("failed to update pathfinding maps");
-                heap_insert(dungeon->turn_queue, (void*) &character, priority + character->speed);
-                return 0;
-            }
-        }
-        heap_insert(dungeon->turn_queue, (void*) &character, priority + character->speed);
+        if (heap_insert(dungeon->turn_queue, (void*) &character, priority + character->speed))
+            RETURN_ERROR("failed to reinsert PC to turn queue");
+        *was_pc = 1;
         return 0; // No open space (impossible with a normal map)
     }
 

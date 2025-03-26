@@ -9,17 +9,9 @@
 #include "../macros.h"
 #include "../character.h"
 #include "../game.h"
-
-#define ROOM_MIN_COUNT 6
-#define ROOM_COUNT_MAX_RANDOMNESS 4
-#define ROOM_MIN_WIDTH 4
-#define ROOM_MIN_HEIGHT 3
-#define ROOM_MAX_RANDOMNESS 6
-#define DUNGEON_WIDTH 80
-#define DUNGEON_HEIGHT 21
+#include "../macros.h"
 
 #define DEFAULT_PATH "/.rlg327/dungeon"
-#define DEFAULT_NUMMON 10
 
 int prepare_args(int argc, char* argv[], int *read, int *write, int *debug, int *nummon, char **path);
 
@@ -32,7 +24,7 @@ int main(int argc, char* argv[]) {
     int read = 0;
     int write = 0;
     int debug = 0;
-    int nummon;
+    int nummon = -1;
     char *path = NULL;
     if (prepare_args(argc, argv, &read, &write, &debug, &nummon, &path)) {
         return 1;
@@ -53,7 +45,6 @@ int main(int argc, char* argv[]) {
             return 1;
         }
         fclose(f);
-        printf("loaded dungeon from %s\n", path);
     }
     else {
         if (dungeon_init(&dungeon, DUNGEON_WIDTH, DUNGEON_HEIGHT, ROOM_MIN_COUNT + ROOM_COUNT_MAX_RANDOMNESS)) {
@@ -104,79 +95,38 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // character *character;
-    // uint32_t trash;
-    // // The PC will play if it's in the heap. We'll let it go first since it'll probably never win :)
-    // character = &(dungeon.pc);
-    // if (heap_insert(dungeon.turn_queue, (void *) &character, 0)) {
-    //     fprintf(stderr, "err: failed to insert PC into heap\n");
-    //     dungeon_destroy(&dungeon);
-    //     free(path);
-    //     return 1;
-    // }
-    // if (generate_monsters(&dungeon, nummon)) {
-    //     fprintf(stderr, "err: couldn't place monsters\n");
-    //     dungeon_destroy(&dungeon);
-    //     free(path);
-    //     return 1;
-    // }
+    character *character;
+    uint32_t trash;
+    // The PC will play if it's in the heap. We'll let it go first since it'll probably never win :)
+    character = &(dungeon.pc);
+    if (heap_insert(dungeon.turn_queue, (void *) &character, 0)) {
+        fprintf(stderr, "err: failed to insert PC into heap\n");
+        dungeon_destroy(&dungeon);
+        free(path);
+        return 1;
+    }
+    if (generate_monsters(&dungeon, nummon < 0 ? (rand() % (RANDOM_MONSTERS_MAX - RANDOM_MONSTERS_MIN + 1)) + RANDOM_MONSTERS_MIN : nummon)) {
+        fprintf(stderr, "err: couldn't place monsters\n");
+        dungeon_destroy(&dungeon);
+        free(path);
+        return 1;
+    }
 
-    // // Our game loop consists of printing the dungeon, taking the next turns until the PC, and checking if the game state isn't RUNNING.
-    // game_result state = GAME_RESULT_RUNNING;
-    // while (state == GAME_RESULT_RUNNING) {
-    //     // Peek the top of the queue to see if the PC goes next
-    //     if (heap_top(dungeon.turn_queue, (void *) &character, &trash)) {
-    //         fprintf(stderr, "err: failed to check top of turn queue for PC\n");
-    //         dungeon_destroy(&dungeon);
-    //         free(path);
-    //         return 1;
-    //     }
-    //     next_turn(&dungeon, &state);
-    //     if (character == &(dungeon.pc)) {
-    //         for (y = 0; y < dungeon.height; y++) {
-    //             for (x = 0; x < dungeon.width; x++) {
-    //                 if (dungeon.cells[x][y].character) printf("%c", dungeon.cells[x][y].character->display);
-    //                 else printf("%c", dungeon.cells[x][y].type);
-    //             }
-    //             printf("\n");
-    //         }
-    //         printf("\n\n\n");
-    //         usleep(1000000 / fps);
-    //     }
-    // }
-    // run()
-
-    // // Print out the final game state
-    // for (y = 0; y < dungeon.height; y++) {
-    //     for (x = 0; x < dungeon.width; x++) {
-    //         if (dungeon.cells[x][y].character) printf("%c", dungeon.cells[x][y].character->display);
-    //         else printf("%c", dungeon.cells[x][y].type);
-    //     }
-    //     printf("\n");
-    // }
-    // printf("\n\n");
-
-    // if (state == GAME_RESULT_LOSE) {
-    //     printf("You lost.\n");
-    // } else {
-    //     printf("You won.\n");
-    // }
-
-    // while (heap_size(dungeon.turn_queue) > 0) {
-    //     if (heap_remove(dungeon.turn_queue, (void *) &character, &trash)) {
-    //         fprintf(stderr, "err: failed to remove from turn queue while cleaning up\n");
-    //         dungeon_destroy(&dungeon);
-    //         free(path);
-    //         return 1;
-    //     }
-    //     if (character == &(dungeon.pc)) continue;
-    //     destroy_character(&dungeon, character);
-    // }
-
-    if (game_start(&dungeon)) {
+    if (game_start(&dungeon, nummon)) {
         dungeon_destroy(&dungeon);
         free(path);
         RETURN_ERROR("game loop failed");
+    }
+
+    while (heap_size(dungeon.turn_queue) > 0) {
+        if (heap_remove(dungeon.turn_queue, (void *) &character, &trash)) {
+            fprintf(stderr, "err: failed to remove from turn queue while cleaning up\n");
+            dungeon_destroy(&dungeon);
+            free(path);
+            return 1;
+        }
+        if (character == &(dungeon.pc)) continue;
+        destroy_character(&dungeon, character);
     }
     
     dungeon_destroy(&dungeon);
@@ -200,7 +150,7 @@ int prepare_args(int argc, char* argv[], int *read, int *write, int *debug, int 
     }
     strcpy(*path, home);
     strcat(*path, DEFAULT_PATH);
-    *nummon = DEFAULT_NUMMON;
+    *nummon = -1;
     for (i = 1; i < argc; i++) {
         if (path_next) {
             free(*path);

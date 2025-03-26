@@ -9,8 +9,8 @@
 
 int dungeon_init(dungeon *dungeon, uint8_t width, uint8_t height, int max_rooms) {
     int i, j;
-    dungeon->width = (uint8_t) width;
-    dungeon->height = (uint8_t) height;
+    dungeon->width = width;
+    dungeon->height = height;
     dungeon->rooms = malloc(max_rooms * sizeof (room));
     dungeon->max_room_count = (uint16_t) max_rooms;
     dungeon->room_count = 0;
@@ -64,6 +64,12 @@ int dungeon_init(dungeon *dungeon, uint8_t width, uint8_t height, int max_rooms)
         goto init_free_all_pathfinding_tunnel;
     }
 
+    dungeon->pc.display = '@';
+    dungeon->pc.monster = NULL;
+    dungeon->pc.type = CHARACTER_PC;
+    dungeon->pc.speed = PC_SPEED;
+    dungeon->pc.dead = 0;
+
     return 0;
 
     init_free_all_pathfinding_tunnel:
@@ -116,6 +122,7 @@ int fill_dungeon(dungeon *dungeon, int min_rooms, int room_count_randomness_max,
         fprintf(stderr, "fill_stone failed\n");
         return 1;
     }
+    dungeon->room_count = 0;
     dungeon->min_room_count = min_rooms;
     if (create_rooms(dungeon, min_rooms + (rand() % room_count_randomness_max), room_min_width, room_min_height, room_size_randomness_max)) {
         fprintf(stderr, "create_rooms failed\n");
@@ -137,10 +144,6 @@ int fill_dungeon(dungeon *dungeon, int min_rooms, int room_count_randomness_max,
     dungeon->pc.x = x;
     dungeon->pc.y = y;
     dungeon->cells[x][y].character = &(dungeon->pc);
-    dungeon->pc.display = '@';
-    dungeon->pc.monster = NULL;
-    dungeon->pc.type = CHARACTER_PC;
-    dungeon->pc.speed = 10;
     dungeon->pc.dead = 0;
 
     return 0;
@@ -174,6 +177,7 @@ int fill_stone(dungeon *dungeon) {
             dungeon->cells[x][y].type = CELL_TYPE_STONE;
             dungeon->cells[x][y].hardness = 0;
             dungeon->cells[x][y].mutable = 1;
+            dungeon->cells[x][y].character = NULL;
         }
     }
 

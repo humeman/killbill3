@@ -7,6 +7,17 @@
 #ifndef MACROS_H
 #define MACROS_H
 
+#define ROOM_MIN_COUNT 6
+#define ROOM_COUNT_MAX_RANDOMNESS 4
+#define ROOM_MIN_WIDTH 4
+#define ROOM_MIN_HEIGHT 3
+#define ROOM_MAX_RANDOMNESS 6
+#define DUNGEON_WIDTH 80
+#define DUNGEON_HEIGHT 21
+#define RANDOM_MONSTERS_MIN 5
+#define RANDOM_MONSTERS_MAX 10
+#define PC_SPEED 10
+
 #define RETURN_ERROR(message) { \
     fprintf(stderr, "err: %s\n", message); \
     return 1; \
