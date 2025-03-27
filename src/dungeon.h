@@ -18,22 +18,22 @@ typedef struct monster {
     uint8_t pc_seen;
     uint8_t pc_last_seen_x;
     uint8_t pc_last_seen_y;
-} monster;
+} monster_t;
 
 typedef enum {
     CHARACTER_PC,
     CHARACTER_MONSTER
-} character_type;
+} character_type_t;
 
 typedef struct character {
     char display;
     uint8_t x;
     uint8_t y;
-    character_type type;
+    character_type_t type;
     uint8_t speed;
-    monster *monster;
+    monster_t *monster;
     uint8_t dead;
-} character;
+} character_t;
 // End of character stuff
 
 // For lack of a better place, this will go here too.
@@ -41,7 +41,7 @@ typedef enum {
     GAME_RESULT_RUNNING = 0,
     GAME_RESULT_WIN = 1,
     GAME_RESULT_LOSE = 2
-} game_result;
+} game_result_t;
 
 #define CELL_TYPES 7
 typedef enum {
@@ -52,21 +52,26 @@ typedef enum {
     CELL_TYPE_DOWN_STAIRCASE,
     CELL_TYPE_EMPTY,
     CELL_TYPE_DEBUG
-} cell_type;
+} cell_type_t;
 
 typedef struct room {
     uint8_t x0;
     uint8_t y0;
     uint8_t x1;
     uint8_t y1;
-} room;
+} room_t;
 
 typedef struct cell {
-    cell_type type;
+    cell_type_t type;
     uint8_t hardness;
-    uint8_t mutable;
-    character* character;
-} cell;
+    character_t* character;
+    uint8_t attributes;
+} cell_t;
+
+typedef enum cell_attributes {
+    CELL_ATTRIBUTE_IMMUTABLE = 0x01,
+    CELL_ATTRIBUTE_SEEN = 0x02
+} cell_attributes_t;
 
 typedef struct dungeon {
     uint8_t width;
@@ -74,18 +79,18 @@ typedef struct dungeon {
     uint16_t room_count;
     uint16_t min_room_count;
     uint16_t max_room_count;
-    room *rooms;
-    cell **cells;
+    room_t *rooms;
+    cell_t **cells;
     uint32_t **pathfinding_no_tunnel;
     uint32_t **pathfinding_tunnel;
-    character pc;
-    binary_heap *turn_queue;
-} dungeon;
+    character_t pc;
+    binary_heap_t *turn_queue;
+} dungeon_t;
 
 typedef struct coordinates {
     uint8_t x;
     uint8_t y;
-} coordinates;
+} coordinates_t;
 
 /**
  * Initializes a dungeon data structure. It is an error to use
@@ -98,7 +103,7 @@ typedef struct coordinates {
  * - height: Height of dungeon to allocate
  * - max_rooms: Number of rooms to allocate
  */
-int dungeon_init(dungeon *dungeon, uint8_t width, uint8_t height, int max_rooms);
+int dungeon_init(dungeon_t *dungeon, uint8_t width, uint8_t height, int max_rooms);
 
 /**
  * Destroys a dungeon instance and frees any memory associated with it.
@@ -107,7 +112,7 @@ int dungeon_init(dungeon *dungeon, uint8_t width, uint8_t height, int max_rooms)
  * Parameters:
  * - dungeon: Pointer to dungeon data structure
  */
-void dungeon_destroy(dungeon *dungeon);
+void dungeon_destroy(dungeon_t *dungeon);
 
 /**
  * Writes a .pgm file for the dungeon hardness map for debugging purposes.
@@ -116,7 +121,7 @@ void dungeon_destroy(dungeon *dungeon);
  * Params:
  * - dungeon: Dungeon to write
  */
-void write_dungeon_pgm(dungeon *dungeon);
+void write_dungeon_pgm(dungeon_t *dungeon);
 
 /**
  * Fills a dungeon (2D array) with a randomly generated one.
@@ -133,7 +138,7 @@ void write_dungeon_pgm(dungeon *dungeon);
  * 
  * Returns: 0 if successful
  */
-int fill_dungeon(dungeon *dungeon, int min_rooms, int room_count_randomness_max, int room_min_width, int room_min_height, int room_size_randomness_max, int debug);
+int fill_dungeon(dungeon_t *dungeon, int min_rooms, int room_count_randomness_max, int room_min_width, int room_min_height, int room_size_randomness_max, int debug);
 
 /**
  * Fills the dungeon with randomly-generated stone. Overwrites everything
@@ -142,7 +147,7 @@ int fill_dungeon(dungeon *dungeon, int min_rooms, int room_count_randomness_max,
  * Params:
  * - dungeon: Dungeon to fill.
  */
-int fill_stone(dungeon *dungeon);
+int fill_stone(dungeon_t *dungeon);
 
 /**
  * Fills only the outside cell of a dungeon with stone.
@@ -150,7 +155,7 @@ int fill_stone(dungeon *dungeon);
  * Parameters:
  * - dungeon: Dungeon to fill
  */
-void fill_outside(dungeon *dungeon);
+void fill_outside(dungeon_t *dungeon);
 
 /**
  * Places several random rooms within the dungeon.
@@ -164,7 +169,7 @@ void fill_outside(dungeon *dungeon);
  * 
  * Returns: 0 if successful
  */
-int create_rooms(dungeon *dungeon, int count, uint8_t min_width, uint8_t min_height, int size_randomness_max);
+int create_rooms(dungeon_t *dungeon, int count, uint8_t min_width, uint8_t min_height, int size_randomness_max);
 
 /**
  * Places a single room of a particular width and height somewhere in the dungeon.
@@ -178,7 +183,7 @@ int create_rooms(dungeon *dungeon, int count, uint8_t min_width, uint8_t min_hei
  * - room_height: Height of the room
  * Returns: 0 if successful
  */
-int create_room(dungeon *dungeon, room *room, uint8_t room_width, uint8_t room_height);
+int create_room(dungeon_t *dungeon, room_t *room, uint8_t room_width, uint8_t room_height);
 
 /**
  * Connects every room in the dungeon.
@@ -187,7 +192,7 @@ int create_room(dungeon *dungeon, room *room, uint8_t room_width, uint8_t room_h
  * - dungeon: Dungeon to connect
  * Returns: 0 if successful
  */
-int connect_rooms(dungeon *dungeon);
+int connect_rooms(dungeon_t *dungeon);
 
 /**
  * Connects two points with a semi-random walkway.
@@ -200,7 +205,7 @@ int connect_rooms(dungeon *dungeon);
  * - y1: Y point 1
  * Returns: 0 if successful
  */
-int connect_points(dungeon *dungeon, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1);
+int connect_points(dungeon_t *dungeon, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1);
 
 /**
  * Places an up and down staircase somewhere on the map.
@@ -211,7 +216,7 @@ int connect_points(dungeon *dungeon, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t
  * - dungeon: Dungeon to modify
  * Returns: 0 if successful
  */
-int place_staircases(dungeon *dungeon);
+int place_staircases(dungeon_t *dungeon);
 
 /**
  * Places a material randomly within a room.
@@ -227,10 +232,10 @@ int place_staircases(dungeon *dungeon);
  * - y_loc: Pointer to variable to store placed Y coordinate in
  * Returns: 0 if successful
  */
-int place_in_room(dungeon *dungeon, room room, cell_type material, uint8_t *x_loc, uint8_t *y_loc);
+int place_in_room(dungeon_t *dungeon, room_t room, cell_type_t material, uint8_t *x_loc, uint8_t *y_loc);
 
-int random_location_in_room(dungeon *dungeon, room room, uint8_t *x_loc, uint8_t *y_loc);
+int random_location_in_room(dungeon_t *dungeon, room_t room, uint8_t *x_loc, uint8_t *y_loc);
 
-int random_location(dungeon *dungeon, uint8_t *x_loc, uint8_t *y_loc);
+int random_location(dungeon_t *dungeon, uint8_t *x_loc, uint8_t *y_loc);
 
 #endif

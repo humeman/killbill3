@@ -7,13 +7,13 @@
 
 #define INITIAL_CAPACITY 10
 
-int heap_init(binary_heap **heap, int item_size)
+int heap_init(binary_heap_t **heap, int item_size)
 {
-    *heap = malloc(sizeof(**heap));
+    *heap = (binary_heap_t *) malloc(sizeof (**heap));
     if (!*heap)
         RETURN_ERROR("could not allocate heap");
     (*heap)->capacity = INITIAL_CAPACITY;
-    (*heap)->items = malloc(sizeof(binary_heap_node) * INITIAL_CAPACITY);
+    (*heap)->items = (binary_heap_node_t *) malloc(sizeof (binary_heap_node_t) * INITIAL_CAPACITY);
     (*heap)->count = 0;
     (*heap)->item_size = item_size;
     if (!(*heap)->items)
@@ -21,7 +21,7 @@ int heap_init(binary_heap **heap, int item_size)
     return 0;
 }
 
-void heap_destroy(binary_heap *heap)
+void heap_destroy(binary_heap_t *heap)
 {
     int i;
     for (i = 0; i < heap->count; i++)
@@ -32,18 +32,18 @@ void heap_destroy(binary_heap *heap)
     free(heap);
 }
 
-int heap_insert(binary_heap *heap, void *item, uint32_t priority)
+int heap_insert(binary_heap_t *heap, void *item, uint32_t priority)
 {
     int i, parent;
-    binary_heap_node temp;
-    binary_heap_node *new;
+    binary_heap_node_t temp;
+    binary_heap_node_t *new_node;
     if (heap->count == heap->capacity)
     {
         heap->capacity *= 2;
-        new = realloc(heap->items, sizeof(binary_heap_node) * heap->capacity);
-        if (!new)
+        new_node = (binary_heap_node_t *) realloc(heap->items, sizeof (binary_heap_node_t) * heap->capacity);
+        if (!new_node)
             RETURN_ERROR("could not reallocate heap items");
-        heap->items = new;
+        heap->items = new_node;
     }
     heap->count++;
     i = heap->count - 1;
@@ -63,7 +63,7 @@ int heap_insert(binary_heap *heap, void *item, uint32_t priority)
     return 0;
 }
 
-int heap_top(binary_heap *heap, void *item, uint32_t *priority)
+int heap_top(binary_heap_t *heap, void *item, uint32_t *priority)
 {
     if (heap->count == 0)
         RETURN_ERROR("attempted to read top of heap while empty");
@@ -72,7 +72,7 @@ int heap_top(binary_heap *heap, void *item, uint32_t *priority)
     return 0;
 }
 
-int heap_at(binary_heap *heap, int i, void *item, uint32_t *priority)
+int heap_at(binary_heap_t *heap, int i, void *item, uint32_t *priority)
 {
     if (i >= heap->count || i < 0)
         RETURN_ERROR("attempted to read heap item at invalid index");
@@ -81,10 +81,10 @@ int heap_at(binary_heap *heap, int i, void *item, uint32_t *priority)
     return 0;
 }
 
-int heap_remove(binary_heap *heap, void *item, uint32_t *priority)
+int heap_remove(binary_heap_t *heap, void *item, uint32_t *priority)
 {
     int i, l, r, target;
-    binary_heap_node temp;
+    binary_heap_node_t temp;
     if (heap->count == 0)
         RETURN_ERROR("attempted to remove top of heap while empty");
     memcpy(item, heap->items[0].item, heap->item_size);
@@ -119,10 +119,10 @@ int heap_remove(binary_heap *heap, void *item, uint32_t *priority)
     return 0;
 }
 
-int heap_decrease_priority(binary_heap *heap, int compare(void *, void *), void *target, uint32_t priority)
+int heap_decrease_priority(binary_heap_t *heap, int compare(void *, void *), void *target, uint32_t priority)
 {
     int i, parent;
-    binary_heap_node temp;
+    binary_heap_node_t temp;
     // Find the item
     for (i = 0; i < heap->count; i++)
     {
@@ -147,7 +147,7 @@ int heap_decrease_priority(binary_heap *heap, int compare(void *, void *), void 
     return 0;
 }
 
-int heap_size(binary_heap *heap)
+int heap_size(binary_heap_t *heap)
 {
     return heap->count;
 }

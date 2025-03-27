@@ -30,7 +30,11 @@ Tags are created for each completed assignment. Run `git checkout 1_01` (for exa
 
     This program adds various random monsters to the dungeon and allows them to move,
     with the dungeon refreshing continually until none remain.
-* **Assignment 1.04**: Game UI
+* **Assignment 1.05**: Game UI
 
     This program turns the game into an actual game with an ncurses interface.
     The PC can now move, and colors, a monster list, quit button, and staircases are added. 
+* **Assignment 1.06**: C++ and Fog of War
+
+    The program has been ported to C++, and the player now has fog of war as it travels around the map
+    (it can only see tiles near where it has already traveled).

@@ -18,7 +18,7 @@ typedef enum colors {
     COLORS_OBJECT,
     COLORS_TEXT,
     COLORS_MENU_TEXT
-} colors;
+} colors_t;
 
 typedef enum keybinds {
     KB_UP_LEFT_0 = '7',
@@ -47,7 +47,7 @@ typedef enum keybinds {
     KB_SCROLL_DOWN = KEY_DOWN,
     KB_ESCAPE = 27, // can't find a constant for this???
     KB_QUIT = 'Q'
-} keybinds;
+} keybinds_t;
 
 char CHARACTERS_BY_CELL_TYPE[CELL_TYPES] = {
     [CELL_TYPE_STONE] = ' ',
@@ -78,6 +78,8 @@ int COLORS_BY_CELL_TYPE[CELL_TYPES] = {
 #define MONSTER_MENU_X_BEGIN WIDTH / 2 - MONSTER_MENU_WIDTH / 2
 #define MONSTER_MENU_Y_BEGIN HEIGHT / 2 - MONSTER_MENU_HEIGHT / 2
 
+#define FOG_OF_WAR_DISTANCE 3
+
 #define PRINT_REPEATED(x, y, count, char) { \
     move(y, x); \
     for (int i = 0; i < count; i++) addch(char); }
@@ -101,7 +103,18 @@ int COLORS_BY_CELL_TYPE[CELL_TYPES] = {
 char LOSE[] = ASCII_LOSE;
 char WIN[] = ASCII_WIN;
 
-void try_move(dungeon *dungeon, char *message, int x_offset, int y_offset) {
+void update_fog_of_war(dungeon_t *dungeon) {
+    int x, y;
+    for (x = dungeon->pc.x - FOG_OF_WAR_DISTANCE; x < dungeon->pc.x + FOG_OF_WAR_DISTANCE; x++) {
+        if (x < 0 || x >= dungeon->width) continue;
+        for (y = dungeon->pc.y - FOG_OF_WAR_DISTANCE; y < dungeon->pc.y + FOG_OF_WAR_DISTANCE; y++) {
+            if (y < 0 || y >= dungeon->height) continue;
+            dungeon->cells[x][y].attributes |= CELL_ATTRIBUTE_SEEN;
+        }
+    }
+}
+
+void try_move(dungeon_t *dungeon, char *message, int x_offset, int y_offset) {
     int new_x = dungeon->pc.x + x_offset;
     int new_y = dungeon->pc.y + y_offset;
     if (dungeon->cells[new_x][new_y].type == CELL_TYPE_STONE) {
@@ -114,12 +127,13 @@ void try_move(dungeon *dungeon, char *message, int x_offset, int y_offset) {
             snprintf(message, 80, "You ate the %c in the way.", dungeon->cells[new_x][new_y].character->display);
         }
         UPDATE_CHARACTER(dungeon->cells, &(dungeon->pc), new_x, new_y);
+        update_fog_of_war(dungeon);
     }
 }
 
-int fill_and_place_on(dungeon *dungeon, cell_type target_cell, int nummon) {
+int fill_and_place_on(dungeon_t *dungeon, cell_type_t target_cell, int nummon) {
     // Kill all the monsters (RIP)
-    character *character;
+    character_t *character;
     uint32_t trash;
     int x, y, placed;
     while (heap_size(dungeon->turn_queue) > 0) {
@@ -150,16 +164,17 @@ int fill_and_place_on(dungeon *dungeon, cell_type target_cell, int nummon) {
     return 0;
 }
 
-int game_start(dungeon *dungeon, int nummon) {
-    int c, i, x, y, trash, count, monster_count, overflow_count, next_turn_ready, was_pc;
+int game_start(dungeon_t *dungeon, int nummon) {
+    int c, i, trash, count, monster_count, overflow_count, next_turn_ready, was_pc;
+    uint8_t x, y;
     int monster_menu_on = 0;
     int monster_menu_i = 0;
-    game_result result;
-    character **ch;
+    game_result_t result;
+    character_t **ch;
     char *ascii;
-    if (!(ch = malloc(sizeof (*ch)))) RETURN_ERROR("failed to allocate memory");
+    if (!(ch = (character_t **) malloc(sizeof (*ch)))) RETURN_ERROR("failed to allocate memory");
     char *message;
-    if (!(message = malloc(1 + WIDTH))) {
+    if (!(message = (char *) malloc(1 + WIDTH))) {
         free(ch);
         RETURN_ERROR("failed to allocate memory");
     }
@@ -180,12 +195,17 @@ int game_start(dungeon *dungeon, int nummon) {
     if (curs_set(0) == ERR) ERROR_AND_EXIT("failed to init ncurses (disable cursor)");
     if (noecho() == ERR) ERROR_AND_EXIT("failed to init ncurses (noecho)");
 
+    update_fog_of_war(dungeon);
     while (1) {
         // Print the dungeon
         clear();
-        for (y = 0; y < HEIGHT - 3; y++) {
+        for (y = 0; y < dungeon->height; y++) {
             move(y + 1, 0);
-            for (x = 0; x < WIDTH; x++) {
+            for (x = 0; x < dungeon->width; x++) {
+                if (!(dungeon->cells[x][y].attributes & CELL_ATTRIBUTE_SEEN)) {
+                    addch(' ');
+                    continue;
+                }
                 if (dungeon->cells[x][y].character) {
                     c = dungeon->cells[x][y].character->type == CHARACTER_PC ? COLORS_PC : COLORS_MONSTER;
                     attrset(COLOR_PAIR(c) | A_BOLD);

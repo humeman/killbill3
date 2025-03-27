@@ -1,4 +1,7 @@
 # ASSIGNMENT BINARIES 
+assignment1_06: dungeon.o files.o heap.o pathfinding.o character.o game.o assignment1_06.o
+	g++ dungeon.o files.o heap.o pathfinding.o character.o game.o assignment1_06.o -o assignment1_06 -lm -lncurses
+
 assignment1_05: dungeon.o files.o heap.o pathfinding.o character.o game.o assignment1_05.o
 	gcc dungeon.o files.o heap.o pathfinding.o character.o game.o assignment1_05.o -o assignment1_05 -lm -lncurses
 
@@ -30,23 +33,26 @@ assignment1_04.o: src/assignments/1_04.c
 assignment1_05.o: src/assignments/1_05.c
 	gcc src/assignments/1_05.c -o assignment1_05.o -Wall -Werror -c -g
 
-game.o: src/game.c src/game.h
-	gcc src/game.c -o game.o -Wall -Werror -c -g
+assignment1_06.o: src/assignments/1_06.cpp
+	gcc src/assignments/1_06.cpp -o assignment1_06.o -Wall -Werror -c -g
 
-dungeon.o: src/dungeon.c src/dungeon.h
-	gcc src/dungeon.c -o dungeon.o -Wall -Werror -c -g
+game.o: src/game.cpp src/game.h
+	gcc src/game.cpp -o game.o -Wall -Werror -c -g
 
-files.o: src/files.c src/files.h
-	gcc src/files.c -o files.o -Wall -Werror -c -g
+dungeon.o: src/dungeon.cpp src/dungeon.h
+	gcc src/dungeon.cpp -o dungeon.o -Wall -Werror -c -g
 
-heap.o: src/heap.c src/heap.h
-	gcc src/heap.c -o heap.o -Wall -Werror -c -g
+files.o: src/files.cpp src/files.h
+	gcc src/files.cpp -o files.o -Wall -Werror -c -g
 
-pathfinding.o: src/pathfinding.c src/heap.h
-	gcc src/pathfinding.c -o pathfinding.o -Wall -Werror -c -g
+heap.o: src/heap.cpp src/heap.h
+	gcc src/heap.cpp -o heap.o -Wall -Werror -c -g
 
-character.o: src/character.c src/character.h
-	gcc src/character.c -o character.o -Wall -Werror -c -g
+pathfinding.o: src/pathfinding.cpp src/heap.h
+	gcc src/pathfinding.cpp -o pathfinding.o -Wall -Werror -c -g
+
+character.o: src/character.cpp src/character.h
+	gcc src/character.cpp -o character.o -Wall -Werror -c -g
 
 # PHONY TARGETS
 clean:

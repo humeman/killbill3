@@ -16,7 +16,7 @@
  *  - dungeon: The dungeon to generate the pathfinding maps for.
  * Returns: 0 if successful.
  */
-int update_pathfinding(dungeon *dungeon);
+int update_pathfinding(dungeon_t *dungeon);
 
 /**
  * Generates a pathfinding map for the specified dungeon and writes it
@@ -29,6 +29,6 @@ int update_pathfinding(dungeon *dungeon);
  *  - allow_tunneling: If non-zero, generates a map allowing tunneling through rock.
  * Returns: 0 if successful.
  */
-int generate_pathfinding_map(dungeon *dungeon, uint32_t **grid, int allow_tunneling);
+int generate_pathfinding_map(dungeon_t *dungeon, uint32_t **grid, int allow_tunneling);
 
 #endif

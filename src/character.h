@@ -21,11 +21,11 @@
     (ch)->y = y_; \
 }
 
-int place_monster(dungeon *dungeon, uint8_t attributes);
-int generate_monsters(dungeon *dungeon, int count);
-void destroy_character(dungeon *dungeon, character *character);
-int has_los(dungeon *dungeon, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1);
-void next_xy(dungeon *dungeon, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t *next_x, uint8_t *next_y);
-int next_turn(dungeon *dungeon, game_result *result, int *was_pc);
+int place_monster(dungeon_t *dungeon, uint8_t attributes);
+int generate_monsters(dungeon_t *dungeon, int count);
+void destroy_character(dungeon_t *dungeon, character_t *ch);
+int has_los(dungeon_t *dungeon, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1);
+void next_xy(dungeon_t *dungeon, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t *next_x, uint8_t *next_y);
+int next_turn(dungeon_t *dungeon, game_result_t *result, int *was_pc);
 
 #endif

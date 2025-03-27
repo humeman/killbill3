@@ -123,3 +123,15 @@
           Memory leak fixes with Valgrind. This is a fair bit harder now since
            ncurses doesn't free everything. :(
            https://www.manpagez.com/man/3/exit_curses/
+
+-- ASSIGNMENT 1.06 --
+3/27:
+    11p: Updated Makefile to use g++, and renamed all C files to .cpp.
+         Added _t suffixes to all the types I made since it started complaining
+          about conflicting names.
+         Added type casts where requested, fixed other compilation errors.
+         Switched the `mutable` flag over to an `attributes` int on cells, now
+          with two attributes, IMMUTABLE and SEEN (for fog of war).
+         Added fog of war. Whenever the PC moves, the cells in a 3 cell radius
+          outside of the PC get the SEEN attribute marked. Only SEEN cells are
+          rendered.

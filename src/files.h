@@ -21,7 +21,7 @@
  *  - debug: If non-zero, enables debug logging for the file's fields.
  * Returns: 0 if successful.
  */
-int dungeon_init_from_file(dungeon *dungeon, FILE *f, int debug);
+int dungeon_init_from_file(dungeon_t *dungeon, FILE *f, int debug);
 
 /**
  * Writes an initialized dungeon to a file.
@@ -32,6 +32,6 @@ int dungeon_init_from_file(dungeon *dungeon, FILE *f, int debug);
  *  - debug: If non-zero, enables debug logging for the file's fields.
  * Returns: 0 if successful.
  */
-int dungeon_save(dungeon *dungeon, FILE *f, int debug);
+int dungeon_save(dungeon_t *dungeon, FILE *f, int debug);
 
 #endif

@@ -1,23 +1,8 @@
 COMS 3270
-Assignment 1.05
+Assignment 1.06
 ---
 
-This assignment builds upon the past assignments by switching to an ncurses-based rendering system
-and adding player controls to the game. When running the game, it enters the normal game loop immediately.
-The user can input a command during their turn (defined by them either moving or resting) to move the PC
-around, or display a list of monsters relative to the PC. The monster menu, when opened, renders directly
-over top of the screen, but no turns can be taken (nothing game-wise will happen) while it's open. If there
-are too many monsters to display in the window, then a ^ or v will be displayed above/below the list to signal
-that -- the arrow keys can be used to scroll. Pressing ESC will return to the game (after a 1s ncurses delay),
-where the user can then take a turn. After the player's turn, any monsters who are ready to take their turn do
-so before it becomes the PC's turn again.
 
-The win/lose logic is unchanged. A character kills another character by moving to an occupied space. If the PC
- is killed, they lose, and if no monsters remain, they win. After the game ends, they can press any key to exit.
-
-Loading/saving still work, and enemies path as expected towards the player (depending on their attributes).
-Rooms are not persistent -- going up/down stairs generates an entirely new dungeon, destroying the old one.
-Some colors are used to make things easier to see.
 
 Implemented controls:
     PC Movement:
