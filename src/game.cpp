@@ -1,3 +1,7 @@
+#include <ncurses.h>
+#include <cstring>
+#include <cstdlib>
+
 #include "game.h"
 #include "macros.h"
 #include "dungeon.h"
@@ -5,10 +9,6 @@
 #include "character.h"
 #include "ascii.h"
 #include "pathfinding.h"
-
-#include <string.h>
-#include <ncurses.h>
-#include <stdlib.h>
 
 typedef enum colors {
     COLORS_FLOOR = 1,

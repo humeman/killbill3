@@ -1,7 +1,7 @@
 #ifndef CHARACTER_H
 #define CHARACTER_H
 
-#include <stdint.h>
+#include <cstdint>
 #include "dungeon.h"
 
 #define MONSTER_ATTRIBUTE_INTELLIGENT 0x01

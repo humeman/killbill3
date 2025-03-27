@@ -1,7 +1,7 @@
-#include <string.h>
+#include <cstring>
 #include <endian.h>
-#include <stdint.h>
-#include <stdlib.h>
+#include <cstdint>
+#include <cstdlib>
 
 #include "files.h"
 #include "dungeon.h"

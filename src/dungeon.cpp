@@ -1,6 +1,6 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
+#include <cstdlib>
+#include <cstdio>
+#include <cmath>
 #include "dungeon.h"
 #include "macros.h"
 
@@ -119,23 +119,19 @@ void write_dungeon_pgm(dungeon_t *dungeon) {
 
 int fill_dungeon(dungeon_t *dungeon, int min_rooms, int room_count_randomness_max, int room_min_width, int room_min_height, int room_size_randomness_max, int debug) {
     if (fill_stone(dungeon)) {
-        fprintf(stderr, "fill_stone failed\n");
-        return 1;
+        RETURN_ERROR("fill_stone failed");
     }
     dungeon->room_count = 0;
     dungeon->min_room_count = min_rooms;
     if (create_rooms(dungeon, min_rooms + (rand() % room_count_randomness_max), room_min_width, room_min_height, room_size_randomness_max)) {
-        fprintf(stderr, "create_rooms failed\n");
-        return 1;
+        RETURN_ERROR("create_rooms failed");
     }
     fill_outside(dungeon);
     if (connect_rooms(dungeon)) {
-        fprintf(stderr, "connect_rooms failed\n");
-        return 1;
+        RETURN_ERROR("connect_rooms failed");
     }
     if (place_staircases(dungeon)) {
-        fprintf(stderr, "place_staircases failed\n");
-        return 1;
+        RETURN_ERROR("place_staircases failed");
     }
 
     // Pick the PC's spawn point
@@ -280,8 +276,7 @@ int create_rooms(dungeon_t *dungeon, int count, uint8_t min_width, uint8_t min_h
     int room_width, room_height;
 
     if (count > dungeon->max_room_count) {
-        fprintf(stderr, "create_rooms caller wants %d rooms, but the max is %d\n", count, dungeon->max_room_count);
-        return 1;
+        RETURN_ERROR("create_rooms caller wants %d rooms, but the max is %d", count, dungeon->max_room_count);
     }
 
     for (i = 0; i < count; i++) {
@@ -440,8 +435,7 @@ int connect_points(dungeon_t *dungeon, uint8_t x0, uint8_t y0, uint8_t x1, uint8
         // In our normal room configuration, this is impossible regardless of what random choices
         // we generate, since each room is within the bounds of the mutable area of the room.
         if (!x_poss && !y_poss) {
-            fprintf(stderr, "err: connect_points from (%d, %d) to (%d, %d) has no possible next location at (%d, %d)\n", x0, y0, x1, y1, x, y);
-            return 1;
+            RETURN_ERROR("connect_points from (%d, %d) to (%d, %d) has no possible next location at (%d, %d)", x0, y0, x1, y1, x, y);
         }
 
         // Flip directions if we can't place in our desired direction.

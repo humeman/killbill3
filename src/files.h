@@ -7,7 +7,7 @@
 #ifndef FILES_H
 #define FILES_H
 
-#include <stdio.h>
+#include <cstdio>
 
 #include "dungeon.h"
 #include "macros.h"

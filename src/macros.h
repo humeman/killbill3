@@ -18,8 +18,8 @@
 #define RANDOM_MONSTERS_MAX 10
 #define PC_SPEED 10
 
-#define RETURN_ERROR(message) { \
-    fprintf(stderr, "err: %s\n", message); \
+#define RETURN_ERROR(message, ...) { \
+    fprintf(stderr, "err: " message "\n", ##__VA_ARGS__); \
     return 1; \
 }
 

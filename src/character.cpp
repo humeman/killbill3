@@ -4,10 +4,10 @@
 #include "pathfinding.h"
 #include "heap.h"
 
-#include <stdint.h>
-#include <stdio.h>
-#include <math.h>
-#include <stdlib.h>
+#include <cstdint>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
 
 int place_monster(dungeon_t *dungeon, uint8_t attributes) {
     uint8_t x, y;

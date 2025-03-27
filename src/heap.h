@@ -7,7 +7,7 @@
 #ifndef HEAP_H
 #define HEAP_H
 
-#include <stdint.h>
+#include <cstdint>
 
 typedef struct {
     void *item;

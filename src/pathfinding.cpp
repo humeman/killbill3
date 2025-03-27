@@ -1,9 +1,9 @@
+#include <cstdio>
+
 #include "pathfinding.h"
 #include "macros.h"
 #include "heap.h"
 #include "dungeon.h"
-
-#include <stdio.h>
 
 #define HARDNESS_OF(hardness) (hardness == 0 ? 1 : 1 + (hardness / 85))
 

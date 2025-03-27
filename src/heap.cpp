@@ -1,9 +1,10 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cstdint>
+
 #include "heap.h"
 #include "macros.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
 
 #define INITIAL_CAPACITY 10
 

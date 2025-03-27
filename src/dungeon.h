@@ -7,7 +7,7 @@
 #ifndef DUNGEON_H
 #define DUNGEON_H
 
-#include <stdint.h>
+#include <cstdint>
 
 #include "heap.h"
 

@@ -34,25 +34,25 @@ assignment1_05.o: src/assignments/1_05.c
 	gcc src/assignments/1_05.c -o assignment1_05.o -Wall -Werror -c -g
 
 assignment1_06.o: src/assignments/1_06.cpp
-	gcc src/assignments/1_06.cpp -o assignment1_06.o -Wall -Werror -c -g
+	g++ src/assignments/1_06.cpp -o assignment1_06.o -Wall -Werror -c -g
 
 game.o: src/game.cpp src/game.h
-	gcc src/game.cpp -o game.o -Wall -Werror -c -g
+	g++ src/game.cpp -o game.o -Wall -Werror -c -g
 
 dungeon.o: src/dungeon.cpp src/dungeon.h
-	gcc src/dungeon.cpp -o dungeon.o -Wall -Werror -c -g
+	g++ src/dungeon.cpp -o dungeon.o -Wall -Werror -c -g
 
 files.o: src/files.cpp src/files.h
-	gcc src/files.cpp -o files.o -Wall -Werror -c -g
+	g++ src/files.cpp -o files.o -Wall -Werror -c -g
 
 heap.o: src/heap.cpp src/heap.h
-	gcc src/heap.cpp -o heap.o -Wall -Werror -c -g
+	g++ src/heap.cpp -o heap.o -Wall -Werror -c -g
 
 pathfinding.o: src/pathfinding.cpp src/heap.h
-	gcc src/pathfinding.cpp -o pathfinding.o -Wall -Werror -c -g
+	g++ src/pathfinding.cpp -o pathfinding.o -Wall -Werror -c -g
 
 character.o: src/character.cpp src/character.h
-	gcc src/character.cpp -o character.o -Wall -Werror -c -g
+	g++ src/character.cpp -o character.o -Wall -Werror -c -g
 
 # PHONY TARGETS
 clean:

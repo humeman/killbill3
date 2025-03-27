@@ -1,8 +1,7 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <string.h>
-#include <unistd.h>
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
+#include <cstring>
 #include "../dungeon.h"
 #include "../files.h"
 #include "../pathfinding.h"
@@ -34,53 +33,46 @@ int main(int argc, char* argv[]) {
     if (read) {
         f = fopen(path, "rb");
         if (f == NULL) {
-            fprintf(stderr, "err: could not open file %s\n", path);
             free(path);
-            return 1;
+            RETURN_ERROR("could not open file %s", path);
         }
         if (dungeon_init_from_file(&dungeon, f, debug)) {
-            fprintf(stderr, "err: could not load dungeon from file %s\n", path);
             free(path);
             fclose(f);
-            return 1;
+            RETURN_ERROR("could not load dungeon from file %s", path);
         }
         fclose(f);
     }
     else {
         if (dungeon_init(&dungeon, DUNGEON_WIDTH, DUNGEON_HEIGHT, ROOM_MIN_COUNT + ROOM_COUNT_MAX_RANDOMNESS)) {
-            fprintf(stderr, "err: could not allocate memory for dungeon\n");
             free(path);
-            return 1;
+            RETURN_ERROR("could not allocate memory for dungeon");
         }
         for (x = 0; x < dungeon.width; x++)
             for (y = 0; y < dungeon.height; y++)
                 dungeon.cells[x][y].type = CELL_TYPE_STONE;
 
         if (fill_dungeon(&dungeon, ROOM_MIN_COUNT, ROOM_COUNT_MAX_RANDOMNESS, ROOM_MIN_WIDTH, ROOM_MIN_HEIGHT, ROOM_MAX_RANDOMNESS, debug)) {
-            fprintf(stderr, "err: could not generate dungeon\n");
             dungeon_destroy(&dungeon);
             free(path);
-            return 1;
+            RETURN_ERROR("could not generate dungeon");
         }
     }
 
     if (write) {
         f = fopen(path, "wb");
         if (f == NULL) {
-            fprintf(stderr, "err: could not open file %s\n", path);
             dungeon_destroy(&dungeon);
             free(path);
-            return 1;
+            RETURN_ERROR("could not open file %s", path);
         }
         if (dungeon_save(&dungeon, f, debug)) {
-            fprintf(stderr, "err: could not save dungeon to %s\n", path);
             dungeon_destroy(&dungeon);
             free(path);
             fclose(f);
-            return 1;
+            RETURN_ERROR("could not save dungeon to %s", path);
         }
         fclose(f);
-        printf("saved dungeon to %s\n", path);
     }
 
     if (debug) {
@@ -89,10 +81,9 @@ int main(int argc, char* argv[]) {
     }
 
     if (update_pathfinding(&dungeon)) {
-        fprintf(stderr, "err: failed to generate pathfinding maps\n");
         dungeon_destroy(&dungeon);
         free(path);
-        return 1;
+        RETURN_ERROR("failed to generate pathfinding maps");
     }
 
     character *character;
@@ -100,16 +91,14 @@ int main(int argc, char* argv[]) {
     // The PC will play if it's in the heap. We'll let it go first since it'll probably never win :)
     character = &(dungeon.pc);
     if (heap_insert(dungeon.turn_queue, (void *) &character, 0)) {
-        fprintf(stderr, "err: failed to insert PC into heap\n");
         dungeon_destroy(&dungeon);
         free(path);
-        return 1;
+        RETURN_ERROR("failed to insert PC into heap");
     }
     if (generate_monsters(&dungeon, nummon < 0 ? (rand() % (RANDOM_MONSTERS_MAX - RANDOM_MONSTERS_MIN + 1)) + RANDOM_MONSTERS_MIN : nummon)) {
-        fprintf(stderr, "err: couldn't place monsters\n");
         dungeon_destroy(&dungeon);
         free(path);
-        return 1;
+        RETURN_ERROR("couldn't place monsters");
     }
 
     if (game_start(&dungeon, nummon)) {
@@ -120,10 +109,9 @@ int main(int argc, char* argv[]) {
 
     while (heap_size(dungeon.turn_queue) > 0) {
         if (heap_remove(dungeon.turn_queue, (void *) &character, &trash)) {
-            fprintf(stderr, "err: failed to remove from turn queue while cleaning up\n");
             dungeon_destroy(&dungeon);
             free(path);
-            return 1;
+            RETURN_ERROR("failed to remove from turn queue while cleaning up");
         }
         if (character == &(dungeon.pc)) continue;
         destroy_character(&dungeon, character);
@@ -145,8 +133,7 @@ int prepare_args(int argc, char* argv[], int *read, int *write, int *debug, int 
     char *home = getenv("HOME");
     *path = (char *) malloc(sizeof (char) * (strlen(home) + strlen(DEFAULT_PATH) + 1));
     if (*path == NULL) {
-        fprintf(stderr, "err: failed to allocate memory\n");
-        return 1;
+        RETURN_ERROR("failed to allocate memory");
     }
     strcpy(*path, home);
     strcat(*path, DEFAULT_PATH);
@@ -157,8 +144,7 @@ int prepare_args(int argc, char* argv[], int *read, int *write, int *debug, int 
             // This is unnecessary, but simplifies all the free()s later.
             *path = (char *) malloc(sizeof (char) * (strlen(argv[i]) + 1));
             if (*path == NULL) {
-                fprintf(stderr, "err: failed to allocate memory\n");
-                return 1;
+                RETURN_ERROR("failed to allocate memory\n");
             }
             strcpy(*path, argv[i]);
             path_next = 0;
@@ -168,9 +154,8 @@ int prepare_args(int argc, char* argv[], int *read, int *write, int *debug, int 
             // https://stackoverflow.com/questions/2024648/convert-a-string-to-int-but-only-if-really-is-an-int
             temp = strtol(argv[i], &err, 10);
             if (*err != '\0' || temp > INT32_MAX || temp < 0) {
-                fprintf(stderr, "err: -n/--nummon must be an int\n");
                 free(*path);
-                return 1;
+                RETURN_ERROR("-n/--nummon must be an int\n");
             }
             *nummon = (int) temp;
             nummon_next = 0;
@@ -189,28 +174,24 @@ int prepare_args(int argc, char* argv[], int *read, int *write, int *debug, int 
             return 1;
         }
         else {
-            fprintf(stderr, "err: unrecognized argument: %s. run -h/--help for usage\n", argv[i]);
             free(*path);
-            return 1;
+            RETURN_ERROR("unrecognized argument: %s. run -h/--help for usage", argv[i]);
         }
     }
     if (path_next) {
-        fprintf(stderr, "err: specify a path after -p/--path\n");
         free(*path);
-        return 1;
+        RETURN_ERROR("specify a path after -p/--path");
     }
 
     if (nummon_next) {
-        fprintf(stderr, "err: specify a number of monsters after -n/--nummon\n");
         free(*path);
-        return 1;
+        RETURN_ERROR("specify a number of monsters after -n/--nummon");
     }
 
     // It's an error to specify a path without reading or writing
     if (custom_path && !*read && !*write) {
-        fprintf(stderr, "err: specify one of -l/--load, -w/--write with -p/--path\n");
         free(*path);
-        return 1;
+        RETURN_ERROR("specify one of -l/--load, -w/--write with -p/--path");
     }
     return 0;
 }
