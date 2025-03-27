@@ -135,3 +135,6 @@
          Added fog of war. Whenever the PC moves, the cells in a 3 cell radius
           outside of the PC get the SEEN attribute marked. Only SEEN cells are
           rendered.
+         General cleanup: moved variable declarations to the top of functions,
+          made all error returns use RETURN_ERROR or ERROR_AND_EXIT macros,
+          switched C standard library imports to C++ (ie, string.h -> cstring).
