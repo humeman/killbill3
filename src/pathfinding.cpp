@@ -5,6 +5,7 @@
 #include "heap.h"
 #include "dungeon.h"
 #include "character.h"
+#include <stdexcept>
 
 #define HARDNESS_OF(hardness) (hardness == 0 ? 1 : 1 + (hardness / 85))
 
@@ -12,37 +13,35 @@
  * A comparator function (for use in a heap) which evaluates the equality of two coordinates,
  * returning 0 if equivalent and 1 otherwise.
  */
-int compare_coords(void *a, void *b) {
+bool compare_coords(void *a, void *b) {
     coordinates_t *ca = (coordinates_t *) a;
     coordinates_t *cb = (coordinates_t *) b;
     return !(ca->x == cb->x && ca->y == cb->y);
 }
 
-int update_pathfinding(dungeon_t *dungeon, uint32_t **pathfinding_no_tunnel, uint32_t **pathfinding_tunnel, character_t *pc) {
-    if (generate_pathfinding_map(dungeon, pathfinding_no_tunnel, 0, pc)) RETURN_ERROR("failed to generate no-tunneling pathfinding map");
-    if (generate_pathfinding_map(dungeon, pathfinding_tunnel, 1, pc)) RETURN_ERROR("failed to generate tunneling pathfinding map");
-    return 0;
+void update_pathfinding(dungeon_t *dungeon, uint32_t **pathfinding_no_tunnel, uint32_t **pathfinding_tunnel, character_t *pc) {
+    generate_pathfinding_map(dungeon, pathfinding_no_tunnel, 0, pc);
+    generate_pathfinding_map(dungeon, pathfinding_tunnel, 1, pc);
 }
 
 /**
  * This algorithm is partially based on the pseuducode provided here:
  * https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm#Using_a_priority_queue
  */
-int generate_pathfinding_map(dungeon_t *dungeon, uint32_t **grid, int allow_tunneling, character_t *pc) {
+void generate_pathfinding_map(dungeon_t *dungeon, uint32_t **grid, int allow_tunneling, character_t *pc) {
     uint8_t x, y, x1, y1;
     uint8_t src_x, src_y;
     uint32_t distance, trash;
-    binary_heap_t *queue;
     coordinates_t coords;
     int done[dungeon->width][dungeon->height];
-    if (heap_init(&queue, sizeof (coordinates_t))) RETURN_ERROR("failed to initialize heap");
+    binary_heap_t queue(sizeof (coordinates_t), compare_coords);
     src_x = pc->x;
     src_y = pc->y;
 
     // Set the source cell to distance 0, add to queue
     grid[src_x][src_y] = 0;
     coords = (coordinates_t) {src_x, src_y};
-    if (heap_insert(queue, &coords, 0)) RETURN_ERROR("failed to insert into heap");
+    queue.insert(&coords, 0);
     
     // Add every other cell with a distance of infinity
     for (x = 0; x < dungeon->width; x++) {
@@ -56,14 +55,14 @@ int generate_pathfinding_map(dungeon_t *dungeon, uint32_t **grid, int allow_tunn
             } else {
                 done[x][y] = 0;
                 coords = (coordinates_t) {x, y};
-                if (heap_insert(queue, &coords, UINT32_MAX)) RETURN_ERROR("failed to insert into heap");
+                queue.insert(&coords, UINT32_MAX);
             }
         }
     }
 
-    while (heap_size(queue) != 0) {
+    while (queue.size() != 0) {
         // Extract the minimal cell
-        if (heap_remove(queue, (void*) &coords, &trash)) RETURN_ERROR("failed to extract top from heap");
+        queue.remove((void*) &coords, &trash);
         x = coords.x;
         y = coords.y;
         done[x][y] = 1;
@@ -83,11 +82,9 @@ int generate_pathfinding_map(dungeon_t *dungeon, uint32_t **grid, int allow_tunn
                 if (distance < grid[x1][y1]) {
                     grid[x1][y1] = distance;
                     coords = (coordinates_t) {x1, y1};
-                    if (heap_decrease_priority(queue, compare_coords, &coords, distance)) RETURN_ERROR("failed to decrease heap priority");
+                    queue.decrease_priority(&coords, distance);
                 }
             }
         }
     }
-    heap_destroy(queue);
-    return 0;
 }

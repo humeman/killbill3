@@ -54,9 +54,12 @@ void place_monster(dungeon_t *dungeon, binary_heap_t *turn_queue, character_t **
     mo->pc_seen = 0;
 
     character_map[coords.x][coords.y] = ch;
-    if (heap_insert(turn_queue, (void *) &ch, ch->speed)) {
+    try {
+        turn_queue->insert((void *) &ch, ch->speed);
+     } catch (std::runtime_error &e) {
         free(mo);
         free(ch);
+        fprintf(stderr, "err: %s\n", e.what());
         throw std::runtime_error("failed to insert monster into turn queue");
     }
 }
@@ -78,8 +81,8 @@ void generate_monsters(dungeon_t *dungeon, binary_heap_t *turn_queue, character_
             place_monster(dungeon, turn_queue, character_map, attributes);
         } catch (std::runtime_error &e) {
             pc = NULL;
-            while (heap_size(turn_queue) != 0) {
-                if (heap_remove(turn_queue, (void *) &ch, &priority)) throw std::runtime_error("catastrophe: failed to remove from heap while cleaning up an error");
+            while (turn_queue->size() != 0) {
+                turn_queue->remove((void *) &ch, &priority);
                 if (ch->type == CHARACTER_PC) {
                     pc = ch;
                     pc_priority = priority;
@@ -88,7 +91,8 @@ void generate_monsters(dungeon_t *dungeon, binary_heap_t *turn_queue, character_
                     destroy_character(dungeon, character_map, ch);
                 }
             }
-            if (pc != NULL && heap_insert(turn_queue, (void *) &pc, pc_priority)) throw std::runtime_error("catastrophe: failed to reinsert PC into heap while cleaning up an error");
+            if (pc != NULL)
+                turn_queue->insert((void *) &pc, pc_priority);
             throw std::runtime_error("failed to generate monsters");
         }
     }
@@ -188,8 +192,8 @@ void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t *turn_queue, c
     int i, j, x1, y1;
     uint32_t** map;
     cell_t* next;
-    while (heap_size(turn_queue) > 0 && ch == NULL) {
-        if (heap_remove(turn_queue, (void*) &ch, &priority)) throw std::runtime_error("failed to remove from top of turn queue");
+    while (turn_queue->size() > 0 && ch == NULL) {
+        turn_queue->remove((void*) &ch, &priority);
         // The dead flag here avoids us having to remove from the heap at an arbitrary location.
         // We just destroy it when it comes off the queue next.
         if (ch->dead) {
@@ -199,7 +203,7 @@ void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t *turn_queue, c
             }
         }
     }
-    if (ch == NULL || (ch == pc && heap_size(turn_queue) == 0)) {
+    if (ch == NULL || (ch == pc && turn_queue->size() == 0)) {
         // Everyone is dead. Game over.
         *result = GAME_RESULT_WIN;
         return;
@@ -212,8 +216,7 @@ void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t *turn_queue, c
     // Previously for random movement, but now we'll render the changes
     // and wait for user input
     if (ch == pc) {
-        if (heap_insert(turn_queue, (void*) &ch, priority + ch->speed))
-            throw std::runtime_error("failed to reinsert PC to turn queue");
+        turn_queue->insert((void*) &ch, priority + ch->speed);
         *was_pc = 1;
         return; // No open space (impossible with a normal map)
     }
@@ -334,7 +337,7 @@ void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t *turn_queue, c
                 if (character_map[next_x][next_y]->type == CHARACTER_PC) {
                     UPDATE_CHARACTER(character_map, ch, next_x, next_y);
                     *result = GAME_RESULT_LOSE;
-                    heap_insert(turn_queue, &ch, priority + ch->speed); // So this character gets free'd
+                    turn_queue->insert(&ch, priority + ch->speed); // So this character gets free'd
                     return;
                 }
             }
@@ -350,7 +353,6 @@ void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t *turn_queue, c
         }
     }
 
-    if (heap_insert(turn_queue, &ch, priority + ch->speed))
-        throw std::runtime_error("failed to re-insert character into turn queue");
+    turn_queue->insert(&ch, priority + ch->speed);
     return;
 }

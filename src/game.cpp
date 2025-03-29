@@ -132,7 +132,9 @@ game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
             goto init_free_pathfinding_tunnel;
         }
     }
-    if (heap_init(&turn_queue, sizeof (character_t*))) {
+    try {
+        turn_queue = new binary_heap_t(sizeof (character_t *), NULL);
+    } catch (std::exception &e) {
         goto init_free_all_pathfinding_tunnel;
     }
 
@@ -161,7 +163,7 @@ game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
     init_free_character_map:
     free(character_map);
     init_free_heap:
-    heap_destroy(turn_queue);
+    delete turn_queue;
     init_free_all_pathfinding_tunnel:
     for (j = 0; j < width; j++) free(pathfinding_tunnel[j]);
     init_free_pathfinding_tunnel:
@@ -177,9 +179,12 @@ game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
 game_t::~game_t() {
     character_t *character;
     uint32_t trash;
-    while (heap_size(turn_queue) > 0) {
-        if (heap_remove(turn_queue, (void *) &character, &trash)) {
+    while (turn_queue->size() > 0) {
+        try {
+            turn_queue->remove((void *) &character, &trash);
+         } catch (std::exception &e) {
             // Nothing we can do here :shrug:
+            fprintf(stderr, "err: catastrophe: failed to remove from heap while destroying game");
         }
         if (character == &pc) continue;
         destroy_character(dungeon, character_map, character);
@@ -187,7 +192,7 @@ game_t::~game_t() {
     
     uint8_t width = dungeon->width;
     int i;
-    heap_destroy(turn_queue);
+    delete turn_queue;
     free(message);
     for (i = 0; i < width; i++) free(character_map[i]);
     free(character_map);
@@ -228,9 +233,7 @@ void game_t::init_from_file(char *path) {
     update_pathfinding(dungeon, pathfinding_no_tunnel, pathfinding_tunnel, &pc);
 
     pc_pt = &pc;
-    if (heap_insert(turn_queue, (void *) &pc_pt, 0)) {
-        throw std::runtime_error("failed to insert PC into heap");
-    }
+    turn_queue->insert((void *) &pc_pt, 0);
 }
 
 void game_t::init_random() {
@@ -252,9 +255,7 @@ void game_t::init_random() {
     update_pathfinding(dungeon, pathfinding_no_tunnel, pathfinding_tunnel, &pc);
 
     pc_pt = &pc;
-    if (heap_insert(turn_queue, (void *) &pc_pt, 0)) {
-        throw std::runtime_error("failed to insert PC into heap");
-    }
+    turn_queue->insert((void *) &pc_pt, 0);
 }
 
 void game_t::write_to_file(char *path) {
@@ -314,9 +315,8 @@ void game_t::fill_and_place_on(cell_type_t target_cell) {
     character_t *character;
     uint32_t trash;
     int x, y, placed;
-    while (heap_size(turn_queue) > 0) {
-        if (heap_remove(turn_queue, (void *) &character, &trash))
-            throw std::runtime_error("failed to remove from turn queue while cleaning up");
+    while (turn_queue->size() > 0) {
+        turn_queue->remove((void *) &character, &trash);
         if (character == &pc) continue;
         destroy_character(dungeon, character_map, character);
     }
@@ -334,7 +334,7 @@ void game_t::fill_and_place_on(cell_type_t target_cell) {
     if (!placed) throw std::runtime_error("no target cell present to place PC on");
     // Readd the PC and new monsters
     character = &pc;
-    heap_insert(turn_queue, (void *) &character, 0);
+    turn_queue->insert((void *) &character, 0);
     generate_monsters(dungeon, turn_queue, character_map, nummon < 0 ? (rand() % (RANDOM_MONSTERS_MAX - RANDOM_MONSTERS_MIN + 1)) + RANDOM_MONSTERS_MIN : nummon);
 }
 
@@ -405,11 +405,16 @@ void game_t::run() {
                 PRINT_REPEATED(MONSTER_MENU_X_BEGIN, y, MONSTER_MENU_WIDTH, ' ');
 
             attron(A_BOLD);
-            count = heap_size(turn_queue);
+            count = turn_queue->size();
             PRINTW_CENTERED_AT(WIDTH / 2, MONSTER_MENU_Y_BEGIN + 1, "MONSTERS (%d)", count - 1);
             attroff(A_BOLD);
             for (i = 0, monster_count = 0; monster_count < MONSTER_MENU_HEIGHT - 6 + monster_menu_i && i < count; i++) {
-                if (heap_at(turn_queue, i, ch, (uint32_t *) &trash)) ERROR_AND_EXIT("failed to get monster from turn queue");
+                try {
+                    turn_queue->at(i, ch, (uint32_t *) &trash);
+                } catch (std::runtime_error &e) {
+                    fprintf(stderr, "err: %s\n", e.what());
+                    ERROR_AND_EXIT("failed to get monster from turn queue");
+                }
                 if ((*ch)->type == CHARACTER_MONSTER) {
                     if (monster_count >= monster_menu_i) {
                         x = pc.x - (*ch)->x;
@@ -457,7 +462,7 @@ void game_t::run() {
                     snprintf(message, WIDTH, "Can't scroll without monster menu open!");
                     break;
                 }
-                count = heap_size(turn_queue) - 1;
+                count = turn_queue->size() - 1;
                 overflow_count = count - (MONSTER_MENU_HEIGHT - 6);
                 if (overflow_count < 0) overflow_count = 0;
                 monster_menu_i++;
@@ -598,8 +603,11 @@ void game_t::run() {
                 goto exit;
             }
 
-            if (update_pathfinding(dungeon, pathfinding_no_tunnel, pathfinding_tunnel, &pc))
-                ERROR_AND_EXIT("failed to update monster pathfinding");
+            try {
+                update_pathfinding(dungeon, pathfinding_no_tunnel, pathfinding_tunnel, &pc);
+            } catch (std::runtime_error &e) {
+                ERROR_AND_EXIT("failed to update monster pathfinding: %s", e.what());
+            }
         }
     }
     
