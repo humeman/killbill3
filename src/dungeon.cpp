@@ -76,6 +76,7 @@ void dungeon_t::fill(int min_rooms, int room_count_randomness_max, int room_min_
     room_count = 0;
     min_room_count = min_rooms;
     create_rooms(min_rooms + (rand() % room_count_randomness_max), room_min_width, room_min_height, room_size_randomness_max);
+    connect_rooms();
     fill_outside();
     place_staircases();
 }

@@ -138,7 +138,7 @@ game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
 
     character_map = (character_t ***) malloc(width * sizeof (character_t**));
     if (character_map == NULL) {
-        goto init_free_all_pathfinding_tunnel;
+        goto init_free_heap;
     }
     for (i = 0; i < width; i++) {
         character_map[i] = (character_t **) malloc(height * sizeof (character_t*));
@@ -160,6 +160,8 @@ game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
     for (j = 0; j < width; j++) free(character_map[j]);
     init_free_character_map:
     free(character_map);
+    init_free_heap:
+    heap_destroy(turn_queue);
     init_free_all_pathfinding_tunnel:
     for (j = 0; j < width; j++) free(pathfinding_tunnel[j]);
     init_free_pathfinding_tunnel:
