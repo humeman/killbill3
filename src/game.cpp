@@ -9,6 +9,7 @@
 #include "character.h"
 #include "ascii.h"
 #include "pathfinding.h"
+#include <stdexcept>
 
 typedef enum colors {
     COLORS_FLOOR = 1,
@@ -103,31 +104,137 @@ int COLORS_BY_CELL_TYPE[CELL_TYPES] = {
 char LOSE[] = ASCII_LOSE;
 char WIN[] = ASCII_WIN;
 
-void update_fog_of_war(dungeon_t *dungeon) {
+game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
+    int i, j;
+    this->debug = debug;
+    this->dungeon = new dungeon_t(width, height, max_rooms);
+
+    pathfinding_no_tunnel = (uint32_t **) malloc(width * sizeof (uint32_t*));
+    if (pathfinding_no_tunnel == NULL) {
+        goto init_free;
+    }
+    for (i = 0; i < width; i++) {
+        pathfinding_no_tunnel[i] = (uint32_t *) malloc(height * sizeof (uint32_t));
+        if (pathfinding_no_tunnel[i] == NULL) {
+            for (j = 0; j < i; j++) free(pathfinding_no_tunnel[j]);
+            goto init_free_pathfinding_no_tunnel;
+        }
+    }
+
+    pathfinding_tunnel = (uint32_t **) malloc(width * sizeof (uint32_t*));
+    if (pathfinding_tunnel == NULL) {
+        goto init_free_all_pathfinding_no_tunnel;
+    }
+    for (i = 0; i < width; i++) {
+        pathfinding_tunnel[i] = (uint32_t *) malloc(height * sizeof (uint32_t));
+        if (pathfinding_tunnel[i] == NULL) {
+            for (j = 0; j < i; j++) free(pathfinding_tunnel[j]);
+            goto init_free_pathfinding_tunnel;
+        }
+    }
+    if (heap_init(&turn_queue, sizeof (character_t*))) {
+        goto init_free_all_pathfinding_tunnel;
+    }
+
+    character_map = (character_t ***) malloc(width * sizeof (character_t**));
+    if (character_map == NULL) {
+        goto init_free_all_pathfinding_tunnel;
+    }
+    for (i = 0; i < width; i++) {
+        character_map[i] = (character_t **) malloc(height * sizeof (character_t*));
+        if (character_map[i] == NULL) {
+            for (j = 0; j < i; j++) free(character_map[j]);
+            goto init_free_character_map;
+        }
+    }
+
+    init_free_character_map:
+    free(character_map);
+    init_free_all_pathfinding_tunnel:
+    for (j = 0; j < width; j++) free(pathfinding_tunnel[j]);
+    init_free_pathfinding_tunnel:
+    free(pathfinding_tunnel);
+    init_free_all_pathfinding_no_tunnel:
+    for (j = 0; j < width; j++) free(pathfinding_no_tunnel[j]);
+    init_free_pathfinding_no_tunnel:
+    free(pathfinding_no_tunnel);
+    init_free:
+    throw std::runtime_error("failed to allocate dungeon");
+}
+
+void game_t::init_from_file(char *path) {
+    coordinates_t pc_coords;
+    FILE *f;
+    f = fopen(path, "rb");
+    if (f == NULL) {
+        free(path);
+        throw std::runtime_error("could not open the specified file");
+    }
+    try {
+        this->dungeon->fill_from_file(f, debug, &pc_coords);
+    }
+    catch (std::runtime_error &e) {
+        free(path);
+        fclose(f);
+        throw e;
+    }
+    fclose(f);
+
+    // Place the PC now
+    pc.x = pc_coords.x;
+    pc.y = pc_coords.y;
+    pc.dead = 0;
+    pc.display = '@';
+    pc.monster = NULL;
+    pc.type = CHARACTER_PC;
+    character_map[pc.x][pc.y] = &pc;
+
+    update_pathfinding();
+}
+
+void game_t::init_random() {
+    coordinates_t pc_coords;
+    dungeon->fill(ROOM_MIN_COUNT, ROOM_COUNT_MAX_RANDOMNESS, ROOM_MIN_WIDTH, ROOM_MIN_HEIGHT, ROOM_MAX_RANDOMNESS, debug);
+
+    pc_coords = dungeon->random_location();
+
+    // Place the PC now
+    pc.x = pc_coords.x;
+    pc.y = pc_coords.y;
+    pc.dead = 0;
+    pc.display = '@';
+    pc.monster = NULL;
+    pc.type = CHARACTER_PC;
+    character_map[pc.x][pc.y] = &pc;
+
+    update_pathfinding();
+}
+
+void game_t::update_fog_of_war() {
     int x, y;
-    for (x = dungeon->pc.x - FOG_OF_WAR_DISTANCE; x < dungeon->pc.x + FOG_OF_WAR_DISTANCE; x++) {
+    for (x = pc.x - FOG_OF_WAR_DISTANCE; x < pc.y + FOG_OF_WAR_DISTANCE; x++) {
         if (x < 0 || x >= dungeon->width) continue;
-        for (y = dungeon->pc.y - FOG_OF_WAR_DISTANCE; y < dungeon->pc.y + FOG_OF_WAR_DISTANCE; y++) {
+        for (y = pc.y - FOG_OF_WAR_DISTANCE; y < pc.y + FOG_OF_WAR_DISTANCE; y++) {
             if (y < 0 || y >= dungeon->height) continue;
             dungeon->cells[x][y].attributes |= CELL_ATTRIBUTE_SEEN;
         }
     }
 }
 
-void try_move(dungeon_t *dungeon, char *message, int x_offset, int y_offset) {
-    int new_x = dungeon->pc.x + x_offset;
-    int new_y = dungeon->pc.y + y_offset;
+void game_t::try_move(dungeon_t *dungeon, char *message, int x_offset, int y_offset) {
+    int new_x = pc.x + x_offset;
+    int new_y = pc.y + y_offset;
     if (dungeon->cells[new_x][new_y].type == CELL_TYPE_STONE) {
         snprintf(message, 80, "There's stone in the way!");
     }
     else { 
-        if (dungeon->cells[new_x][new_y].character != NULL) {
+        if (character_map[new_x][new_y] != NULL) {
             // Kill the monster there
-            dungeon->cells[new_x][new_y].character->dead = 1;
-            snprintf(message, 80, "You ate the %c in the way.", dungeon->cells[new_x][new_y].character->display);
+            character_map[new_x][new_y]->dead = 1;
+            snprintf(message, 80, "You ate the %c in the way.", character_map[new_x][new_y]->display);
         }
-        UPDATE_CHARACTER(dungeon->cells, &(dungeon->pc), new_x, new_y);
-        update_fog_of_war(dungeon);
+        UPDATE_CHARACTER(character_map, &(dungeon->pc), new_x, new_y);
+        update_fog_of_war();
     }
 }
 

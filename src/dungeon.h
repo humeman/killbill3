@@ -11,30 +11,6 @@
 
 #include "heap.h"
 
-// Since these next 3 will be included in the dungeon struct,
-// I'm including them here so we don't have a (circular) dependency on character.h.
-typedef struct monster {
-    uint8_t attributes;
-    uint8_t pc_seen;
-    uint8_t pc_last_seen_x;
-    uint8_t pc_last_seen_y;
-} monster_t;
-
-typedef enum {
-    CHARACTER_PC,
-    CHARACTER_MONSTER
-} character_type_t;
-
-typedef struct character {
-    char display;
-    uint8_t x;
-    uint8_t y;
-    character_type_t type;
-    uint8_t speed;
-    monster_t *monster;
-    uint8_t dead;
-} character_t;
-// End of character stuff
 
 // For lack of a better place, this will go here too.
 typedef enum {
@@ -54,46 +30,45 @@ typedef enum {
     CELL_TYPE_DEBUG
 } cell_type_t;
 
-typedef struct {
-    uint8_t x0;
-    uint8_t y0;
-    uint8_t x1;
-    uint8_t y1;
-} room_t;
+class room_t {
+    public:
+        uint8_t x0;
+        uint8_t y0;
+        uint8_t x1;
+        uint8_t y1;
 
-typedef struct {
-    cell_type_t type;
-    uint8_t hardness;
-    character_t* character;
-    uint8_t attributes;
-} cell_t;
+};
+
+class cell_t {
+    public:
+        cell_type_t type;
+        uint8_t hardness;
+        uint8_t attributes;
+
+};
 
 typedef enum {
     CELL_ATTRIBUTE_IMMUTABLE = 0x01,
     CELL_ATTRIBUTE_SEEN = 0x02
 } cell_attributes_t;
 
-typedef struct {
-    uint8_t width;
-    uint8_t height;
-    uint16_t room_count;
-    uint16_t min_room_count;
-    uint16_t max_room_count;
-    room_t *rooms;
-    cell_t **cells;
-    uint32_t **pathfinding_no_tunnel;
-    uint32_t **pathfinding_tunnel;
-    character_t pc;
-    binary_heap_t *turn_queue;
-} dungeon_t;
+class queue_node_t {
+    public:
+        int x;
+        int y;
+        queue_node_t *next;
 
-typedef struct {
-    uint8_t x;
-    uint8_t y;
-} coordinates_t;
+};
 
-class dungeon_t_new {
-    private:
+class coordinates_t {
+    public:
+        uint8_t x;
+        uint8_t y;
+
+};
+
+class dungeon_t {
+    public:
         uint8_t width;
         uint8_t height;
         uint16_t room_count;
@@ -101,14 +76,9 @@ class dungeon_t_new {
         uint16_t max_room_count;
         room_t *rooms;
         cell_t **cells;
-        uint32_t **pathfinding_no_tunnel;
-        uint32_t **pathfinding_tunnel;
-        character_t pc;
-        binary_heap_t *turn_queue;
 
-    public:
-        dungeon_t_new(uint8_t width, uint8_t height, int max_rooms);
-        ~dungeon_t_new();
+        dungeon_t(uint8_t width, uint8_t height, int max_rooms);
+        ~dungeon_t();
 
         /**
          * Writes a .pgm file for the dungeon hardness map for debugging purposes.
@@ -145,6 +115,10 @@ class dungeon_t_new {
          * Returns: The picked coordinates
          */
         coordinates_t random_location();
+
+        void fill_from_file(FILE *f, int debug, coordinates_t *pc_coords);
+
+        void save_to_file(FILE *f, int debug, coordinates_t *pc_coords);
 
     private:
         /**
@@ -218,17 +192,6 @@ class dungeon_t_new {
          * Returns: coordinates to location of placed material
          */
         coordinates_t place_in_room(room_t *room, cell_type_t material);
-};
-
-/**
- * Used in the Gaussian diffusion.
- */
-class queue_node_t {
-    public:
-        int x;
-        int y;
-        queue_node_t *next;
-
 };
 
 #endif
