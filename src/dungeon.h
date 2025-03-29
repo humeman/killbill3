@@ -8,6 +8,7 @@
 #define DUNGEON_H
 
 #include <cstdint>
+#include <cstdio>
 
 #include "heap.h"
 

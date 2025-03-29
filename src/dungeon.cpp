@@ -36,55 +36,11 @@ dungeon_t::dungeon_t(uint8_t width, uint8_t height, int max_rooms) {
             cells[i][j].type = CELL_TYPE_EMPTY;
             cells[i][j].hardness = 0;
             cells[i][j].attributes = 0;
-            cells[i][j].character = NULL;
         }
     }
-
-    pathfinding_no_tunnel = (uint32_t **) malloc(width * sizeof (uint32_t*));
-    if (pathfinding_no_tunnel == NULL) {
-        goto init_free_all_cells;
-    }
-    for (i = 0; i < width; i++) {
-        pathfinding_no_tunnel[i] = (uint32_t *) malloc(height * sizeof (uint32_t));
-        if (pathfinding_no_tunnel[i] == NULL) {
-            for (j = 0; j < i; j++) free(pathfinding_no_tunnel[j]);
-            goto init_free_pathfinding_no_tunnel;
-        }
-    }
-
-    pathfinding_tunnel = (uint32_t **) malloc(width * sizeof (uint32_t*));
-    if (pathfinding_tunnel == NULL) {
-        goto init_free_all_pathfinding_no_tunnel;
-    }
-    for (i = 0; i < width; i++) {
-        pathfinding_tunnel[i] = (uint32_t *) malloc(height * sizeof (uint32_t));
-        if (pathfinding_tunnel[i] == NULL) {
-            for (j = 0; j < i; j++) free(pathfinding_tunnel[j]);
-            goto init_free_pathfinding_tunnel;
-        }
-    }
-    if (heap_init(&turn_queue, sizeof (character_t*))) {
-        goto init_free_all_pathfinding_tunnel;
-    }
-
-    pc.display = '@';
-    pc.monster = NULL;
-    pc.type = CHARACTER_PC;
-    pc.speed = PC_SPEED;
-    pc.dead = 0;
 
     return;
 
-    init_free_all_pathfinding_tunnel:
-    for (j = 0; j < width; j++) free(pathfinding_tunnel[j]);
-    init_free_pathfinding_tunnel:
-    free(pathfinding_tunnel);
-    init_free_all_pathfinding_no_tunnel:
-    for (j = 0; j < width; j++) free(pathfinding_no_tunnel[j]);
-    init_free_pathfinding_no_tunnel:
-    free(pathfinding_no_tunnel);
-    init_free_all_cells:
-    for (j = 0; j < width; j++) free(cells[j]);
     init_free_cells:
     free(cells);
     init_free_rooms:
@@ -97,14 +53,9 @@ dungeon_t::~dungeon_t() {
     int i;
     for (i = 0; i < width; i++) {
         free(cells[i]);
-        free(pathfinding_no_tunnel[i]);
-        free(pathfinding_tunnel[i]);
     }
     free(cells);
     free(rooms);
-    free(pathfinding_no_tunnel);
-    free(pathfinding_tunnel); 
-    heap_destroy(turn_queue);
 }
 
 void dungeon_t::write_pgm() {
@@ -121,21 +72,12 @@ void dungeon_t::write_pgm() {
 }
 
 void dungeon_t::fill(int min_rooms, int room_count_randomness_max, int room_min_width, int room_min_height, int room_size_randomness_max, int debug) {
-    coordinates_t loc;
-
     fill_stone();
     room_count = 0;
     min_room_count = min_rooms;
     create_rooms(min_rooms + (rand() % room_count_randomness_max), room_min_width, room_min_height, room_size_randomness_max);
     fill_outside();
     place_staircases();
-
-    // Pick the PC's spawn point
-    loc = random_location();
-    pc.x = loc.x;
-    pc.y = loc.y;
-    cells[loc.x][loc.y].character = &(pc);
-    pc.dead = 0;
 }
 
 // The Gaussian values ripped from Assignment 1.01's solution code.
@@ -161,7 +103,6 @@ void dungeon_t::fill_stone() {
             cells[x][y].type = CELL_TYPE_STONE;
             cells[x][y].hardness = 0;
             cells[x][y].attributes = 0;
-            cells[x][y].character = NULL;
         }
     }
 
@@ -483,9 +424,6 @@ coordinates_t dungeon_t::random_location_in_room(room_t *room) {
 
                 // And, we can't place in an immutable cell.
                 if (cells[x][y].attributes & CELL_ATTRIBUTE_IMMUTABLE) continue;
-
-                // Also, don't overwrite a character.
-                if (cells[x][y].character) continue;
                 
                 coords.x = x;
                 coords.y = y;
@@ -595,7 +533,7 @@ void dungeon_t::fill_from_file(FILE *f, int debug, coordinates_t *pc_coords) {
     }
 }
 
-int dungeon_t::save_to_file(dungeon_t *dungeon, FILE *f, int debug) {
+void dungeon_t::save_to_file(FILE *f, int debug, coordinates_t *pc_coords) {
     uint32_t version, file_size;
     uint8_t width, height;
     int up_count, down_count, x, y;
@@ -604,7 +542,7 @@ int dungeon_t::save_to_file(dungeon_t *dungeon, FILE *f, int debug) {
     int header_size = strlen(header);
     size_t size = fwrite(header, sizeof (*header), header_size, f);
 
-    if (size != (size_t) header_size) RETURN_ERROR("could not write to file");
+    if (size != (size_t) header_size) throw std::runtime_error("could not write to file");
     if (debug) printf("debug: header = %s, wrote %ld bytes\n", header, sizeof (*header) * header_size);
 
     version = FILE_VERSION;
@@ -618,7 +556,7 @@ int dungeon_t::save_to_file(dungeon_t *dungeon, FILE *f, int debug) {
     down = NULL;
     for (x = 0; x < DUNGEON_WIDTH; x++) {
         for (y = 0; y < DUNGEON_HEIGHT; y++) {
-            if (dungeon->cells[x][y].type == CELL_TYPE_UP_STAIRCASE) {
+            if (cells[x][y].type == CELL_TYPE_UP_STAIRCASE) {
                 up_count++;
                 if (up == NULL)
                     up = (coordinates_t *) malloc(sizeof (*up));
@@ -627,7 +565,7 @@ int dungeon_t::save_to_file(dungeon_t *dungeon, FILE *f, int debug) {
                 up[up_count - 1].x = x;
                 up[up_count - 1].y = y;
             } 
-            else if (dungeon->cells[x][y].type == CELL_TYPE_DOWN_STAIRCASE) {
+            else if (cells[x][y].type == CELL_TYPE_DOWN_STAIRCASE) {
                 down_count++;
                 if (down == NULL)
                     down = (coordinates_t *) malloc(sizeof (*down));
@@ -638,26 +576,26 @@ int dungeon_t::save_to_file(dungeon_t *dungeon, FILE *f, int debug) {
             }
         }
     }
-    file_size = 1708 + dungeon->room_count * 4 + up_count * 2 + down_count * 2;
+    file_size = 1708 + room_count * 4 + up_count * 2 + down_count * 2;
     WRITE_UINT32(file_size, "file size", f, debug);
 
-    WRITE_UINT8((dungeon->pc.x), "pc x", f, debug);
-    WRITE_UINT8((dungeon->pc.y), "pc y", f, debug);
+    WRITE_UINT8(pc_coords->x, "pc x", f, debug);
+    WRITE_UINT8(pc_coords->y, "pc y", f, debug);
 
     for (y = 0; y < DUNGEON_HEIGHT; y++) {
         for (x = 0; x < DUNGEON_WIDTH; x++) {
-            WRITE_UINT8((dungeon->cells[x][y].hardness), "cell matrix", f, debug);
+            WRITE_UINT8((cells[x][y].hardness), "cell matrix", f, debug);
         }
     }
 
-    WRITE_UINT16((dungeon->room_count), "room count", f, debug);
+    WRITE_UINT16(room_count, "room count", f, debug);
     int i;
-    for (i = 0; i < dungeon->room_count; i++) {
+    for (i = 0; i < room_count; i++) {
         if (debug) printf("debug: writing room %d\n", i);
-        WRITE_UINT8((dungeon->rooms[i].x0), "room x0", f, debug);
-        WRITE_UINT8((dungeon->rooms[i].y0), "room y0", f, debug);
-        width = dungeon->rooms[i].x1 - dungeon->rooms[i].x0 + 1;
-        height = dungeon->rooms[i].y1 - dungeon->rooms[i].y0 + 1;
+        WRITE_UINT8((rooms[i].x0), "room x0", f, debug);
+        WRITE_UINT8((rooms[i].y0), "room y0", f, debug);
+        width = rooms[i].x1 - rooms[i].x0 + 1;
+        height = rooms[i].y1 - rooms[i].y0 + 1;
         WRITE_UINT8(width, "room width", f, debug);
         WRITE_UINT8(height, "room height", f, debug);
     }
@@ -677,5 +615,4 @@ int dungeon_t::save_to_file(dungeon_t *dungeon, FILE *f, int debug) {
 
     free(up);
     free(down);
-    return 0;
 }

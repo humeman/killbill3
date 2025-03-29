@@ -11,12 +11,12 @@
 
 /**
  * Updates the location of a character in the dungeon.
- * Expects **cells and *character.
+ * Expects **character_map and *character.
  */
-#define UPDATE_CHARACTER(cells, ch, x_, y_) { \
-    if (cells[(ch)->x][(ch)->y].character == ch) \
-        cells[(ch)->x][(ch)->y].character = NULL; \
-    cells[x_][y_].character = ch; \
+#define UPDATE_CHARACTER(character_map, ch, x_, y_) { \
+    if (character_map[(ch)->x][(ch)->y] == ch) \
+        character_map[(ch)->x][(ch)->y] = NULL; \
+    character_map[x_][y_] = ch; \
     (ch)->x = x_; \
     (ch)->y = y_; \
 }
@@ -45,11 +45,11 @@ class character_t {
         uint8_t dead;
 };
 
-int place_monster(dungeon_t *dungeon, uint8_t attributes);
-int generate_monsters(dungeon_t *dungeon, int count);
-void destroy_character(dungeon_t *dungeon, character_t *ch);
-int has_los(dungeon_t *dungeon, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1);
+void place_monster(dungeon_t *dungeon, binary_heap_t *turn_queue, character_t ***character_map, uint8_t attributes);
+void generate_monsters(dungeon_t *dungeon, binary_heap_t *turn_queue, character_t ***character_map, int count);
+void destroy_character(dungeon_t *dungeon, character_t ***character_map, character_t *ch);
+bool has_los(dungeon_t *dungeon, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1);
 void next_xy(dungeon_t *dungeon, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t *next_x, uint8_t *next_y);
-int next_turn(dungeon_t *dungeon, game_result_t *result, int *was_pc);
+void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t *turn_queue, character_t ***character_map, uint32_t **pathfinding_tunnel, uint32_t **pathfinding_no_tunnel, game_result_t *result, int *was_pc);
 
 #endif

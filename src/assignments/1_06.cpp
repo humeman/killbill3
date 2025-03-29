@@ -3,7 +3,6 @@
 #include <ctime>
 #include <cstring>
 #include "../dungeon.h"
-#include "../files.h"
 #include "../pathfinding.h"
 #include "../macros.h"
 #include "../character.h"
@@ -15,9 +14,6 @@
 int prepare_args(int argc, char* argv[], int *read, int *write, int *debug, int *nummon, char **path);
 
 int main(int argc, char* argv[]) {
-    int x, y;
-    dungeon_t dungeon;
-
     srand(time(NULL));
 
     int read = 0;
@@ -29,96 +25,26 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    FILE *f;
+    game_t game(debug, DUNGEON_WIDTH, DUNGEON_HEIGHT, ROOM_MIN_COUNT + ROOM_COUNT_MAX_RANDOMNESS);
+
     if (read) {
-        f = fopen(path, "rb");
-        if (f == NULL) {
-            free(path);
-            RETURN_ERROR("could not open file %s", path);
-        }
-        if (dungeon_init_from_file(&dungeon, f, debug)) {
-            free(path);
-            fclose(f);
-            RETURN_ERROR("could not load dungeon from file %s", path);
-        }
-        fclose(f);
+        game.init_from_file(path);
     }
     else {
-        if (dungeon_init(&dungeon, DUNGEON_WIDTH, DUNGEON_HEIGHT, ROOM_MIN_COUNT + ROOM_COUNT_MAX_RANDOMNESS)) {
-            free(path);
-            RETURN_ERROR("could not allocate memory for dungeon");
-        }
-        for (x = 0; x < dungeon.width; x++)
-            for (y = 0; y < dungeon.height; y++)
-                dungeon.cells[x][y].type = CELL_TYPE_STONE;
-
-        if (fill_dungeon(&dungeon, ROOM_MIN_COUNT, ROOM_COUNT_MAX_RANDOMNESS, ROOM_MIN_WIDTH, ROOM_MIN_HEIGHT, ROOM_MAX_RANDOMNESS, debug)) {
-            dungeon_destroy(&dungeon);
-            free(path);
-            RETURN_ERROR("could not generate dungeon");
-        }
+        game.init_random();
     }
 
     if (write) {
-        f = fopen(path, "wb");
-        if (f == NULL) {
-            dungeon_destroy(&dungeon);
-            free(path);
-            RETURN_ERROR("could not open file %s", path);
-        }
-        if (dungeon_save(&dungeon, f, debug)) {
-            dungeon_destroy(&dungeon);
-            free(path);
-            fclose(f);
-            RETURN_ERROR("could not save dungeon to %s", path);
-        }
-        fclose(f);
+        game.write_to_file(path);
     }
 
     if (debug) {
-        write_dungeon_pgm(&dungeon);
+        game.dungeon->write_pgm();
         printf("debug: wrote hardness map to dungeon.pgm\n");
     }
 
-    if (update_pathfinding(&dungeon)) {
-        dungeon_destroy(&dungeon);
-        free(path);
-        RETURN_ERROR("failed to generate pathfinding maps");
-    }
-
-    character *character;
-    uint32_t trash;
-    // The PC will play if it's in the heap. We'll let it go first since it'll probably never win :)
-    character = &(dungeon.pc);
-    if (heap_insert(dungeon.turn_queue, (void *) &character, 0)) {
-        dungeon_destroy(&dungeon);
-        free(path);
-        RETURN_ERROR("failed to insert PC into heap");
-    }
-    if (generate_monsters(&dungeon, nummon < 0 ? (rand() % (RANDOM_MONSTERS_MAX - RANDOM_MONSTERS_MIN + 1)) + RANDOM_MONSTERS_MIN : nummon)) {
-        dungeon_destroy(&dungeon);
-        free(path);
-        RETURN_ERROR("couldn't place monsters");
-    }
-
-    if (game_start(&dungeon, nummon)) {
-        dungeon_destroy(&dungeon);
-        free(path);
-        RETURN_ERROR("game loop failed");
-    }
-
-    while (heap_size(dungeon.turn_queue) > 0) {
-        if (heap_remove(dungeon.turn_queue, (void *) &character, &trash)) {
-            dungeon_destroy(&dungeon);
-            free(path);
-            RETURN_ERROR("failed to remove from turn queue while cleaning up");
-        }
-        if (character == &(dungeon.pc)) continue;
-        destroy_character(&dungeon, character);
-    }
-    
-    dungeon_destroy(&dungeon);
-    free(path);
+    game.random_monsters();
+    game.run();
 
     return 0;
 }

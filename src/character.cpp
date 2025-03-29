@@ -8,26 +8,44 @@
 #include <cstdio>
 #include <cmath>
 #include <cstdlib>
+#include <stdexcept>
 
-int place_monster(dungeon_t *dungeon, uint8_t attributes) {
-    uint8_t x, y;
+#define MAX_ATTEMPTS 2 * DUNGEON_WIDTH * DUNGEON_HEIGHT
+
+coordinates_t random_location_no_kill(dungeon_t *dungeon, character_t ***character_map) {
+    int i;
+    coordinates_t coords;
+    for (i = 0; i < MAX_ATTEMPTS; i++) {
+        try {
+            coords = dungeon->random_location();
+            if (character_map[coords.x][coords.y]) continue;
+            return coords;
+        } catch (std::runtime_error &e) {}
+    }
+    throw std::runtime_error("no available space for a new monster in dungeon");
+}
+
+void place_monster(dungeon_t *dungeon, binary_heap_t *turn_queue, character_t ***character_map, uint8_t attributes) {
     character_t *ch;
     monster_t *mo;
+    coordinates_t coords;
     ch = (character_t *) malloc(sizeof (*ch));
-    if (!ch) RETURN_ERROR("failed to allocate character");
+    if (!ch) throw std::runtime_error("failed to allocate character");
     mo = (monster_t *) malloc(sizeof (*mo));
     if (!mo) {
         free(ch);
-        RETURN_ERROR("failed to allocate monster");
+        throw std::runtime_error("failed to allocate monster");
     }
     ch->monster = mo;
-    if (random_location(dungeon, &x, &y)) {
+    try {
+        coords = random_location_no_kill(dungeon, character_map);
+    } catch (std::runtime_error &e) {
         free(ch);
         free(mo);
-        RETURN_ERROR("no available space to place monster")
+        throw e;
     }
-    ch->x = x;
-    ch->y = y;
+    ch->x = coords.x;
+    ch->y = coords.y;
     ch->speed = (rand() % 16) + 5;
     ch->dead = 0;
     ch->type = CHARACTER_MONSTER;
@@ -35,21 +53,19 @@ int place_monster(dungeon_t *dungeon, uint8_t attributes) {
     ch->display = mo->attributes < 10 ? '0' + mo->attributes : 'a' + (mo->attributes - 10);
     mo->pc_seen = 0;
 
-    dungeon->cells[x][y].character = ch;
-    if (heap_insert(dungeon->turn_queue, (void *) &ch, ch->speed)) {
+    character_map[coords.x][coords.y] = ch;
+    if (heap_insert(turn_queue, (void *) &ch, ch->speed)) {
         free(mo);
         free(ch);
-        RETURN_ERROR("failed to insert monster into turn queue");
+        throw std::runtime_error("failed to insert monster into turn queue");
     }
-
-    return 0;
 }
 
-int generate_monsters(dungeon_t *dungeon, int count) {
+void generate_monsters(dungeon_t *dungeon, binary_heap_t *turn_queue, character_t ***character_map, int count) {
     int i;
     uint8_t attributes;
     character_t *ch;
-    uint8_t pc_removed;
+    character_t *pc;
     uint32_t pc_priority;
     uint32_t priority;
     for (i = 0; i < count; i++) {
@@ -58,34 +74,34 @@ int generate_monsters(dungeon_t *dungeon, int count) {
         if (rand() % 2 == 1) attributes |= MONSTER_ATTRIBUTE_TELEPATHIC;
         if (rand() % 2 == 1) attributes |= MONSTER_ATTRIBUTE_TUNNELING;
         if (rand() % 2 == 1) attributes |= MONSTER_ATTRIBUTE_ERRATIC;
-        if (place_monster(dungeon, attributes)) {
-            pc_removed = 0;
-            while (heap_size(dungeon->turn_queue) != 0) {
-                if (heap_remove(dungeon->turn_queue, (void *) &ch, &priority)) RETURN_ERROR("catastrophe: failed to remove from heap while cleaning up an error");
-                if (ch == &(dungeon->pc)) {
-                    pc_removed = 1;
+        try {
+            place_monster(dungeon, turn_queue, character_map, attributes);
+        } catch (std::runtime_error &e) {
+            pc = NULL;
+            while (heap_size(turn_queue) != 0) {
+                if (heap_remove(turn_queue, (void *) &ch, &priority)) throw std::runtime_error("catastrophe: failed to remove from heap while cleaning up an error");
+                if (ch->type == CHARACTER_PC) {
+                    pc = ch;
                     pc_priority = priority;
                 }
                 else {
-                    destroy_character(dungeon, ch);
+                    destroy_character(dungeon, character_map, ch);
                 }
             }
-            if (pc_removed && heap_insert(dungeon->turn_queue, (void *) &(dungeon->pc), pc_priority)) RETURN_ERROR("catastrophe: failed to reinsert PC into heap while cleaning up an error");
-            RETURN_ERROR("failed to generate monsters");
+            if (pc != NULL && heap_insert(turn_queue, (void *) &pc, pc_priority)) throw std::runtime_error("catastrophe: failed to reinsert PC into heap while cleaning up an error");
+            throw std::runtime_error("failed to generate monsters");
         }
     }
-
-    return 0;
 }
 
-void destroy_character(dungeon_t *dungeon, character_t *ch) {
-    if (dungeon->cells[ch->x][ch->y].character == ch)
-        dungeon->cells[ch->x][ch->y].character = NULL;
+void destroy_character(dungeon_t *dungeon, character_t ***character_map, character_t *ch) {
+    if (character_map[ch->x][ch->y] == ch)
+        character_map[ch->x][ch->y] = NULL;
     if (ch->monster) free(ch->monster);
     free(ch);
 }
 
-int has_los(dungeon_t *dungeon, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1) {
+bool has_los(dungeon_t *dungeon, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1) {
     // Regular line equation (rounded to grid points).
     // The special case is if we have a slope > 1 or < -1 -- in that case we can iterate over Y instead of X.
     // Don't bother if the points are equal
@@ -105,7 +121,7 @@ int has_los(dungeon_t *dungeon, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1) 
         dir = (x_diff > 0 ? 1 : -1);
         for (x = x0; x != x1 + dir; x += dir) {
             y = (uint8_t) round(m * x + b);
-            if (dungeon->cells[x][y].type == CELL_TYPE_STONE) return 0;
+            if (dungeon->cells[x][y].type == CELL_TYPE_STONE) return false;
         }
     }
     else {
@@ -123,10 +139,10 @@ int has_los(dungeon_t *dungeon, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1) 
         dir = (y_diff > 0 ? 1 : -1);
         for (y = y0; y != y1 + dir; y += dir) {
             x = (uint8_t) round(m * y + b);
-            if (dungeon->cells[x][y].type == CELL_TYPE_STONE) return 0;
+            if (dungeon->cells[x][y].type == CELL_TYPE_STONE) return false;
         }
     }
-    return 1;
+    return true;
 }
 
 void next_xy(dungeon_t *dungeon, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t *next_x, uint8_t *next_y) {
@@ -165,28 +181,28 @@ void next_xy(dungeon_t *dungeon, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1,
     }
 }
 
-int next_turn(dungeon_t *dungeon, game_result_t *result, int *was_pc) {
+void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t *turn_queue, character_t ***character_map, uint32_t **pathfinding_tunnel, uint32_t **pathfinding_no_tunnel, game_result_t *result, int *was_pc) {
     character_t *ch = NULL;
     uint32_t priority;
     uint8_t x, y, next_x, next_y, min, x_offset, y_offset, can_move, target_x, target_y;
     int i, j, x1, y1;
     uint32_t** map;
     cell_t* next;
-    while (heap_size(dungeon->turn_queue) > 0 && ch == NULL) {
-        if (heap_remove(dungeon->turn_queue, (void*) &ch, &priority)) RETURN_ERROR("failed to remove from top of turn queue");
+    while (heap_size(turn_queue) > 0 && ch == NULL) {
+        if (heap_remove(turn_queue, (void*) &ch, &priority)) throw std::runtime_error("failed to remove from top of turn queue");
         // The dead flag here avoids us having to remove from the heap at an arbitrary location.
         // We just destroy it when it comes off the queue next.
         if (ch->dead) {
-            if (ch != &(dungeon->pc)) {
-                destroy_character(dungeon, ch);
+            if (ch != pc) {
+                destroy_character(dungeon, character_map, ch);
                 ch = NULL;
             }
         }
     }
-    if (ch == NULL || (ch == &(dungeon->pc) && heap_size(dungeon->turn_queue) == 0)) {
+    if (ch == NULL || (ch == pc && heap_size(turn_queue) == 0)) {
         // Everyone is dead. Game over.
         *result = GAME_RESULT_WIN;
-        return 0;
+        return;
     }
     
     x = ch->x;
@@ -195,11 +211,11 @@ int next_turn(dungeon_t *dungeon, game_result_t *result, int *was_pc) {
     // If this was the PC's turn, signal that back to the caller
     // Previously for random movement, but now we'll render the changes
     // and wait for user input
-    if (ch == &(dungeon->pc)) {
-        if (heap_insert(dungeon->turn_queue, (void*) &ch, priority + ch->speed))
-            RETURN_ERROR("failed to reinsert PC to turn queue");
+    if (ch == pc) {
+        if (heap_insert(turn_queue, (void*) &ch, priority + ch->speed))
+            throw std::runtime_error("failed to reinsert PC to turn queue");
         *was_pc = 1;
-        return 0; // No open space (impossible with a normal map)
+        return; // No open space (impossible with a normal map)
     }
 
     // Find out which direction this monster wants to go.
@@ -213,19 +229,19 @@ int next_turn(dungeon_t *dungeon, game_result_t *result, int *was_pc) {
     //    a: If it's telepathic, it can.
     if (ch->monster->attributes & MONSTER_ATTRIBUTE_TELEPATHIC) {
         can_move = 1;
-        target_x = dungeon->pc.x;
-        target_y = dungeon->pc.y;
+        target_x = pc->x;
+        target_y = pc->y;
     }
     //    b: If it has line of sight, it can.
-    else if (has_los(dungeon, x, y, dungeon->pc.x, dungeon->pc.y)) {
+    else if (has_los(dungeon, x, y, pc->x, pc->y)) {
         can_move = 1;
-        target_x = dungeon->pc.x;
-        target_y = dungeon->pc.y;
+        target_x = pc->x;
+        target_y = pc->y;
 
         // For future use, we can also mark that the PC was seen.
         ch->monster->pc_seen = 1;
-        ch->monster->pc_last_seen_x = dungeon->pc.x;
-        ch->monster->pc_last_seen_y = dungeon->pc.y;
+        ch->monster->pc_last_seen_x = pc->x;
+        ch->monster->pc_last_seen_y = pc->y;
     }
     //    c: If it has a last seen location in mind, it can.
     else if (ch->monster->pc_seen)  {
@@ -240,9 +256,9 @@ int next_turn(dungeon_t *dungeon, game_result_t *result, int *was_pc) {
         if (ch->monster->attributes & MONSTER_ATTRIBUTE_INTELLIGENT) {
             // We can use the pathfinding maps to go to the PC
             if (ch->monster->attributes & MONSTER_ATTRIBUTE_TUNNELING)
-                map = dungeon->pathfinding_tunnel;
+                map = pathfinding_tunnel;
             else
-                map = dungeon->pathfinding_no_tunnel;
+                map = pathfinding_no_tunnel;
 
             // Pick the best direction
             min = UINT8_MAX;
@@ -312,29 +328,29 @@ int next_turn(dungeon_t *dungeon, game_result_t *result, int *was_pc) {
         next = &(dungeon->cells[next_x][next_y]);
         if (next->type != CELL_TYPE_STONE) {
             // If there's already a character there, kill it.
-            if (next->character != NULL) {
-                next->character->dead = 1;
+            if (character_map[next_x][next_y] != NULL) {
+                character_map[next_x][next_y]->dead = 1;
                 // Special case is the PC, in which case the game ends.
-                if (next->character->type == CHARACTER_PC) {
-                    UPDATE_CHARACTER(dungeon->cells, ch, next_x, next_y);
+                if (character_map[next_x][next_y]->type == CHARACTER_PC) {
+                    UPDATE_CHARACTER(character_map, ch, next_x, next_y);
                     *result = GAME_RESULT_LOSE;
-                    heap_insert(dungeon->turn_queue, &ch, priority + ch->speed); // So this character gets free'd
-                    return 0;
+                    heap_insert(turn_queue, &ch, priority + ch->speed); // So this character gets free'd
+                    return;
                 }
             }
-            UPDATE_CHARACTER(dungeon->cells, ch, next_x, next_y);
+            UPDATE_CHARACTER(character_map, ch, next_x, next_y);
         }
         else {
             // Each iteration is minus 85 hardness.
             next->hardness -= MIN(next->hardness, 85);
             if (next->hardness == 0) {
                 next->type = CELL_TYPE_HALL;
-                UPDATE_CHARACTER(dungeon->cells, ch, next_x, next_y);
+                UPDATE_CHARACTER(character_map, ch, next_x, next_y);
             }
         }
     }
 
-    if (heap_insert(dungeon->turn_queue, &ch, priority + ch->speed))
-        RETURN_ERROR("failed to re-insert character into turn queue");
-    return 0;
+    if (heap_insert(turn_queue, &ch, priority + ch->speed))
+        throw std::runtime_error("failed to re-insert character into turn queue");
+    return;
 }

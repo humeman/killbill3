@@ -4,6 +4,7 @@
 #include "macros.h"
 #include "heap.h"
 #include "dungeon.h"
+#include "character.h"
 
 #define HARDNESS_OF(hardness) (hardness == 0 ? 1 : 1 + (hardness / 85))
 
@@ -12,14 +13,14 @@
  * returning 0 if equivalent and 1 otherwise.
  */
 int compare_coords(void *a, void *b) {
-    coordinates *ca = (coordinates *) a;
-    coordinates *cb = (coordinates *) b;
+    coordinates_t *ca = (coordinates_t *) a;
+    coordinates_t *cb = (coordinates_t *) b;
     return !(ca->x == cb->x && ca->y == cb->y);
 }
 
-int update_pathfinding(dungeon_t *dungeon) {
-    if (generate_pathfinding_map(dungeon, dungeon->pathfinding_no_tunnel, 0)) RETURN_ERROR("failed to generate no-tunneling pathfinding map");
-    if (generate_pathfinding_map(dungeon, dungeon->pathfinding_tunnel, 1)) RETURN_ERROR("failed to generate tunneling pathfinding map");
+int update_pathfinding(dungeon_t *dungeon, uint32_t **pathfinding_no_tunnel, uint32_t **pathfinding_tunnel, character_t *pc) {
+    if (generate_pathfinding_map(dungeon, pathfinding_no_tunnel, 0, pc)) RETURN_ERROR("failed to generate no-tunneling pathfinding map");
+    if (generate_pathfinding_map(dungeon, pathfinding_tunnel, 1, pc)) RETURN_ERROR("failed to generate tunneling pathfinding map");
     return 0;
 }
 
@@ -27,7 +28,7 @@ int update_pathfinding(dungeon_t *dungeon) {
  * This algorithm is partially based on the pseuducode provided here:
  * https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm#Using_a_priority_queue
  */
-int generate_pathfinding_map(dungeon_t *dungeon, uint32_t **grid, int allow_tunneling) {
+int generate_pathfinding_map(dungeon_t *dungeon, uint32_t **grid, int allow_tunneling, character_t *pc) {
     uint8_t x, y, x1, y1;
     uint8_t src_x, src_y;
     uint32_t distance, trash;
@@ -35,8 +36,8 @@ int generate_pathfinding_map(dungeon_t *dungeon, uint32_t **grid, int allow_tunn
     coordinates_t coords;
     int done[dungeon->width][dungeon->height];
     if (heap_init(&queue, sizeof (coordinates_t))) RETURN_ERROR("failed to initialize heap");
-    src_x = dungeon->pc.x;
-    src_y = dungeon->pc.y;
+    src_x = pc->x;
+    src_y = pc->y;
 
     // Set the source cell to distance 0, add to queue
     grid[src_x][src_y] = 0;

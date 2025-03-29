@@ -146,8 +146,16 @@ game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
             for (j = 0; j < i; j++) free(character_map[j]);
             goto init_free_character_map;
         }
+        for (j = 0; j < i; j++) character_map[i][j] = NULL;
     }
 
+    if (!(message = (char *) malloc(1 + WIDTH))) {
+        goto init_free_all_character_map;
+    }
+    message[0] = '\0';
+
+    init_free_all_character_map:
+    for (j = 0; j < width; j++) free(character_map[j]);
     init_free_character_map:
     free(character_map);
     init_free_all_pathfinding_tunnel:
@@ -162,12 +170,25 @@ game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
     throw std::runtime_error("failed to allocate dungeon");
 }
 
+game_t::~game_t() {
+    uint8_t width = dungeon->width;
+    int i;
+    heap_destroy(turn_queue);
+    free(message);
+    for (i = 0; i < width; i++) free(character_map[i]);
+    free(character_map);
+    for (i = 0; i < width; i++) free(pathfinding_tunnel[i]);
+    free(pathfinding_tunnel);
+    for (i = 0; i < width; i++) free(pathfinding_no_tunnel[i]);
+    free(pathfinding_no_tunnel);
+}
+
 void game_t::init_from_file(char *path) {
     coordinates_t pc_coords;
+    character_t *pc_pt;
     FILE *f;
     f = fopen(path, "rb");
     if (f == NULL) {
-        free(path);
         throw std::runtime_error("could not open the specified file");
     }
     try {
@@ -189,11 +210,17 @@ void game_t::init_from_file(char *path) {
     pc.type = CHARACTER_PC;
     character_map[pc.x][pc.y] = &pc;
 
-    update_pathfinding();
+    update_pathfinding(dungeon, pathfinding_no_tunnel, pathfinding_tunnel, &pc);
+
+    pc_pt = &pc;
+    if (heap_insert(turn_queue, (void *) &pc_pt, 0)) {
+        throw std::runtime_error("failed to insert PC into heap");
+    }
 }
 
 void game_t::init_random() {
     coordinates_t pc_coords;
+    character_t *pc_pt;
     dungeon->fill(ROOM_MIN_COUNT, ROOM_COUNT_MAX_RANDOMNESS, ROOM_MIN_WIDTH, ROOM_MIN_HEIGHT, ROOM_MAX_RANDOMNESS, debug);
 
     pc_coords = dungeon->random_location();
@@ -207,7 +234,36 @@ void game_t::init_random() {
     pc.type = CHARACTER_PC;
     character_map[pc.x][pc.y] = &pc;
 
-    update_pathfinding();
+    update_pathfinding(dungeon, pathfinding_no_tunnel, pathfinding_tunnel, &pc);
+
+    pc_pt = &pc;
+    if (heap_insert(turn_queue, (void *) &pc_pt, 0)) {
+        throw std::runtime_error("failed to insert PC into heap");
+    }
+}
+
+void game_t::write_to_file(char *path) {
+    FILE *f;
+    coordinates_t pc_coords;
+    f = fopen(path, "wb");
+    if (f == NULL) throw std::runtime_error("couldn't open file for writing");
+    pc_coords.x = pc.x;
+    pc_coords.y = pc.y;
+    try {
+        dungeon->save_to_file(f, debug, &pc_coords);
+    } catch (std::runtime_error &e) {
+        fclose(f);
+        throw e;
+    }
+    fclose(f);
+}
+
+void game_t::override_nummon(int nummon) {
+    this->nummon = nummon;
+}
+
+void game_t::random_monsters() {
+    generate_monsters(dungeon, turn_queue, character_map, nummon < 0 ? (rand() % (RANDOM_MONSTERS_MAX - RANDOM_MONSTERS_MIN + 1)) + RANDOM_MONSTERS_MIN : nummon);
 }
 
 void game_t::update_fog_of_war() {
@@ -221,7 +277,7 @@ void game_t::update_fog_of_war() {
     }
 }
 
-void game_t::try_move(dungeon_t *dungeon, char *message, int x_offset, int y_offset) {
+void game_t::try_move(int x_offset, int y_offset) {
     int new_x = pc.x + x_offset;
     int new_y = pc.y + y_offset;
     if (dungeon->cells[new_x][new_y].type == CELL_TYPE_STONE) {
@@ -233,45 +289,41 @@ void game_t::try_move(dungeon_t *dungeon, char *message, int x_offset, int y_off
             character_map[new_x][new_y]->dead = 1;
             snprintf(message, 80, "You ate the %c in the way.", character_map[new_x][new_y]->display);
         }
-        UPDATE_CHARACTER(character_map, &(dungeon->pc), new_x, new_y);
+        UPDATE_CHARACTER(character_map, &pc, new_x, new_y);
         update_fog_of_war();
     }
 }
 
-int fill_and_place_on(dungeon_t *dungeon, cell_type_t target_cell, int nummon) {
+void game_t::fill_and_place_on(cell_type_t target_cell) {
     // Kill all the monsters (RIP)
     character_t *character;
     uint32_t trash;
     int x, y, placed;
-    while (heap_size(dungeon->turn_queue) > 0) {
-        if (heap_remove(dungeon->turn_queue, (void *) &character, &trash))
-            RETURN_ERROR("failed to remove from turn queue while cleaning up");
-        if (character == &(dungeon->pc)) continue;
-        destroy_character(dungeon, character);
+    while (heap_size(turn_queue) > 0) {
+        if (heap_remove(turn_queue, (void *) &character, &trash))
+            throw std::runtime_error("failed to remove from turn queue while cleaning up");
+        if (character == &pc) continue;
+        destroy_character(dungeon, character_map, character);
     }
-    if (fill_dungeon(dungeon, ROOM_MIN_COUNT, ROOM_COUNT_MAX_RANDOMNESS, ROOM_MIN_WIDTH, ROOM_MIN_HEIGHT, ROOM_MAX_RANDOMNESS, 0))
-        RETURN_ERROR("couldn't regenerate dungeon");
+    dungeon->fill(ROOM_MIN_COUNT, ROOM_COUNT_MAX_RANDOMNESS, ROOM_MIN_WIDTH, ROOM_MIN_HEIGHT, ROOM_MAX_RANDOMNESS, 0);
     placed = 0;
     for (x = 0; x < dungeon->width; x++) {
         for (y = 0; y < dungeon->height; y++) {
             if (dungeon->cells[x][y].type == target_cell) {
-                UPDATE_CHARACTER(dungeon->cells, &(dungeon->pc), x, y);
+                UPDATE_CHARACTER(character_map, &pc, x, y);
                 placed = 1;
                 break;
             }
         }
     }
-    if (!placed) RETURN_ERROR("no target cell present to place PC on");
+    if (!placed) throw std::runtime_error("no target cell present to place PC on");
     // Readd the PC and new monsters
-    character = &(dungeon->pc);
-    if (heap_insert(dungeon->turn_queue, (void *) &character, 0))
-        RETURN_ERROR("failed to insert PC into turn queue");
-    if (generate_monsters(dungeon, nummon < 0 ? (rand() % (RANDOM_MONSTERS_MAX - RANDOM_MONSTERS_MIN + 1)) + RANDOM_MONSTERS_MIN : nummon))
-        RETURN_ERROR("couldn't regenerate monsters");
-    return 0;
+    character = &pc;
+    heap_insert(turn_queue, (void *) &character, 0);
+    generate_monsters(dungeon, turn_queue, character_map, nummon < 0 ? (rand() % (RANDOM_MONSTERS_MAX - RANDOM_MONSTERS_MIN + 1)) + RANDOM_MONSTERS_MIN : nummon);
 }
 
-int game_start(dungeon_t *dungeon, int nummon) {
+void game_t::run() {
     int c, i, trash, count, monster_count, overflow_count, next_turn_ready, was_pc;
     uint8_t x, y;
     int monster_menu_on = 0;
@@ -279,13 +331,7 @@ int game_start(dungeon_t *dungeon, int nummon) {
     game_result_t result;
     character_t **ch;
     char *ascii;
-    if (!(ch = (character_t **) malloc(sizeof (*ch)))) RETURN_ERROR("failed to allocate memory");
-    char *message;
-    if (!(message = (char *) malloc(1 + WIDTH))) {
-        free(ch);
-        RETURN_ERROR("failed to allocate memory");
-    }
-    message[0] = '\0';
+    if (!(ch = (character_t **) malloc(sizeof (*ch)))) throw std::runtime_error("failed to allocate memory");
     initscr();
     if (COLS < WIDTH || LINES < HEIGHT)
         ERROR_AND_EXIT("terminal size is too small, minimum is %dx%d (yours is %dx%d)", WIDTH, HEIGHT, COLS, LINES);
@@ -302,7 +348,7 @@ int game_start(dungeon_t *dungeon, int nummon) {
     if (curs_set(0) == ERR) ERROR_AND_EXIT("failed to init ncurses (disable cursor)");
     if (noecho() == ERR) ERROR_AND_EXIT("failed to init ncurses (noecho)");
 
-    update_fog_of_war(dungeon);
+    update_fog_of_war();
     while (1) {
         // Print the dungeon
         clear();
@@ -313,10 +359,10 @@ int game_start(dungeon_t *dungeon, int nummon) {
                     addch(' ');
                     continue;
                 }
-                if (dungeon->cells[x][y].character) {
-                    c = dungeon->cells[x][y].character->type == CHARACTER_PC ? COLORS_PC : COLORS_MONSTER;
+                if (character_map[x][y]) {
+                    c = character_map[x][y]->type == CHARACTER_PC ? COLORS_PC : COLORS_MONSTER;
                     attrset(COLOR_PAIR(c) | A_BOLD);
-                    addch(dungeon->cells[x][y].character->display);
+                    addch(character_map[x][y]->display);
                     attroff(COLOR_PAIR(c) | A_BOLD);
                 } else {
                     attrset(COLOR_PAIR(COLORS_BY_CELL_TYPE[dungeon->cells[x][y].type]));
@@ -344,15 +390,15 @@ int game_start(dungeon_t *dungeon, int nummon) {
                 PRINT_REPEATED(MONSTER_MENU_X_BEGIN, y, MONSTER_MENU_WIDTH, ' ');
 
             attron(A_BOLD);
-            count = heap_size(dungeon->turn_queue);
+            count = heap_size(turn_queue);
             PRINTW_CENTERED_AT(WIDTH / 2, MONSTER_MENU_Y_BEGIN + 1, "MONSTERS (%d)", count - 1);
             attroff(A_BOLD);
             for (i = 0, monster_count = 0; monster_count < MONSTER_MENU_HEIGHT - 6 + monster_menu_i && i < count; i++) {
-                if (heap_at(dungeon->turn_queue, i, ch, (uint32_t *) &trash)) ERROR_AND_EXIT("failed to get monster from turn queue");
+                if (heap_at(turn_queue, i, ch, (uint32_t *) &trash)) ERROR_AND_EXIT("failed to get monster from turn queue");
                 if ((*ch)->type == CHARACTER_MONSTER) {
                     if (monster_count >= monster_menu_i) {
-                        x = dungeon->pc.x - (*ch)->x;
-                        y = dungeon->pc.y - (*ch)->y;
+                        x = pc.x - (*ch)->x;
+                        y = pc.y - (*ch)->y;
 
                         PRINTW_CENTERED_AT(WIDTH / 2, MONSTER_MENU_Y_BEGIN + 3 + monster_count - monster_menu_i, 
                             "%c: %2d %s, %2d %s", (*ch)->display,
@@ -396,7 +442,7 @@ int game_start(dungeon_t *dungeon, int nummon) {
                     snprintf(message, WIDTH, "Can't scroll without monster menu open!");
                     break;
                 }
-                count = heap_size(dungeon->turn_queue) - 1;
+                count = heap_size(turn_queue) - 1;
                 overflow_count = count - (MONSTER_MENU_HEIGHT - 6);
                 if (overflow_count < 0) overflow_count = 0;
                 monster_menu_i++;
@@ -417,49 +463,49 @@ int game_start(dungeon_t *dungeon, int nummon) {
             case KB_UP_LEFT_0:
             case KB_UP_LEFT_1:
                 if (monster_menu_on) break;
-                try_move(dungeon, message, -1, -1);
+                try_move(-1, -1);
                 next_turn_ready = 1;
                 break;
             case KB_UP_0:
             case KB_UP_1:
                 if (monster_menu_on) break;
-                try_move(dungeon, message, 0, -1);
+                try_move(0, -1);
                 next_turn_ready = 1;
                 break;
             case KB_UP_RIGHT_0:
             case KB_UP_RIGHT_1:
                 if (monster_menu_on) break;
-                try_move(dungeon, message, 1, -1);
+                try_move(1, -1);
                 next_turn_ready = 1;
                 break;
             case KB_RIGHT_0:
             case KB_RIGHT_1:
                 if (monster_menu_on) break;
-                try_move(dungeon, message, 1, 0);
+                try_move(1, 0);
                 next_turn_ready = 1;
                 break;
             case KB_DOWN_RIGHT_0:
             case KB_DOWN_RIGHT_1:
                 if (monster_menu_on) break;
-                try_move(dungeon, message, 1, 1);
+                try_move(1, 1);
                 next_turn_ready = 1;
                 break;
             case KB_DOWN_0:
             case KB_DOWN_1:
                 if (monster_menu_on) break;
-                try_move(dungeon, message, 0, 1);
+                try_move(0, 1);
                 next_turn_ready = 1;
                 break;
             case KB_DOWN_LEFT_0:
             case KB_DOWN_LEFT_1:
                 if (monster_menu_on) break;
-                try_move(dungeon, message, -1, 1);
+                try_move(-1, 1);
                 next_turn_ready = 1;
                 break;
             case KB_LEFT_0:
             case KB_LEFT_1:
                 if (monster_menu_on) break;
-                try_move(dungeon, message, -1, 0);
+                try_move(-1, 0);
                 next_turn_ready = 1;
                 break;
             case KB_REST_0:
@@ -470,20 +516,26 @@ int game_start(dungeon_t *dungeon, int nummon) {
                 break;
             case KB_UP_STAIRS:
                 if (monster_menu_on) break;
-                if (dungeon->cells[dungeon->pc.x][dungeon->pc.y].type != CELL_TYPE_UP_STAIRCASE) {
+                if (dungeon->cells[pc.x][pc.y].type != CELL_TYPE_UP_STAIRCASE) {
                     snprintf(message, WIDTH, "There isn't an up staircase here.");
                 }
-                if (fill_and_place_on(dungeon, CELL_TYPE_DOWN_STAIRCASE, nummon))
+                try {
+                    fill_and_place_on(CELL_TYPE_DOWN_STAIRCASE);
+                } catch (std::runtime_error &e) {
                     ERROR_AND_EXIT("failed to generate new dungeon");
+                }
                 snprintf(message, WIDTH, "You went up the stairs.");
                 break;
             case KB_DOWN_STAIRS:
                 if (monster_menu_on) break;
-                if (dungeon->cells[dungeon->pc.x][dungeon->pc.y].type != CELL_TYPE_DOWN_STAIRCASE) {
+                if (dungeon->cells[pc.x][pc.y].type != CELL_TYPE_DOWN_STAIRCASE) {
                     snprintf(message, WIDTH, "There isn't a down staircase here.");
                 }
-                if (fill_and_place_on(dungeon, CELL_TYPE_UP_STAIRCASE, nummon))
+                try {
+                    fill_and_place_on(CELL_TYPE_UP_STAIRCASE);
+                } catch (std::runtime_error &e) {
                     ERROR_AND_EXIT("failed to generate new dungeon");
+                }
                 snprintf(message, WIDTH, "You went down the stairs.");
                 break;
             case KB_QUIT:
@@ -497,8 +549,11 @@ int game_start(dungeon_t *dungeon, int nummon) {
             result = GAME_RESULT_RUNNING;
             was_pc = 0;
             while (!was_pc && result == GAME_RESULT_RUNNING) {
-                if (next_turn(dungeon, &result, &was_pc))
+                try {
+                    next_turn(dungeon, &pc, turn_queue, character_map, pathfinding_tunnel, pathfinding_no_tunnel, &result, &was_pc);
+                } catch (std::runtime_error &e) {
                     ERROR_AND_EXIT("failed to take next turn");
+                }
             }
 
             if (result != GAME_RESULT_RUNNING) {
@@ -528,7 +583,7 @@ int game_start(dungeon_t *dungeon, int nummon) {
                 goto exit;
             }
 
-            if (update_pathfinding(dungeon))
+            if (update_pathfinding(dungeon, pathfinding_no_tunnel, pathfinding_tunnel, &pc))
                 ERROR_AND_EXIT("failed to update monster pathfinding");
         }
     }
@@ -536,11 +591,9 @@ int game_start(dungeon_t *dungeon, int nummon) {
 
     exit:
     free(ch);
-    free(message);
     endwin();
-    return 0;
+    return;
     exit_err:
     free(ch);
-    free(message);
-    return 1;
+    throw std::runtime_error("game loop failed");
 }
