@@ -146,13 +146,15 @@ game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
             for (j = 0; j < i; j++) free(character_map[j]);
             goto init_free_character_map;
         }
-        for (j = 0; j < i; j++) character_map[i][j] = NULL;
+        for (j = 0; j < height; j++) character_map[i][j] = NULL;
     }
 
     if (!(message = (char *) malloc(1 + WIDTH))) {
         goto init_free_all_character_map;
     }
     message[0] = '\0';
+
+    return;
 
     init_free_all_character_map:
     for (j = 0; j < width; j++) free(character_map[j]);
@@ -171,6 +173,16 @@ game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
 }
 
 game_t::~game_t() {
+    character_t *character;
+    uint32_t trash;
+    while (heap_size(turn_queue) > 0) {
+        if (heap_remove(turn_queue, (void *) &character, &trash)) {
+            // Nothing we can do here :shrug:
+        }
+        if (character == &pc) continue;
+        destroy_character(dungeon, character_map, character);
+    }
+    
     uint8_t width = dungeon->width;
     int i;
     heap_destroy(turn_queue);
@@ -181,6 +193,7 @@ game_t::~game_t() {
     free(pathfinding_tunnel);
     for (i = 0; i < width; i++) free(pathfinding_no_tunnel[i]);
     free(pathfinding_no_tunnel);
+    delete dungeon;
 }
 
 void game_t::init_from_file(char *path) {

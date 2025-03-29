@@ -49,6 +49,7 @@ int heap_insert(binary_heap_t *heap, void *item, uint32_t priority)
     heap->count++;
     i = heap->count - 1;
     heap->items[i].item = malloc(heap->item_size);
+    printf("%d\n", priority);
     heap->items[i].priority = priority;
     memcpy(heap->items[i].item, item, heap->item_size);
     while (i > 0)

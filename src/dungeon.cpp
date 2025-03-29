@@ -12,8 +12,8 @@
 
 dungeon_t::dungeon_t(uint8_t width, uint8_t height, int max_rooms) {
     int i, j;
-    width = width;
-    height = height;
+    this->width = width;
+    this->height = height;
     rooms = (room_t *) malloc(max_rooms * sizeof (room_t));
     max_room_count = (uint16_t) max_rooms;
     room_count = 0;

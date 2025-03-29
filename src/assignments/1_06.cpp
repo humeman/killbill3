@@ -46,6 +46,8 @@ int main(int argc, char* argv[]) {
     game.random_monsters();
     game.run();
 
+    free(path);
+
     return 0;
 }
 
