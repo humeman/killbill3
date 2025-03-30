@@ -228,6 +228,7 @@ void game_t::init_from_file(char *path) {
     pc.display = '@';
     pc.monster = NULL;
     pc.type = CHARACTER_PC;
+    pc.speed = PC_SPEED;
     character_map[pc.x][pc.y] = &pc;
 
     update_pathfinding(dungeon, pathfinding_no_tunnel, pathfinding_tunnel, &pc);
@@ -250,6 +251,7 @@ void game_t::init_random() {
     pc.display = '@';
     pc.monster = NULL;
     pc.type = CHARACTER_PC;
+    pc.speed = PC_SPEED;
     character_map[pc.x][pc.y] = &pc;
 
     update_pathfinding(dungeon, pathfinding_no_tunnel, pathfinding_tunnel, &pc);
@@ -284,9 +286,9 @@ void game_t::random_monsters() {
 
 void game_t::update_fog_of_war() {
     int x, y;
-    for (x = pc.x - FOG_OF_WAR_DISTANCE; x < pc.y + FOG_OF_WAR_DISTANCE; x++) {
+    for (x = pc.x - FOG_OF_WAR_DISTANCE; x <= pc.x + FOG_OF_WAR_DISTANCE; x++) {
         if (x < 0 || x >= dungeon->width) continue;
-        for (y = pc.y - FOG_OF_WAR_DISTANCE; y < pc.y + FOG_OF_WAR_DISTANCE; y++) {
+        for (y = pc.y - FOG_OF_WAR_DISTANCE; y <= pc.y + FOG_OF_WAR_DISTANCE; y++) {
             if (y < 0 || y >= dungeon->height) continue;
             dungeon->cells[x][y].attributes |= CELL_ATTRIBUTE_SEEN;
         }
@@ -336,17 +338,18 @@ void game_t::fill_and_place_on(cell_type_t target_cell) {
     character = &pc;
     turn_queue->insert((void *) &character, 0);
     generate_monsters(dungeon, turn_queue, character_map, nummon < 0 ? (rand() % (RANDOM_MONSTERS_MAX - RANDOM_MONSTERS_MIN + 1)) + RANDOM_MONSTERS_MIN : nummon);
+    update_fog_of_war();
 }
 
 void game_t::run() {
-    int c, i, trash, count, monster_count, overflow_count, next_turn_ready, was_pc;
+    int c, i, x_offset, y_offset, trash, count, monster_count, overflow_count, next_turn_ready, was_pc;
     uint8_t x, y;
     int monster_menu_on = 0;
     int monster_menu_i = 0;
     game_result_t result;
-    character_t **ch;
+    character_t *ch;
     char *ascii;
-    if (!(ch = (character_t **) malloc(sizeof (*ch)))) throw std::runtime_error("failed to allocate memory");
+    message[0] = '\0';
     initscr();
     if (COLS < WIDTH || LINES < HEIGHT)
         ERROR_AND_EXIT("terminal size is too small, minimum is %dx%d (yours is %dx%d)", WIDTH, HEIGHT, COLS, LINES);
@@ -410,22 +413,22 @@ void game_t::run() {
             attroff(A_BOLD);
             for (i = 0, monster_count = 0; monster_count < MONSTER_MENU_HEIGHT - 6 + monster_menu_i && i < count; i++) {
                 try {
-                    turn_queue->at(i, ch, (uint32_t *) &trash);
+                    turn_queue->at(i, &ch, (uint32_t *) &trash);
                 } catch (std::runtime_error &e) {
                     fprintf(stderr, "err: %s\n", e.what());
                     ERROR_AND_EXIT("failed to get monster from turn queue");
                 }
-                if ((*ch)->type == CHARACTER_MONSTER) {
+                if (ch->type == CHARACTER_MONSTER) {
                     if (monster_count >= monster_menu_i) {
-                        x = pc.x - (*ch)->x;
-                        y = pc.y - (*ch)->y;
+                        x_offset = ((int) pc.x) - ((int) ch->x);
+                        y_offset = ((int) pc.y) - ((int) ch->y);
 
                         PRINTW_CENTERED_AT(WIDTH / 2, MONSTER_MENU_Y_BEGIN + 3 + monster_count - monster_menu_i, 
-                            "%c: %2d %s, %2d %s", (*ch)->display,
-                            y < 0 ? -1 * y : y,
-                            y < 0 ? "south" : "north", 
-                            x < 0 ? -1 * x : x,
-                            x < 0 ? "east" : "west"
+                            "%c: %2d %s, %2d %s", ch->display,
+                            y_offset < 0 ? -1 * y_offset : y_offset,
+                            y_offset < 0 ? "south" : "north", 
+                            x_offset < 0 ? -1 * x_offset : x_offset,
+                            x_offset < 0 ? "east" : "west"
                         );
                     }
                     monster_count++;
@@ -613,10 +616,8 @@ void game_t::run() {
     
 
     exit:
-    free(ch);
     endwin();
     return;
     exit_err:
-    free(ch);
     throw std::runtime_error("game loop failed");
 }

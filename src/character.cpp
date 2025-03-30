@@ -216,7 +216,7 @@ void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t *turn_queue, c
     // Previously for random movement, but now we'll render the changes
     // and wait for user input
     if (ch == pc) {
-        turn_queue->insert((void*) &ch, priority + ch->speed);
+        turn_queue->insert((void*) &pc, priority + pc->speed);
         *was_pc = 1;
         return; // No open space (impossible with a normal map)
     }

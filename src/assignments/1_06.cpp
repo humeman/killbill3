@@ -24,8 +24,9 @@ int main(int argc, char* argv[]) {
     if (prepare_args(argc, argv, &read, &write, &debug, &nummon, &path)) {
         return 1;
     }
-
+    
     game_t game(debug, DUNGEON_WIDTH, DUNGEON_HEIGHT, ROOM_MIN_COUNT + ROOM_COUNT_MAX_RANDOMNESS);
+    if (nummon >= 0) game.override_nummon(nummon);
 
     if (read) {
         game.init_from_file(path);
