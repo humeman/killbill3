@@ -69,6 +69,9 @@ class coordinates_t {
 };
 
 class dungeon_t {
+    private:
+        bool is_initalized;
+
     public:
         uint8_t width;
         uint8_t height;
@@ -78,6 +81,15 @@ class dungeon_t {
         room_t *rooms;
         cell_t **cells;
 
+        /**
+         * Allocates memory for a dungeon. It still must be filled after creation
+         *  to be usable.
+         * 
+         * Params:
+         * - width: Width of the dungeon
+         * - height: Height of the dungeon
+         * - max_rooms: Number of room objects to allocate
+         */
         dungeon_t(uint8_t width, uint8_t height, int max_rooms);
         ~dungeon_t();
 
@@ -117,8 +129,25 @@ class dungeon_t {
          */
         coordinates_t random_location();
 
+        /**
+         * Fills this dungeon with the data read from an RLG327 file.
+         * 
+         * Params:
+         * - f: File pointer to read
+         * - debug: If true, debug messages will be printed
+         * - pc_coords: A pointer to coordinates that contain the PC's location
+         */
         void fill_from_file(FILE *f, int debug, coordinates_t *pc_coords);
 
+        /**
+         * Saves this dungeon to an RLG327 file.
+         * 
+         * Params:
+         * - f: File pointer to write
+         * - debug: If true, debug messages will be printed
+         * - pc_coords: A pointer to coordinates that will be updated with
+         *      the PC's location
+         */
         void save_to_file(FILE *f, int debug, coordinates_t *pc_coords);
 
     private:

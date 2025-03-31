@@ -23,31 +23,68 @@ class binary_heap_t {
         bool (*compare)(void *, void *);
 
     public:
+        /**
+         * Initializes a new binary heap.
+         * 
+         * Params:
+         * - item_size: Size of the data being stored
+         * - compare: Comparator (return true if equal) to find items in the heap
+         */
         binary_heap_t(int item_size, bool compare(void *, void *));
         ~binary_heap_t();
 
+        /**
+         * Inserts an item into the heap.
+         * 
+         * Params:
+         * - item: Pointer to the data to be *copied* into the heap.
+         * - priority: Priority to insert with.
+         */
         void insert(void *item, uint32_t priority);
-        void top(void *item, uint32_t *priority);
-        void at(int i, void *item, uint32_t *priority);
-        void remove(void *item, uint32_t *priority);
+
+        /**
+         * Gets (without removing) the top item on the heap.
+         * 
+         * Params:
+         * - item: Pointer to memory where the data will be *copied*.
+         * Returns: The priority of the item.
+         */
+        uint32_t top(void *item);
+
+        /**
+         * Gets (without removing) any item on the heap.
+         * 
+         * Params:
+         * - i: Index of the item to get.
+         * - item: Pointer to memory where the data will be *copied*.
+         * Returns: The priority of the item.
+         */
+        uint32_t at(int i, void *item);
+
+        /**
+         * Removes the top item on the heap.
+         * 
+         * Params:
+         * - item: Pointer to memory where the data will be *copied*.
+         * Returns: The priority of the item.
+         */
+        uint32_t remove(void *item);
+
+        /**
+         * Decreases the priority of an item in the heap.
+         * 
+         * Params:
+         * - target: The data to decrease the priority of.
+         * - priority: The new priority.
+         */
         void decrease_priority(void *target, uint32_t priority);
+
+        /**
+         * Gets the size of the heap.
+         * 
+         * Returns: Number of items.
+         */
         int size();
 };
-
-// typedef struct {
-//     int count;
-//     int capacity;
-//     int item_size;
-//     binary_heap_node_t* items;
-// } binary_heap_t;
-
-// int heap_init(binary_heap_t **heap, int item_size);
-// void heap_destroy(binary_heap_t *heap);
-// int heap_insert(binary_heap_t *heap, void *item, uint32_t priority);
-// int heap_top(binary_heap_t *heap, void *item, uint32_t *priority);
-// int heap_at(binary_heap_t *heap, int i, void *item, uint32_t *priority);
-// int heap_remove(binary_heap_t *heap, void *item, uint32_t *priority);
-// int heap_decrease_priority(binary_heap_t *heap, int (void*, void*), void *target, uint32_t priority);
-// int heap_size(binary_heap_t *heap);
 
 #endif

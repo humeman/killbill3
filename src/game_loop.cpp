@@ -72,8 +72,35 @@ char WIN[] = ASCII_WIN;
 #define MONSTER_MENU_Y_BEGIN HEIGHT / 2 - MONSTER_MENU_HEIGHT / 2
 
 void game_t::run() {
+    try {
+        initscr();
+        if (COLS < WIDTH || LINES < HEIGHT)
+            throw std::runtime_error("terminal size is too small, minimum is %dx%d (yours is %dx%d)" 
+                + std::to_string(WIDTH) + std::to_string(HEIGHT) + std::to_string(COLS) + std::to_string(LINES));
+        if (start_color() != OK) throw std::runtime_error("failed to init ncurses (no color support)");
+        if (init_pair(COLORS_FLOOR, COLOR_BLUE, COLOR_BLACK) != OK) throw std::runtime_error("failed to init ncurses (init color)");
+        if (init_pair(COLORS_PC, COLOR_GREEN, COLOR_BLACK) != OK) throw std::runtime_error("failed to init ncurses (init color)");
+        if (init_pair(COLORS_MONSTER, COLOR_RED, COLOR_BLACK) != OK) throw std::runtime_error("failed to init ncurses (init color)");
+        if (init_pair(COLORS_OBJECT, COLOR_MAGENTA, COLOR_BLACK) != OK) throw std::runtime_error("failed to init ncurses (init color)");
+        if (init_pair(COLORS_STONE, COLOR_BLACK, COLOR_BLACK) != OK) throw std::runtime_error("failed to init ncurses (init color)");
+        if (init_pair(COLORS_TEXT, COLOR_WHITE, COLOR_BLACK) != OK) throw std::runtime_error("failed to init ncurses (init color)");
+        if (init_pair(COLORS_MENU_TEXT, COLOR_BLACK, COLOR_WHITE) != OK) throw std::runtime_error("failed to init ncurses (init color)");
+        if (keypad(stdscr, TRUE) != OK) throw std::runtime_error("failed to init ncurses (special kb keys)");
+                        // man this library is weird
+        if (curs_set(0) == ERR) throw std::runtime_error("failed to init ncurses (disable cursor)");
+        if (noecho() == ERR) throw std::runtime_error("failed to init ncurses (noecho)");    
+
+        run_internal();
+    } catch (std::runtime_error &e) {
+        endwin();
+        throw e;
+    }
+    endwin();
+}
+
+void game_t::run_internal() {
     if (!is_initialized) throw std::runtime_error("game is not yet initialized");
-    int c, i, x_offset, y_offset, trash, count, monster_count, overflow_count;
+    int c, i, x_offset, y_offset, count, monster_count, overflow_count;
     bool next_turn_ready, was_pc;
     uint8_t x, y;
     int monster_menu_i = 0;
@@ -88,21 +115,6 @@ void game_t::run() {
     bool in_sight;
     char *ascii;
     message[0] = '\0';
-    initscr();
-    if (COLS < WIDTH || LINES < HEIGHT)
-        ERROR_AND_EXIT("terminal size is too small, minimum is %dx%d (yours is %dx%d)", WIDTH, HEIGHT, COLS, LINES);
-    if (start_color() != OK) ERROR_AND_EXIT("failed to init ncurses (no color support)");
-    if (init_pair(COLORS_FLOOR, COLOR_BLUE, COLOR_BLACK) != OK) ERROR_AND_EXIT("failed to init ncurses (init color)");
-    if (init_pair(COLORS_PC, COLOR_GREEN, COLOR_BLACK) != OK) ERROR_AND_EXIT("failed to init ncurses (init color)");
-    if (init_pair(COLORS_MONSTER, COLOR_RED, COLOR_BLACK) != OK) ERROR_AND_EXIT("failed to init ncurses (init color)");
-    if (init_pair(COLORS_OBJECT, COLOR_MAGENTA, COLOR_BLACK) != OK) ERROR_AND_EXIT("failed to init ncurses (init color)");
-    if (init_pair(COLORS_STONE, COLOR_BLACK, COLOR_BLACK) != OK) ERROR_AND_EXIT("failed to init ncurses (init color)");
-    if (init_pair(COLORS_TEXT, COLOR_WHITE, COLOR_BLACK) != OK) ERROR_AND_EXIT("failed to init ncurses (init color)");
-    if (init_pair(COLORS_MENU_TEXT, COLOR_BLACK, COLOR_WHITE) != OK) ERROR_AND_EXIT("failed to init ncurses (init color)");
-    if (keypad(stdscr, TRUE) != OK) ERROR_AND_EXIT("failed to init ncurses (special kb keys)");
-                    // man this library is weird
-    if (curs_set(0) == ERR) ERROR_AND_EXIT("failed to init ncurses (disable cursor)");
-    if (noecho() == ERR) ERROR_AND_EXIT("failed to init ncurses (noecho)");
 
     update_fog_of_war();
     while (1) {
@@ -164,12 +176,7 @@ void game_t::run() {
             PRINTW_CENTERED_AT(WIDTH / 2, MONSTER_MENU_Y_BEGIN + 1, "MONSTERS (%d)", count - 1);
             attroff(A_BOLD);
             for (i = 0, monster_count = 0; monster_count < MONSTER_MENU_HEIGHT - 6 + monster_menu_i && i < count; i++) {
-                try {
-                    turn_queue->at(i, &ch, (uint32_t *) &trash);
-                } catch (std::runtime_error &e) {
-                    fprintf(stderr, "err: %s\n", e.what());
-                    ERROR_AND_EXIT("failed to get monster from turn queue");
-                }
+                turn_queue->at(i, &ch);
                 if (ch->type() == CHARACTER_TYPE_MONSTER) {
                     if (monster_count >= monster_menu_i) {
                         x_offset = ((int) pc.x) - ((int) ch->x);
@@ -278,11 +285,7 @@ void game_t::run() {
                 if (dungeon->cells[pc.x][pc.y].type != CELL_TYPE_UP_STAIRCASE) {
                     snprintf(message, WIDTH, "There isn't an up staircase here.");
                 }
-                try {
-                    fill_and_place_on(CELL_TYPE_DOWN_STAIRCASE);
-                } catch (std::runtime_error &e) {
-                    ERROR_AND_EXIT("failed to generate new dungeon");
-                }
+                fill_and_place_on(CELL_TYPE_DOWN_STAIRCASE);
                 snprintf(message, WIDTH, "You went up the stairs.");
                 break;
             case KB_DOWN_STAIRS:
@@ -290,11 +293,7 @@ void game_t::run() {
                 if (dungeon->cells[pc.x][pc.y].type != CELL_TYPE_DOWN_STAIRCASE) {
                     snprintf(message, WIDTH, "There isn't a down staircase here.");
                 }
-                try {
-                    fill_and_place_on(CELL_TYPE_UP_STAIRCASE);
-                } catch (std::runtime_error &e) {
-                    ERROR_AND_EXIT("failed to generate new dungeon");
-                }
+                fill_and_place_on(CELL_TYPE_UP_STAIRCASE);
                 snprintf(message, WIDTH, "You went down the stairs.");
                 break;
             case KB_TOGGLE_FOG:
@@ -341,26 +340,17 @@ void game_t::run() {
                 }
                 break;
             case KB_QUIT:
-                goto exit;
+                return;
             default:
                 snprintf(message, WIDTH, "Unrecognized command: %c", (char) c);
         }
 
         if (next_turn_ready) {
-            try {
-                update_pathfinding(dungeon, pathfinding_no_tunnel, pathfinding_tunnel, &pc);
-            } catch (std::runtime_error &e) {
-                ERROR_AND_EXIT("failed to update monster pathfinding: %s", e.what());
-            }
-
+            update_pathfinding(dungeon, pathfinding_no_tunnel, pathfinding_tunnel, &pc);
             result = GAME_RESULT_RUNNING;
             was_pc = 0;
             while (!was_pc && result == GAME_RESULT_RUNNING) {
-                try {
-                    next_turn(dungeon, &pc, turn_queue, character_map, pathfinding_tunnel, pathfinding_no_tunnel, &result, &was_pc);
-                } catch (std::runtime_error &e) {
-                    ERROR_AND_EXIT("failed to take next turn");
-                }
+                next_turn(dungeon, &pc, turn_queue, character_map, pathfinding_tunnel, pathfinding_no_tunnel, &result, &was_pc);
             }
 
             if (result != GAME_RESULT_RUNNING) {
@@ -387,16 +377,9 @@ void game_t::run() {
                 }
                 PRINTW_CENTERED_AT(WIDTH / 2, HEIGHT - 1, "(press any key to exit)");
                 getch();
-                goto exit;
+                return;
             }
             hide_fog_of_war = false;
         }
     }
-    
-
-    exit:
-    endwin();
-    return;
-    exit_err:
-    throw std::runtime_error("game loop failed");
 }

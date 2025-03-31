@@ -70,7 +70,7 @@ void generate_monsters(dungeon_t *dungeon, binary_heap_t *turn_queue, character_
         } catch (std::runtime_error &e) {
             pc = NULL;
             while (turn_queue->size() != 0) {
-                turn_queue->remove((void *) &ch, &priority);
+                priority = turn_queue->remove((void *) &ch);
                 if (ch->type() == CHARACTER_TYPE_PC) {
                     pc = ch;
                     pc_priority = priority;
@@ -201,7 +201,7 @@ void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t *turn_queue, c
     uint32_t** map;
     cell_t* next_cell;
     while (turn_queue->size() > 0 && ch == NULL) {
-        turn_queue->remove((void*) &ch, &priority);
+        priority = turn_queue->remove((void*) &ch);
         // The dead flag here avoids us having to remove from the heap at an arbitrary location.
         // We just destroy it when it comes off the queue next.
         if (ch->dead) {

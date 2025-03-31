@@ -10,6 +10,8 @@
 #define STONE_SEED_COUNT 10
 #define GAUSSIAN_CONVOLUTION_COUNT 2
 
+#define ENSURE_INITIALIZED if (!is_initalized) throw std::runtime_error("dungeon is not initialized")
+
 dungeon_t::dungeon_t(uint8_t width, uint8_t height, int max_rooms) {
     int i, j;
     this->width = width;
@@ -39,6 +41,8 @@ dungeon_t::dungeon_t(uint8_t width, uint8_t height, int max_rooms) {
         }
     }
 
+    is_initalized = false;
+
     return;
 
     init_free_cells:
@@ -59,6 +63,7 @@ dungeon_t::~dungeon_t() {
 }
 
 void dungeon_t::write_pgm() {
+    ENSURE_INITIALIZED;
     FILE* out;
     out = fopen("dungeon.pgm", "w");
     fprintf(out, "P5\n%u %u\n255\n", width, height);
@@ -79,6 +84,7 @@ void dungeon_t::fill(int min_rooms, int room_count_randomness_max, int room_min_
     connect_rooms();
     fill_outside();
     place_staircases();
+    is_initalized = true;
 }
 
 // The Gaussian values ripped from Assignment 1.01's solution code.
@@ -532,9 +538,12 @@ void dungeon_t::fill_from_file(FILE *f, int debug, coordinates_t *pc_coords) {
         READ_UINT8(y, "down staircase y", f, debug);
         cells[x][y].type = CELL_TYPE_DOWN_STAIRCASE;
     }
+
+    is_initalized = true;
 }
 
 void dungeon_t::save_to_file(FILE *f, int debug, coordinates_t *pc_coords) {
+    ENSURE_INITIALIZED;
     uint32_t version, file_size;
     uint8_t width, height;
     int up_count, down_count, x, y;

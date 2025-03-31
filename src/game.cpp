@@ -102,10 +102,9 @@ game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
 
 game_t::~game_t() {
     character_t *character;
-    uint32_t trash;
     while (turn_queue->size() > 0) {
         try {
-            turn_queue->remove((void *) &character, &trash);
+            turn_queue->remove((void *) &character);
          } catch (std::exception &e) {
             // Nothing we can do here :shrug:
             fprintf(stderr, "err: catastrophe: failed to remove from heap while destroying game");
@@ -268,10 +267,9 @@ void game_t::fill_and_place_on(cell_type_t target_cell) {
     if (!is_initialized) throw std::runtime_error("game is not yet initialized");
     // Kill all the monsters (RIP)
     character_t *character;
-    uint32_t trash;
     int x, y, placed;
     while (turn_queue->size() > 0) {
-        turn_queue->remove((void *) &character, &trash);
+        turn_queue->remove((void *) &character);
         if (character == &pc) continue;
         destroy_character(character_map, character);
     }

@@ -31,7 +31,7 @@ void update_pathfinding(dungeon_t *dungeon, uint32_t **pathfinding_no_tunnel, ui
 void generate_pathfinding_map(dungeon_t *dungeon, uint32_t **grid, int allow_tunneling, character_t *pc) {
     uint8_t x, y, x1, y1;
     uint8_t src_x, src_y;
-    uint32_t distance, trash;
+    uint32_t distance;
     coordinates_t coords;
     int done[dungeon->width][dungeon->height];
     binary_heap_t queue(sizeof (coordinates_t), compare_coords);
@@ -62,7 +62,7 @@ void generate_pathfinding_map(dungeon_t *dungeon, uint32_t **grid, int allow_tun
 
     while (queue.size() != 0) {
         // Extract the minimal cell
-        queue.remove((void*) &coords, &trash);
+        queue.remove((void*) &coords);
         x = coords.x;
         y = coords.y;
         done[x][y] = 1;

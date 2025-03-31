@@ -61,30 +61,31 @@ void binary_heap_t::insert(void *item, uint32_t priority)
     }
 }
 
-void binary_heap_t::top(void *item, uint32_t *priority)
+uint32_t binary_heap_t::top(void *item)
 {
     if (count == 0)
         throw std::runtime_error("attempted to read top of heap while empty");
     memcpy(item, items[0].item, item_size);
-    *priority = items[0].priority;
+    return items[0].priority;
 }
 
-void binary_heap_t::at(int i, void *item, uint32_t *priority)
+uint32_t binary_heap_t::at(int i, void *item)
 {
     if (i >= count || i < 0)
         throw std::runtime_error("attempted to read heap item at invalid index");
     memcpy(item, items[i].item, item_size);
-    *priority = items[i].priority;
+    return items[i].priority;
 }
 
-void binary_heap_t::remove(void *item, uint32_t *priority)
+uint32_t binary_heap_t::remove(void *item)
 {
     int i, l, r, target;
+    uint32_t priority;
     binary_heap_node_t temp;
     if (count == 0)
         throw std::runtime_error("attempted to remove top of heap while empty");
     memcpy(item, items[0].item, item_size);
-    *priority = items[0].priority;
+    priority = items[0].priority;
     free(items[0].item);
     items[0] = items[count - 1];
     count--;
@@ -111,6 +112,7 @@ void binary_heap_t::remove(void *item, uint32_t *priority)
         items[target] = temp;
         i = target;
     }
+    return priority;
 }
 
 void binary_heap_t::decrease_priority(void *target, uint32_t priority)

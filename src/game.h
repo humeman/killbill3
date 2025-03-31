@@ -70,21 +70,92 @@ class game_t {
         game_t(int debug, uint8_t width, uint8_t height, int max_rooms);
         ~game_t();
 
+        /**
+         * Initializes the game's dungeon from an RLG327 file.
+         * 
+         * Params:
+         * - path: The path to the file to read.
+         */
         void init_from_file(char *path);
+
+        /**
+         * Initializes the game with a random dungeon.
+         */
         void init_random();
+
+        /**
+         * Adds randomized monsters, the count is the value of nummon (or random
+         *  if that hasn't been set).
+         */
         void random_monsters();
 
+        /**
+         * Writes the game's dungeon to an RLG327 file.
+         * 
+         * Params:
+         * - path: The path to the file to write.
+         */
         void write_to_file(char *path);
 
+        /**
+         * Overrides the number of monsters used when calling random_monsters()
+         *  or when the PC goes up/down staircases. By default, this is random.
+         * 
+         * Params:
+         * - nummon: New number of monsters per dungeon
+         */
         void override_nummon(int nummon);
 
+        /**
+         * Runs the game.
+         */
         void run();
 
     private:
+        /**
+         * The internal game loop. This is wrapped by run() to handle ncurses
+         *  initialization and cleanup.
+         */
+        void run_internal();
+
+        /**
+         * Updates the PC's fog of war map with what it currently sees.
+         */
         void update_fog_of_war();
+
+        /**
+         * Tries to move the PC to a new location.
+         * 
+         * Params:
+         * - x_offset: Number to add to the X coordinate
+         * - y_offset: Number to add to the Y coordinate
+         */
         void try_move(int x_offset, int y_offset);
+
+        /**
+         * Changes the value of some coordinates, clamping each value to the
+         *  size of the dungeon.
+         * 
+         * Params:
+         * - coords: Coordinates to update
+         * - x_offset: Number to add to the X coordinate
+         * - y_offset: Number to add to the Y coordinate
+         */
         void move_coords(coordinates_t &coords, int x_offset, int y_offset);
+
+        /**
+         * Forces the PC to move to some new coordinates, regardless of if
+         *  they represent a possible PC location.
+         */
         void force_move(coordinates_t dest);
+
+        /**
+         * Regenerates the dungeon, placing the PC on the first instance of
+         *  a specified target cell.
+         * 
+         * Params:
+         * - target_cell: Cell type to place on
+         */
         void fill_and_place_on(cell_type_t target_cell);
 };
 
