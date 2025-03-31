@@ -200,6 +200,8 @@ void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t *turn_queue, c
     int i, j, x1, y1;
     uint32_t** map;
     cell_t* next_cell;
+    bool alive;
+
     while (turn_queue->size() > 0 && ch == NULL) {
         priority = turn_queue->remove((void*) &ch);
         // The dead flag here avoids us having to remove from the heap at an arbitrary location.
@@ -211,11 +213,11 @@ void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t *turn_queue, c
             }
         }
     }
-    if (ch == NULL || (ch == pc && turn_queue->size() == 0)) {
-        // Everyone is dead. Game over.
-        *result = GAME_RESULT_WIN;
-        return;
-    }
+    // if (ch == NULL || (ch == pc && turn_queue->size() == 0)) {
+    //     // Everyone is dead. Game over.
+    //     *result = GAME_RESULT_WIN;
+    //     return;
+    // }
     
     x = ch->x;
     y = ch->y;
@@ -224,6 +226,20 @@ void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t *turn_queue, c
     // Previously for random movement, but now we'll render the changes
     // and wait for user input
     if (ch == pc) {
+        // Iterate over the turn queue and count the alive monsters.
+        // The dead flag makes the removal of monsters easy, but if it's the PC's turn
+        // and the only other monster in the queue is dead, then the game won't end.
+        alive = false;
+        for (i = 0; i < turn_queue->size(); i++) {
+            turn_queue->at(i, (void*) &ch);
+            if (!ch->dead) {
+                alive = true;
+                break;
+            }
+        }
+        if (!alive) {
+            *result = GAME_RESULT_WIN;
+        }
         turn_queue->insert((void*) &pc, priority + pc->speed);
         *was_pc = 1;
         return; // No open space (impossible with a normal map)
@@ -278,7 +294,7 @@ void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t *turn_queue, c
             for (x1 = x - 1; x1 <= x + 1; x1++) {
                 for (y1 = y - 1; y1 <= y + 1; y1++) {
                     if (x1 == x && y1 == y) continue;
-                    if (x < 0 || x >= dungeon->width || y < 0 || y >= dungeon->height) continue;
+                    if (x1 < 0 || x1 >= dungeon->width || y1 < 0 || y1 >= dungeon->height) continue;
                     if (map[x1][y1] == UINT32_MAX) continue;
                     // Find the minimum while preferring non-stone cells.
                     if (map[x1][y1] < min || (map[x1][y1] == min && dungeon->cells[x1][y1].type != CELL_TYPE_STONE)) {
@@ -312,12 +328,13 @@ void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t *turn_queue, c
         y_offset = rand();
         can_move = 0;
         for (i = 0; i < 3; i++) {
-            x1 = x - 1 + (i + x_offset) % 3;
+            x1 = (int) x - 1 + (i + (int) x_offset) % 3;
             if (x1 < 0 || x1 >= dungeon->width) continue;
             for (j = 0; j < 3; j++) {
-                y1 = y - 1 + (j + y_offset) % 3;
+                y1 = (int) y - 1 + (j + (int) y_offset) % 3;
                 if (y1 < 0 || y1 >= dungeon->height) continue;
                 if (x1 == x && y1 == y) continue;
+                if (dungeon->cells[x1][y1].attributes & CELL_ATTRIBUTE_IMMUTABLE) continue;
                 if (dungeon->cells[x1][y1].type == CELL_TYPE_STONE && !(monster->attributes & MONSTER_ATTRIBUTE_TUNNELING)) continue;
                 // This cell is open
                 next.x = x1;
