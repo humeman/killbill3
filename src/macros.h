@@ -24,6 +24,12 @@
 #define FILE_MATRIX_OFFSET 22
 #define FILE_ROOM_COUNT_OFFSET 1702
 
+#define WIDTH 80
+#define HEIGHT 24
+
+#define FOG_OF_WAR_DISTANCE 2
+#define TELEPORT_POINTER '*'
+
 
 #define RETURN_ERROR(message, ...) { \
     fprintf(stderr, "err: " message "\n", ##__VA_ARGS__); \

@@ -20,7 +20,7 @@ typedef enum {
     GAME_RESULT_LOSE = 2
 } game_result_t;
 
-#define CELL_TYPES 7
+#define CELL_TYPES 8
 typedef enum {
     CELL_TYPE_STONE,
     CELL_TYPE_ROOM,
@@ -28,7 +28,8 @@ typedef enum {
     CELL_TYPE_UP_STAIRCASE,
     CELL_TYPE_DOWN_STAIRCASE,
     CELL_TYPE_EMPTY,
-    CELL_TYPE_DEBUG
+    CELL_TYPE_DEBUG,
+    CELL_TYPE_HIDDEN
 } cell_type_t;
 
 class room_t {
@@ -49,8 +50,7 @@ class cell_t {
 };
 
 typedef enum {
-    CELL_ATTRIBUTE_IMMUTABLE = 0x01,
-    CELL_ATTRIBUTE_SEEN = 0x02
+    CELL_ATTRIBUTE_IMMUTABLE = 0x01
 } cell_attributes_t;
 
 class queue_node_t {

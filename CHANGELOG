@@ -138,3 +138,59 @@
          General cleanup: moved variable declarations to the top of functions,
           made all error returns use RETURN_ERROR or ERROR_AND_EXIT macros,
           switched C standard library imports to C++ (ie, string.h -> cstring).
+    4p:  Began migrating the dungeon_t struct to its own C++ class. Program is now
+          very broken :)
+3/28:
+    12p: Decided to go all in on C++ stuff. Much of the program had to be changed, and
+          the main refactor spanned quite a few hours. This included:
+          - Making every struct a C++ class, and any struct that includes methods
+             that operate on it members of that class
+          - Getting rid of direct mallocs (where possible) for constructors/destructors
+          - Replacing the print error/return status code pattern with exceptions
+             -> This also allowed me to make methods return their values rather than
+                 updating values of pointers where possible. For example, getting a
+                 pair of coordinates will return coordinates_t rather than updating
+                 an X and Y pointer.
+          - Got rid of the files.cpp/h methods and moved them into dungeon.cpp/h -- they
+             made way more sense there to begin with.
+         Besides that, I did a few other refactors to improve the boundaries between
+          source files/classes and make things easier to follow.
+          - The dungeon code now exclusively handles dungeons, not characters or any
+             of that extra stuff.
+          - A new game_t class (in game.cpp/h) handles the game logic, and is where the
+             dungeon generation and character management, turns, etc converge. Character
+             maps, pathfinding, PC, etc. are all defined here. This required a signficant
+             refactor of dungeon/file/game code.
+          - Moved a lot of the game prep logic into game_t and out of main. Now, the init
+             logic in main is just `new game_t` and `game.init_from_file()` or 
+             `game.init_random()`. Cleanup is also in the game destructor.
+3/29:
+    9a:  Continued the Great C++ Refactor. Began to move on to debugging the now very,
+          very broken program.
+          - Refactored heap.cpp/heap.c into a C++ class for consistency.
+          - Began hunting some Valgrind uninitialized value errors and use of unallocated
+             memory. Not much success yet.
+3/30:
+    11a: Got the game up and running again following the refactor and hunted down bugs.
+          - Found a bug in the Fog of War implementation -- a typo, where an X should've
+             been a Y, which made the dungeon blank sometimes.
+          - Readded the PC speed definition, which was lost somewhere and resulted in lots
+             of vague 'uninitialized value' complaints from Valgrind and made the monsters
+             go warp speed.
+          - Fixed a bug with Fog of War where using staircases would result in an empty
+             dungeon for one turn.
+          - Found and cleaned up some memory leaks introduced in the refactor. Got rid of
+             some now unnecessary mallocs.
+          - `nummon` implementation was redone with the new game_t class, and I forgot to
+             actually set it if the user overrides it, so it does that now.
+          - Fixed a bug in the monster menu implementation where a uint8_t was being used
+             for possibly negative values, making the numbers wrap around to 255.
+    3p:  Read over the requirements again and realized the SEEN attribute on cells was
+          insufficient for the Fog of War requirement. It's now a map of cell types, where
+          the default is CELL_TYPE_HIDDEN which is rendered as stone.
+         Added the toggle key for Fog of War.
+         Did some color work so that the "seen" cells that aren't immediately visible
+          by the PC are rendered in grayscale to better reflect that they aren't the real
+          cells.
+         Implemented teleportation.
+         Moved the game loop out of game.cpp into game_loop.cpp since it's getting long.

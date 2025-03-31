@@ -1,6 +1,6 @@
 # ASSIGNMENT BINARIES 
-assignment1_06: dungeon.o heap.o pathfinding.o character.o game.o assignment1_06.o
-	g++ dungeon.o heap.o pathfinding.o character.o game.o assignment1_06.o -o assignment1_06 -lm -lncurses
+assignment1_06: dungeon.o heap.o pathfinding.o character.o game.o game_loop.o assignment1_06.o
+	g++ dungeon.o heap.o pathfinding.o character.o game.o game_loop.o assignment1_06.o -o assignment1_06 -lm -lncurses
 
 assignment1_05: dungeon.o files.o heap.o pathfinding.o character.o game.o assignment1_05.o
 	gcc dungeon.o files.o heap.o pathfinding.o character.o game.o assignment1_05.o -o assignment1_05 -lm -lncurses
@@ -38,6 +38,9 @@ assignment1_06.o: src/assignments/1_06.cpp
 
 game.o: src/game.cpp src/game.h
 	g++ src/game.cpp -o game.o -Wall -Werror -c -g
+
+game_loop.o: src/game_loop.cpp src/game.h
+	g++ src/game_loop.cpp -o game_loop.o -Wall -Werror -c -g
 
 dungeon.o: src/dungeon.cpp src/dungeon.h
 	g++ src/dungeon.cpp -o dungeon.o -Wall -Werror -c -g
