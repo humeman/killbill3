@@ -225,9 +225,9 @@ void game_t::try_move(int x_offset, int y_offset) {
     int new_x = pc.x + x_offset;
     int new_y = pc.y + y_offset;
     if (new_x < 0) new_x = 0;
-    if (new_x >= dungeon->width) new_x = dungeon->width;
+    if (new_x >= dungeon->width) new_x = dungeon->width - 1;
     if (new_y < 0) new_y = 0;
-    if (new_y >= dungeon->height) new_y = dungeon->height;
+    if (new_y >= dungeon->height) new_y = dungeon->height - 1;
     if (dungeon->cells[new_x][new_y].type == CELL_TYPE_STONE) {
         snprintf(message, 80, "There's stone in the way!");
     }
@@ -254,10 +254,10 @@ void game_t::move_coords(coordinates_t &coords, int x_offset, int y_offset) {
 }
 
 void game_t::force_move(coordinates_t dest) {
-    if (character_map[dest.x][dest.y] != NULL) {
+    if (character_map[dest.x][dest.y] != NULL && character_map[dest.x][dest.y] != &pc) {
         // Kill the monster there
         character_map[dest.x][dest.y]->dead = 1;
-        snprintf(message, 80, "You ate the %c in the way.", character_map[dest.x][dest.y]->display);
+        snprintf(message, 80, "The poor %c stood no chance. Cheater!", character_map[dest.x][dest.y]->display);
     }
     pc.move_to(dest, character_map);
     update_fog_of_war();

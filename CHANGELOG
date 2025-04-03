@@ -194,3 +194,10 @@
           cells.
          Implemented teleportation.
          Moved the game loop out of game.cpp into game_loop.cpp since it's getting long.
+3/31:
+    3p:  I had a random segfault while playtesting that I couldn't reproduce, so I created
+          a script to run the game with random inputs over and over until a crash. 
+          Discovered and fixed two out-of-bounds reads caused by typos in character 
+          logic with it.
+         The game now displays the final frame after win/lose.
+         Teleportation now shows a message when killing a monster (was bugged).

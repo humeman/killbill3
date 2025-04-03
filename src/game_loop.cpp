@@ -85,6 +85,7 @@ void game_t::run() {
         if (init_pair(COLORS_STONE, COLOR_BLACK, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
         if (init_pair(COLORS_TEXT, COLOR_WHITE, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
         if (init_pair(COLORS_MENU_TEXT, COLOR_BLACK, COLOR_WHITE) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
+        if (init_pair(COLORS_FOG_OF_WAR_TERRAIN, COLOR_WHITE, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
         if (keypad(stdscr, TRUE) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (special kb keys)");
                         // man this library is weird
         if (curs_set(0) == ERR) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (disable cursor)");
@@ -109,7 +110,7 @@ void game_t::run_internal() {
     bool teleport_mode = false;
     bool sticky_message = false;
     coordinates_t teleport_pointer;
-    game_result_t result;
+    game_result_t result = GAME_RESULT_RUNNING;
     character_t *ch;
     cell_type_t cell_to_render;
     bool in_sight;
@@ -148,7 +149,9 @@ void game_t::run_internal() {
                     attroff(COLOR_PAIR(c) | A_BOLD);
                 } else {
                     attrset(COLOR_PAIR(in_sight ? COLORS_BY_CELL_TYPE[cell_to_render] : COLORS_FOG_OF_WAR_TERRAIN));
+                    if (!in_sight) attrset(A_DIM);
                     addch(CHARACTERS_BY_CELL_TYPE[cell_to_render]);
+                    if (!in_sight) attroff(A_DIM);
                     attroff(COLOR_PAIR(in_sight ? COLORS_BY_CELL_TYPE[cell_to_render] : COLORS_FOG_OF_WAR_TERRAIN));
                 }
             }
@@ -160,6 +163,34 @@ void game_t::run_internal() {
         attrset(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
         printw(" %s ", message);
         attroff(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
+
+        if (result != GAME_RESULT_RUNNING) {
+            getch();
+            // Print our beautiful images
+            clear();
+            if (result == GAME_RESULT_LOSE) {
+                ascii = LOSE;
+                x = WIDTH / 2 - ASCII_LOSE_WIDTH / 2;
+                y = HEIGHT / 2 - ASCII_LOSE_HEIGHT / 2;
+            }
+            else {
+                ascii = WIN;
+                x = WIDTH / 2 - ASCII_WIN_WIDTH / 2;
+                y = HEIGHT / 2 - ASCII_WIN_HEIGHT / 2;
+            }
+            move(y, x);
+            for (i = 0; ascii[i]; i++) {
+                if (ascii[i] == '\n') {
+                    y++;
+                    move(y, x);
+                } else {
+                    addch(ascii[i]);
+                }
+            }
+            PRINTW_CENTERED_AT(WIDTH / 2, HEIGHT - 1, "(press any key to exit)");
+            getch();
+            return;
+        }
 
         // Print out the monster menu if available
         if (monster_menu_on) {
@@ -254,6 +285,7 @@ void game_t::run_internal() {
             case KB_UP_RIGHT_0:
             case KB_UP_RIGHT_1:
                 KB_CONTROLS(1, -1);
+                break;
             case KB_RIGHT_0:
             case KB_RIGHT_1:
                 KB_CONTROLS(1, 0);
@@ -310,8 +342,8 @@ void game_t::run_internal() {
                     teleport_pointer.y = pc.y;
                 }
                 else {
-                    force_move(teleport_pointer);
                     message[0] = '\0';
+                    force_move(teleport_pointer);
                     sticky_message = false;
                     teleport_mode = false;
                     next_turn_ready = true;
@@ -332,8 +364,8 @@ void game_t::run_internal() {
                         teleport_pointer.x = pc.x;
                         teleport_pointer.y = pc.y;
                     }
-                    force_move(teleport_pointer);
                     message[0] = '\0';
+                    force_move(teleport_pointer);
                     sticky_message = false;
                     teleport_mode = false;
                     next_turn_ready = true;
@@ -353,33 +385,11 @@ void game_t::run_internal() {
                 next_turn(dungeon, &pc, turn_queue, character_map, pathfinding_tunnel, pathfinding_no_tunnel, &result, &was_pc);
             }
 
-            if (result != GAME_RESULT_RUNNING) {
-                // Print our beautiful images
-                clear();
-                if (result == GAME_RESULT_LOSE) {
-                    ascii = LOSE;
-                    x = WIDTH / 2 - ASCII_LOSE_WIDTH / 2;
-                    y = HEIGHT / 2 - ASCII_LOSE_HEIGHT / 2;
-                }
-                else {
-                    ascii = WIN;
-                    x = WIDTH / 2 - ASCII_WIN_WIDTH / 2;
-                    y = HEIGHT / 2 - ASCII_WIN_HEIGHT / 2;
-                }
-                move(y, x);
-                for (i = 0; ascii[i]; i++) {
-                    if (ascii[i] == '\n') {
-                        y++;
-                        move(y, x);
-                    } else {
-                        addch(ascii[i]);
-                    }
-                }
-                PRINTW_CENTERED_AT(WIDTH / 2, HEIGHT - 1, "(press any key to exit)");
-                getch();
-                return;
-            }
             hide_fog_of_war = false;
+            if (result != GAME_RESULT_RUNNING) {
+                hide_fog_of_war = true;
+                snprintf(message, 80, "Game over. Press any key to continue.");
+            }
         }
     }
 }
