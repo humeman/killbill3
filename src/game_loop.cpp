@@ -75,31 +75,31 @@ void game_t::run() {
     try {
         initscr();
         if (COLS < WIDTH || LINES < HEIGHT)
-            throw std::runtime_error("terminal size is too small, minimum is %dx%d (yours is %dx%d)" 
-                + std::to_string(WIDTH) + std::to_string(HEIGHT) + std::to_string(COLS) + std::to_string(LINES));
-        if (start_color() != OK) throw std::runtime_error("failed to init ncurses (no color support)");
-        if (init_pair(COLORS_FLOOR, COLOR_BLUE, COLOR_BLACK) != OK) throw std::runtime_error("failed to init ncurses (init color)");
-        if (init_pair(COLORS_PC, COLOR_GREEN, COLOR_BLACK) != OK) throw std::runtime_error("failed to init ncurses (init color)");
-        if (init_pair(COLORS_MONSTER, COLOR_RED, COLOR_BLACK) != OK) throw std::runtime_error("failed to init ncurses (init color)");
-        if (init_pair(COLORS_OBJECT, COLOR_MAGENTA, COLOR_BLACK) != OK) throw std::runtime_error("failed to init ncurses (init color)");
-        if (init_pair(COLORS_STONE, COLOR_BLACK, COLOR_BLACK) != OK) throw std::runtime_error("failed to init ncurses (init color)");
-        if (init_pair(COLORS_TEXT, COLOR_WHITE, COLOR_BLACK) != OK) throw std::runtime_error("failed to init ncurses (init color)");
-        if (init_pair(COLORS_MENU_TEXT, COLOR_BLACK, COLOR_WHITE) != OK) throw std::runtime_error("failed to init ncurses (init color)");
-        if (keypad(stdscr, TRUE) != OK) throw std::runtime_error("failed to init ncurses (special kb keys)");
+            throw dungeon_exception(__PRETTY_FUNCTION__, "terminal size is too small, minimum is "
+                + std::to_string(WIDTH) + "x" + std::to_string(HEIGHT) + " (yours is " + std::to_string(COLS) + "x" + std::to_string(LINES) + ")");
+        if (start_color() != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (no color support)");
+        if (init_pair(COLORS_FLOOR, COLOR_BLUE, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
+        if (init_pair(COLORS_PC, COLOR_GREEN, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
+        if (init_pair(COLORS_MONSTER, COLOR_RED, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
+        if (init_pair(COLORS_OBJECT, COLOR_MAGENTA, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
+        if (init_pair(COLORS_STONE, COLOR_BLACK, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
+        if (init_pair(COLORS_TEXT, COLOR_WHITE, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
+        if (init_pair(COLORS_MENU_TEXT, COLOR_BLACK, COLOR_WHITE) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
+        if (keypad(stdscr, TRUE) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (special kb keys)");
                         // man this library is weird
-        if (curs_set(0) == ERR) throw std::runtime_error("failed to init ncurses (disable cursor)");
-        if (noecho() == ERR) throw std::runtime_error("failed to init ncurses (noecho)");    
+        if (curs_set(0) == ERR) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (disable cursor)");
+        if (noecho() == ERR) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (noecho)");    
 
         run_internal();
-    } catch (std::runtime_error &e) {
+    } catch (dungeon_exception &e) {
         endwin();
-        throw e;
+        throw dungeon_exception(__PRETTY_FUNCTION__, e);
     }
     endwin();
 }
 
 void game_t::run_internal() {
-    if (!is_initialized) throw std::runtime_error("game is not yet initialized");
+    if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
     int c, i, x_offset, y_offset, count, monster_count, overflow_count;
     bool next_turn_ready, was_pc;
     uint8_t x, y;
@@ -327,7 +327,7 @@ void game_t::run_internal() {
                     try {
                         teleport_pointer = random_location_no_kill(dungeon, character_map);
                     }
-                    catch (std::runtime_error &e) {
+                    catch (dungeon_exception &e) {
                         // I don't see a reason to crash the game for this.
                         teleport_pointer.x = pc.x;
                         teleport_pointer.y = pc.y;

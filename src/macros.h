@@ -7,6 +7,8 @@
 #ifndef MACROS_H
 #define MACROS_H
 
+#include <string>
+
 #define ROOM_MIN_COUNT 6
 #define ROOM_COUNT_MAX_RANDOMNESS 4
 #define ROOM_MIN_WIDTH 4
@@ -29,6 +31,31 @@
 
 #define FOG_OF_WAR_DISTANCE 2
 #define TELEPORT_POINTER '*'
+
+class dungeon_exception : public std::exception {
+    private:
+        std::string message;
+    public:
+        dungeon_exception(const char *function, std::string message) {
+            this->message = "\n  - " + std::string(function) + ": " + message;
+        }
+        dungeon_exception(const char *function, dungeon_exception &e) {
+            this->message = std::string(e.what()) + "\n  - " + std::string(function);
+        }
+        dungeon_exception(const char *function, dungeon_exception &e, std::string message) {
+            this->message = std::string(e.what()) + "\n  - " + std::string(function) + ": " + message;
+        }
+        dungeon_exception(const char *function, const char *message) {
+            this->message = "\n  - " + std::string(function) + ": " + std::string(message);
+        }
+        dungeon_exception(const char *function, dungeon_exception &e, const char *message) {
+            this->message = std::string(e.what()) + "\n  - " + function + ": " + std::string(message);
+        }
+
+        const char *what() const noexcept override {
+            return message.c_str();
+        }
+};
 
 
 #define RETURN_ERROR(message, ...) { \
@@ -53,43 +80,42 @@
 // Reads a uint32 from f into the variable specified in 'var'.
 #define READ_UINT32(var, description, f, debug) { \
     size_t size = fread(&var, sizeof (var), 1, f); \
-    if (size != 1) throw std::runtime_error("the specified file is not a valid RLG327 file (file ended too early)"); \
+    if (size != 1) throw dungeon_exception(__PRETTY_FUNCTION__, "the specified file is not a valid RLG327 file (file ended too early)"); \
     var = be32toh(var); \
     if (debug) printf("debug: %s = %u\n", description, var); }
 
 // Reads a uint16 from f into the variable specified in 'var'.
 #define READ_UINT16(var, description, f, debug) { \
     size_t size = fread(&var, sizeof (var), 1, f); \
-    if (size != 1) throw std::runtime_error("the specified file is not a valid RLG327 file (file ended too early)"); \
+    if (size != 1) throw dungeon_exception(__PRETTY_FUNCTION__, "the specified file is not a valid RLG327 file (file ended too early)"); \
     var = be16toh(var); \
     if (debug) printf("debug: %s = %u\n", description, var); }
 
 // Reads a uint8 from f into the variable specified in 'var'.
 #define READ_UINT8(var, description, f, debug) { \
     size_t size = fread(&var, sizeof (var), 1, f); \
-    if (size != 1) throw std::runtime_error("the specified file is not a valid RLG327 file (file ended too early)"); \
+    if (size != 1) throw dungeon_exception(__PRETTY_FUNCTION__, "the specified file is not a valid RLG327 file (file ended too early)"); \
     if (debug) printf("debug: %s = %u\n", description, var); }
 
 // Writes the uint32 variable 'var' into f.
 #define WRITE_UINT32(var, description, f, debug) { \
     uint32_t be = htobe32(var); \
     size_t size = fwrite(&be, sizeof (uint32_t), 1, f); \
-    if (size != 1) throw std::runtime_error("could not write to file"); \
+    if (size != 1) throw dungeon_exception(__PRETTY_FUNCTION__, "could not write to file"); \
     if (debug) printf("debug: %s = %u, wrote %ld bytes\n", description, var, sizeof (var)); }
 
 // Writes the uint16 variable 'var' into f.
 #define WRITE_UINT16(var, description, f, debug) { \
     uint16_t be = htobe16(var); \
     size_t size = fwrite(&be, sizeof (uint16_t), 1, f); \
-    if (size != 1) throw std::runtime_error("could not write to file"); \
+    if (size != 1) throw dungeon_exception(__PRETTY_FUNCTION__, "could not write to file"); \
     if (debug) printf("debug: %s = %u, wrote %ld bytes\n", description, var, sizeof (var)); }
 
 // Writes the uint8 variable 'var' into f.
 #define WRITE_UINT8(var, description, f, debug) { \
     size_t size = fwrite(&var, sizeof (uint8_t), 1, f); \
-    if (size != 1) throw std::runtime_error("could not write to file"); \
+    if (size != 1) throw dungeon_exception(__PRETTY_FUNCTION__, "could not write to file"); \
     if (debug) printf("debug: %s = %u, wrote %ld bytes\n", description, var, sizeof (var)); }
-
 
 
 #endif

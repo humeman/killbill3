@@ -10,7 +10,7 @@
 #define STONE_SEED_COUNT 10
 #define GAUSSIAN_CONVOLUTION_COUNT 2
 
-#define ENSURE_INITIALIZED if (!is_initalized) throw std::runtime_error("dungeon is not initialized")
+#define ENSURE_INITIALIZED if (!is_initalized) throw dungeon_exception(__PRETTY_FUNCTION__, "dungeon is not initialized")
 
 dungeon_t::dungeon_t(uint8_t width, uint8_t height, int max_rooms) {
     int i, j;
@@ -50,7 +50,7 @@ dungeon_t::dungeon_t(uint8_t width, uint8_t height, int max_rooms) {
     init_free_rooms:
     free(rooms);
     init_free:
-    throw std::runtime_error("failed to allocate dungeon");
+    throw dungeon_exception(__PRETTY_FUNCTION__, "failed to allocate dungeon");
 }
 
 dungeon_t::~dungeon_t() {
@@ -211,7 +211,7 @@ void dungeon_t::create_rooms(int count, uint8_t min_width, uint8_t min_height, i
     if (count > max_room_count) {
         // Not sure what the conventions are here, but I want exceptions and hate sprintf :)
         // https://stackoverflow.com/a/5591169
-        throw std::runtime_error("create_rooms caller wants " + std::to_string(count) + " rooms, but the max is " + std::to_string(max_room_count));
+        throw dungeon_exception(__PRETTY_FUNCTION__, "create_rooms caller wants " + std::to_string(count) + " rooms, but the max is " + std::to_string(max_room_count));
     }
 
     for (i = 0; i < count; i++) {
@@ -221,8 +221,9 @@ void dungeon_t::create_rooms(int count, uint8_t min_width, uint8_t min_height, i
         try {
             create_room(rooms + i, room_width, room_height);
         }
-        catch (std::runtime_error &e) {
-            if (i < min_room_count) throw std::runtime_error("failed to create the minimum number of rooms (full?)");
+        catch (dungeon_exception &e) {
+            if (i < min_room_count) 
+                throw dungeon_exception(__PRETTY_FUNCTION__, e, "failed to create the minimum number of rooms (full?)");
         }
 
         room_count++;
@@ -270,7 +271,7 @@ void dungeon_t::create_room(room_t *room, uint8_t room_width, uint8_t room_heigh
             }
         }
     }
-    if (!placed) throw std::runtime_error("no space available to place room");
+    if (!placed) throw dungeon_exception(__PRETTY_FUNCTION__, "no space available to place room");
 }
 
 void dungeon_t::connect_rooms() {
@@ -368,7 +369,8 @@ void dungeon_t::connect_points(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1) {
         // In our normal room configuration, this is impossible regardless of what random choices
         // we generate, since each room is within the bounds of the mutable area of the room.
         if (!x_poss && !y_poss)
-            throw std::runtime_error(
+            throw dungeon_exception(
+                __PRETTY_FUNCTION__,
                 "connect_points from ("
                 + std::to_string(x0) + ", " + std::to_string(y0) + ") to (" + std::to_string(x1) + ", " + std::to_string(y1)
                 + "has no possible next location at (" + std::to_string(x) + ", " + std::to_string(y) + ")");
@@ -389,7 +391,7 @@ void dungeon_t::connect_points(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1) {
 
 void dungeon_t::place_staircases() {
     room_t room;
-    if (room_count < 1) throw std::runtime_error("attempted to place but no rooms exist");
+    if (room_count < 1) throw dungeon_exception(__PRETTY_FUNCTION__, "attempted to place but no rooms exist");
 
     // Pick a random location in a room for the up staircase.
     room = rooms[rand() % room_count];
@@ -439,7 +441,7 @@ coordinates_t dungeon_t::random_location_in_room(room_t *room) {
         }
     }
 
-    throw std::runtime_error("couldn't find a location to place in");
+    throw dungeon_exception(__PRETTY_FUNCTION__, "couldn't find a location to place in");
 }
 
 coordinates_t dungeon_t::random_location() {
@@ -451,9 +453,9 @@ coordinates_t dungeon_t::random_location() {
         room = rooms + ((i + room_offset) % room_count);
         try {
             return random_location_in_room(room);
-        } catch (std::runtime_error &e) {}
+        } catch (dungeon_exception &e) {}
     }
-    throw std::runtime_error("no available space in dungeon");
+    throw dungeon_exception(__PRETTY_FUNCTION__, "no available space in dungeon");
 }
 
 void dungeon_t::fill_from_file(FILE *f, int debug, coordinates_t *pc_coords) {
@@ -467,13 +469,13 @@ void dungeon_t::fill_from_file(FILE *f, int debug, coordinates_t *pc_coords) {
     char header[header_size + 1];
     
     size = fread(header, sizeof (*header), header_size, f);
-    if (size != strlen(FILE_HEADER)) throw std::runtime_error("the specified file is not an RLG327 file (file ended too early)");
+    if (size != strlen(FILE_HEADER)) throw dungeon_exception(__PRETTY_FUNCTION__, "the specified file is not an RLG327 file (file ended too early)");
     header[header_size] = 0; // ensures null byte to terminate
     if (debug) printf("debug: file header = %s\n", header);
-    if (strcmp(FILE_HEADER, header)) throw std::runtime_error("the specified file is not an RLG327 file (header mismatch)");
+    if (strcmp(FILE_HEADER, header)) throw dungeon_exception(__PRETTY_FUNCTION__, "the specified file is not an RLG327 file (header mismatch)");
 
     READ_UINT32(version, "version", f, debug);
-    if (version != 0) throw std::runtime_error("this program is incompatible with the provided file's version");
+    if (version != 0) throw dungeon_exception(__PRETTY_FUNCTION__, "this program is incompatible with the provided file's version");
 
     READ_UINT32(file_size, "file size", f, debug);
 
@@ -483,7 +485,7 @@ void dungeon_t::fill_from_file(FILE *f, int debug, coordinates_t *pc_coords) {
     // An unfortunate consequence of the room count being stored after this is
     // that we need the room count to initialize the dungeon. This isn't ideal,
     // but will work.
-    if (fseek(f, FILE_ROOM_COUNT_OFFSET, SEEK_SET)) throw std::runtime_error("unexpected error while reading file (could not seek to room count)");
+    if (fseek(f, FILE_ROOM_COUNT_OFFSET, SEEK_SET)) dungeon_exception(__PRETTY_FUNCTION__, "unexpected error while reading file (could not seek to room count)");
 
     READ_UINT16(room_count, "room count", f, debug);
 
@@ -491,12 +493,12 @@ void dungeon_t::fill_from_file(FILE *f, int debug, coordinates_t *pc_coords) {
     // If so, we'll realloc that.
     if (max_room_count < room_count) {
         temp = (room_t *) realloc(rooms, room_count * sizeof (room_t));
-        if (temp == NULL) throw std::runtime_error("failed to realloc room array");
+        if (temp == NULL) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to realloc room array");
         rooms = temp;
     }
     max_room_count = room_count;
 
-    if (fseek(f, FILE_MATRIX_OFFSET, SEEK_SET)) throw std::runtime_error("unexpected error while reading file (could not seek to dungeon matrix)");
+    if (fseek(f, FILE_MATRIX_OFFSET, SEEK_SET)) throw dungeon_exception(__PRETTY_FUNCTION__, "unexpected error while reading file (could not seek to dungeon matrix)");
     for (y = 0; y < DUNGEON_HEIGHT; y++) {
         for (x = 0; x < DUNGEON_WIDTH; x++) {
             READ_UINT8(hardness, "cell matrix", f, debug);
@@ -504,7 +506,7 @@ void dungeon_t::fill_from_file(FILE *f, int debug, coordinates_t *pc_coords) {
             cells[x][y].type = hardness == 0 ? CELL_TYPE_HALL : CELL_TYPE_STONE;
         }
     }
-    if (fseek(f, FILE_ROOM_COUNT_OFFSET + sizeof (room_count), SEEK_SET)) throw std::runtime_error("unexpected error while reading file (could not seek past room count)");
+    if (fseek(f, FILE_ROOM_COUNT_OFFSET + sizeof (room_count), SEEK_SET)) throw dungeon_exception(__PRETTY_FUNCTION__, "unexpected error while reading file (could not seek past room count)");
 
     for (i = 0; i < room_count; i++) {
         if (debug) printf("debug: reading room %d\n", i);
@@ -552,7 +554,7 @@ void dungeon_t::save_to_file(FILE *f, int debug, coordinates_t *pc_coords) {
     int header_size = strlen(header);
     size_t size = fwrite(header, sizeof (*header), header_size, f);
 
-    if (size != (size_t) header_size) throw std::runtime_error("could not write to file");
+    if (size != (size_t) header_size) throw dungeon_exception(__PRETTY_FUNCTION__, "could not write to file");
     if (debug) printf("debug: header = %s, wrote %ld bytes\n", header, sizeof (*header) * header_size);
 
     version = FILE_VERSION;

@@ -84,7 +84,7 @@ int prepare_args(int argc, char* argv[], int *read, int *write, int *debug, int 
             temp = strtol(argv[i], &err, 10);
             if (*err != '\0' || temp > INT32_MAX || temp < 0) {
                 free(*path);
-                RETURN_ERROR("-n/--nummon must be an int\n");
+                RETURN_ERROR("-n/--nummon must be a positive int\n");
             }
             *nummon = (int) temp;
             nummon_next = 0;
