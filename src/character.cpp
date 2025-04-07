@@ -19,9 +19,9 @@ coordinates_t random_location_no_kill(dungeon_t *dungeon, character_t ***charact
             coords = dungeon->random_location();
             if (character_map[coords.x][coords.y]) continue;
             return coords;
-        } catch (std::runtime_error &e) {}
+        } catch (dungeon_exception &e) {}
     }
-    throw std::runtime_error("no available space for a new monster in dungeon");
+    throw dungeon_exception(__PRETTY_FUNCTION__, "no available space for a new monster in dungeon");
 }
 
 void place_monster(dungeon_t *dungeon, binary_heap_t *turn_queue, character_t ***character_map, uint8_t attributes) {
@@ -29,9 +29,9 @@ void place_monster(dungeon_t *dungeon, binary_heap_t *turn_queue, character_t **
     coordinates_t coords;
     try {
         coords = random_location_no_kill(dungeon, character_map);
-    } catch (std::runtime_error &e) {
+    } catch (dungeon_exception &e) {
         delete monster;
-        throw e;
+        throw dungeon_exception(__PRETTY_FUNCTION__, e);
     }
     monster->x = coords.x;
     monster->y = coords.y;
@@ -44,10 +44,9 @@ void place_monster(dungeon_t *dungeon, binary_heap_t *turn_queue, character_t **
     character_map[coords.x][coords.y] = monster;
     try {
         turn_queue->insert((void *) &monster, monster->speed);
-     } catch (std::runtime_error &e) {
+     } catch (dungeon_exception &e) {
         delete monster;
-        fprintf(stderr, "err: %s\n", e.what());
-        throw std::runtime_error("failed to insert monster into turn queue");
+        throw dungeon_exception(__PRETTY_FUNCTION__, e, "failed to insert monster into turn queue");
     }
 }
 
@@ -66,7 +65,7 @@ void generate_monsters(dungeon_t *dungeon, binary_heap_t *turn_queue, character_
         if (rand() % 2 == 1) attributes |= MONSTER_ATTRIBUTE_ERRATIC;
         try {
             place_monster(dungeon, turn_queue, character_map, attributes);
-        } catch (std::runtime_error &e) {
+        } catch (dungeon_exception &e) {
             pc = NULL;
             while (turn_queue->size() != 0) {
                 priority = turn_queue->remove((void *) &ch);
@@ -80,7 +79,7 @@ void generate_monsters(dungeon_t *dungeon, binary_heap_t *turn_queue, character_
             }
             if (pc != NULL)
                 turn_queue->insert((void *) &pc, pc_priority);
-            throw std::runtime_error("failed to generate monsters");
+            throw dungeon_exception(__PRETTY_FUNCTION__, e, "failed to generate monsters");
         }
     }
 }

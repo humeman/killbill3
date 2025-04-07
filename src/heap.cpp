@@ -14,7 +14,7 @@ binary_heap_t::binary_heap_t(int item_size, bool compare(void *, void *))
     capacity = INITIAL_CAPACITY;
     items = (binary_heap_node_t *) malloc(sizeof (binary_heap_node_t) * INITIAL_CAPACITY);
     if (!items)
-        throw std::runtime_error("could not allocate heap items");
+        throw dungeon_exception(__PRETTY_FUNCTION__, "could not allocate heap items");
     count = 0;
     this->item_size = item_size;
     this->compare = compare;
@@ -40,12 +40,12 @@ void binary_heap_t::insert(void *item, uint32_t priority)
         capacity *= 2;
         new_node = (binary_heap_node_t *) realloc(items, sizeof (binary_heap_node_t) * capacity);
         if (!new_node)
-            throw std::runtime_error("could not reallocate heap items");
+            throw dungeon_exception(__PRETTY_FUNCTION__, "could not reallocate heap items");
         items = new_node;
     }
     i = count;
     items[i].item = malloc(item_size);
-    if (!(items[i].item)) throw std::runtime_error("failed to allocate item");
+    if (!(items[i].item)) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to allocate item");
     count++;
     items[i].priority = priority;
     memcpy(items[i].item, item, item_size);
@@ -64,7 +64,7 @@ void binary_heap_t::insert(void *item, uint32_t priority)
 uint32_t binary_heap_t::top(void *item)
 {
     if (count == 0)
-        throw std::runtime_error("attempted to read top of heap while empty");
+        throw dungeon_exception(__PRETTY_FUNCTION__, "attempted to read top of heap while empty");
     memcpy(item, items[0].item, item_size);
     return items[0].priority;
 }
@@ -72,7 +72,7 @@ uint32_t binary_heap_t::top(void *item)
 uint32_t binary_heap_t::at(int i, void *item)
 {
     if (i >= count || i < 0)
-        throw std::runtime_error("attempted to read heap item at invalid index");
+        throw dungeon_exception(__PRETTY_FUNCTION__, "attempted to read heap item at invalid index");
     memcpy(item, items[i].item, item_size);
     return items[i].priority;
 }
@@ -83,7 +83,7 @@ uint32_t binary_heap_t::remove(void *item)
     uint32_t priority;
     binary_heap_node_t temp;
     if (count == 0)
-        throw std::runtime_error("attempted to remove top of heap while empty");
+        throw dungeon_exception(__PRETTY_FUNCTION__, "attempted to remove top of heap while empty");
     memcpy(item, items[0].item, item_size);
     priority = items[0].priority;
     free(items[0].item);
@@ -126,7 +126,7 @@ void binary_heap_t::decrease_priority(void *target, uint32_t priority)
             break;
     }
     if (i == count)
-        throw std::runtime_error("item is not in heap");
+        throw dungeon_exception(__PRETTY_FUNCTION__, "item is not in heap");
 
     // Update it
     items[i].priority = priority;

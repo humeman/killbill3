@@ -97,7 +97,7 @@ game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
     init_free_pathfinding_no_tunnel:
     free(pathfinding_no_tunnel);
     init_free:
-    throw std::runtime_error("failed to allocate dungeon");
+    throw dungeon_exception(__PRETTY_FUNCTION__, "failed to allocate dungeon");
 }
 
 game_t::~game_t() {
@@ -133,15 +133,15 @@ void game_t::init_from_file(char *path) {
     FILE *f;
     f = fopen(path, "rb");
     if (f == NULL) {
-        throw std::runtime_error("could not open the specified file");
+        throw dungeon_exception(__PRETTY_FUNCTION__, "could not open the specified file");
     }
     try {
         this->dungeon->fill_from_file(f, debug, &pc_coords);
     }
-    catch (std::runtime_error &e) {
+    catch (dungeon_exception &e) {
         free(path);
         fclose(f);
-        throw e;
+        throw dungeon_exception(__PRETTY_FUNCTION__, e);
     }
     fclose(f);
 
@@ -183,18 +183,18 @@ void game_t::init_random() {
 }
 
 void game_t::write_to_file(char *path) {
-    if (!is_initialized) throw std::runtime_error("game is not yet initialized");
+    if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
     FILE *f;
     coordinates_t pc_coords;
     f = fopen(path, "wb");
-    if (f == NULL) throw std::runtime_error("couldn't open file for writing");
+    if (f == NULL) throw dungeon_exception(__PRETTY_FUNCTION__, "couldn't open file for writing");
     pc_coords.x = pc.x;
     pc_coords.y = pc.y;
     try {
         dungeon->save_to_file(f, debug, &pc_coords);
-    } catch (std::runtime_error &e) {
+    } catch (dungeon_exception &e) {
         fclose(f);
-        throw e;
+        throw dungeon_exception(__PRETTY_FUNCTION__, e);
     }
     fclose(f);
 }
@@ -204,12 +204,12 @@ void game_t::override_nummon(int nummon) {
 }
 
 void game_t::random_monsters() {
-    if (!is_initialized) throw std::runtime_error("game is not yet initialized");
+    if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
     generate_monsters(dungeon, turn_queue, character_map, nummon < 0 ? (rand() % (RANDOM_MONSTERS_MAX - RANDOM_MONSTERS_MIN + 1)) + RANDOM_MONSTERS_MIN : nummon);
 }
 
 void game_t::update_fog_of_war() {
-    if (!is_initialized) throw std::runtime_error("game is not yet initialized");
+    if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
     int x, y;
     for (x = pc.x - FOG_OF_WAR_DISTANCE; x <= pc.x + FOG_OF_WAR_DISTANCE; x++) {
         if (x < 0 || x >= dungeon->width) continue;
@@ -221,7 +221,7 @@ void game_t::update_fog_of_war() {
 }
 
 void game_t::try_move(int x_offset, int y_offset) {
-    if (!is_initialized) throw std::runtime_error("game is not yet initialized");
+    if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
     int new_x = pc.x + x_offset;
     int new_y = pc.y + y_offset;
     if (new_x < 0) new_x = 0;
@@ -264,7 +264,7 @@ void game_t::force_move(coordinates_t dest) {
 }
 
 void game_t::fill_and_place_on(cell_type_t target_cell) {
-    if (!is_initialized) throw std::runtime_error("game is not yet initialized");
+    if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
     // Kill all the monsters (RIP)
     character_t *character;
     int x, y, placed;
@@ -284,7 +284,7 @@ void game_t::fill_and_place_on(cell_type_t target_cell) {
             }
         }
     }
-    if (!placed) throw std::runtime_error("no target cell present to place PC on");
+    if (!placed) throw dungeon_exception(__PRETTY_FUNCTION__, "no target cell present to place PC on");
     // Readd the PC and new monsters
     character = &pc;
     turn_queue->insert((void *) &character, 0);
