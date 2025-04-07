@@ -1,7 +1,6 @@
 #include "character.h"
 #include "dungeon.h"
 #include "macros.h"
-#include "pathfinding.h"
 #include "heap.h"
 
 #include <cstdint>
@@ -113,7 +112,7 @@ bool character_t::has_los(dungeon_t *dungeon, coordinates_t to) {
     int x_diff = x1 - x0;
     int y_diff = y1 - y0;
     // y = mx + b
-    float m, b; 
+    float m, b;
     if (x_diff != 0) m = y_diff / (float) x_diff;
     uint8_t x_new = x0;
     uint8_t y_new = y0;
@@ -155,7 +154,7 @@ coordinates_t monster_t::next_xy(dungeon_t *dungeon, coordinates_t to) {
     uint8_t y0 = y;
     uint8_t x1 = to.x;
     uint8_t y1 = to.y;
-    float m, b; 
+    float m, b;
     int x_diff, y_diff, dir;
     coordinates_t next;
     next.x = x0;
@@ -218,7 +217,7 @@ void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t *turn_queue, c
     //     *result = GAME_RESULT_WIN;
     //     return;
     // }
-    
+
     x = ch->x;
     y = ch->y;
 
