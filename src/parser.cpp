@@ -165,7 +165,7 @@ void write_to_color(void *item, std::string line, std::ifstream &input) {
         else if (cur == "GREEN")
             *attr |= FLAG_COLOR_GREEN;
         else if (cur == "BLACK")
-            *attr |= FLAG_COLOR_WHITE;
+            *attr |= FLAG_COLOR_BLACK;
         else
             throw dungeon_exception(__PRETTY_FUNCTION__, "unrecognized color " + cur);
     }

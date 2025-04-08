@@ -13,47 +13,47 @@
 int prepare_args(int argc, char* argv[], int *read, int *write, int *debug, int *nummon, char **path);
 
 #define PRINT_MONST_ATTRS(attrs) { \
-    if (attrs & MONSTER_ATTRIBUTE_INTELLIGENT) std::cout << "smart "; \
-    if (attrs & MONSTER_ATTRIBUTE_TELEPATHIC) std::cout << "telepathic "; \
-    if (attrs & MONSTER_ATTRIBUTE_TUNNELING) std::cout << "tunneling "; \
-    if (attrs & MONSTER_ATTRIBUTE_ERRATIC) std::cout << "erratic "; \
-    if (attrs & MONSTER_ATTRIBUTE_GHOST) std::cout << "pass "; \
-    if (attrs & MONSTER_ATTRIBUTE_PICKUP) std::cout << "pickup "; \
-    if (attrs & MONSTER_ATTRIBUTE_DESTROY) std::cout << "destroy "; \
-    if (attrs & MONSTER_ATTRIBUTE_UNIQUE) std::cout << "unique "; \
-    if (attrs & MONSTER_ATTRIBUTE_BOSS) std::cout << "boss "; }
+    if (attrs & MONSTER_ATTRIBUTE_INTELLIGENT) std::cout << "SMART "; \
+    if (attrs & MONSTER_ATTRIBUTE_TELEPATHIC) std::cout << "TELE "; \
+    if (attrs & MONSTER_ATTRIBUTE_TUNNELING) std::cout << "TUNNEL "; \
+    if (attrs & MONSTER_ATTRIBUTE_ERRATIC) std::cout << "ERRATIC "; \
+    if (attrs & MONSTER_ATTRIBUTE_GHOST) std::cout << "PASS "; \
+    if (attrs & MONSTER_ATTRIBUTE_PICKUP) std::cout << "PICKUP "; \
+    if (attrs & MONSTER_ATTRIBUTE_DESTROY) std::cout << "DESTROY "; \
+    if (attrs & MONSTER_ATTRIBUTE_UNIQUE) std::cout << "UNIQ "; \
+    if (attrs & MONSTER_ATTRIBUTE_BOSS) std::cout << "BOSS "; }
 
 
 #define PRINT_COLORS(attrs) { \
-    if (attrs & FLAG_COLOR_WHITE) std::cout << "white "; \
-    if (attrs & FLAG_COLOR_RED) std::cout << "red "; \
-    if (attrs & FLAG_COLOR_GREEN) std::cout << "green "; \
-    if (attrs & FLAG_COLOR_YELLOW) std::cout << "yellow "; \
-    if (attrs & FLAG_COLOR_BLUE) std::cout << "blue "; \
-    if (attrs & FLAG_COLOR_MAGENTA) std::cout << "magenta "; \
-    if (attrs & FLAG_COLOR_CYAN) std::cout << "cyan "; \
-    if (attrs & FLAG_COLOR_BLACK) std::cout << "black "; }
+    if (attrs & FLAG_COLOR_WHITE) std::cout << "WHITE "; \
+    if (attrs & FLAG_COLOR_RED) std::cout << "RED "; \
+    if (attrs & FLAG_COLOR_GREEN) std::cout << "GREEN "; \
+    if (attrs & FLAG_COLOR_YELLOW) std::cout << "YELLOW "; \
+    if (attrs & FLAG_COLOR_BLUE) std::cout << "BLUE "; \
+    if (attrs & FLAG_COLOR_MAGENTA) std::cout << "MAGENTA "; \
+    if (attrs & FLAG_COLOR_CYAN) std::cout << "CYAN "; \
+    if (attrs & FLAG_COLOR_BLACK) std::cout << "BLACK "; }
 
 #define PRINT_ITEM_TYPE(attrs) { \
-    if (attrs == ITEM_TYPE_WEAPON) std::cout << "weapon"; \
-    else if (attrs == ITEM_TYPE_OFFHAND) std::cout << "offhand"; \
-    else if (attrs == ITEM_TYPE_RANGED) std::cout << "ranged"; \
-    else if (attrs == ITEM_TYPE_ARMOR) std::cout << "armor"; \
-    else if (attrs == ITEM_TYPE_HELMET) std::cout << "helmet"; \
-    else if (attrs == ITEM_TYPE_CLOAK) std::cout << "cloak"; \
-    else if (attrs == ITEM_TYPE_GLOVES) std::cout << "gloves"; \
-    else if (attrs == ITEM_TYPE_BOOTS) std::cout << "boots"; \
-    else if (attrs == ITEM_TYPE_RING) std::cout << "ring"; \
-    else if (attrs == ITEM_TYPE_AMULET) std::cout << "amulet"; \
-    else if (attrs == ITEM_TYPE_LIGHT) std::cout << "light"; \
-    else if (attrs == ITEM_TYPE_SCROLL) std::cout << "scroll"; \
-    else if (attrs == ITEM_TYPE_BOOK) std::cout << "book"; \
-    else if (attrs == ITEM_TYPE_FLASK) std::cout << "flask"; \
-    else if (attrs == ITEM_TYPE_GOLD) std::cout << "gold"; \
-    else if (attrs == ITEM_TYPE_AMMUNITION) std::cout << "ammunition"; \
-    else if (attrs == ITEM_TYPE_FOOD) std::cout << "food"; \
-    else if (attrs == ITEM_TYPE_WAND) std::cout << "wand"; \
-    else if (attrs == ITEM_TYPE_CONTAINER) std::cout << "container"; }
+    if (attrs == ITEM_TYPE_WEAPON) std::cout << "WEAPON"; \
+    else if (attrs == ITEM_TYPE_OFFHAND) std::cout << "OFFHAND"; \
+    else if (attrs == ITEM_TYPE_RANGED) std::cout << "RANGED"; \
+    else if (attrs == ITEM_TYPE_ARMOR) std::cout << "ARMOR"; \
+    else if (attrs == ITEM_TYPE_HELMET) std::cout << "HELMET"; \
+    else if (attrs == ITEM_TYPE_CLOAK) std::cout << "CLOAK"; \
+    else if (attrs == ITEM_TYPE_GLOVES) std::cout << "GLOVES"; \
+    else if (attrs == ITEM_TYPE_BOOTS) std::cout << "BOOTS"; \
+    else if (attrs == ITEM_TYPE_RING) std::cout << "RING"; \
+    else if (attrs == ITEM_TYPE_AMULET) std::cout << "AMULET"; \
+    else if (attrs == ITEM_TYPE_LIGHT) std::cout << "LIGHT"; \
+    else if (attrs == ITEM_TYPE_SCROLL) std::cout << "SCROLL"; \
+    else if (attrs == ITEM_TYPE_BOOK) std::cout << "BOOK"; \
+    else if (attrs == ITEM_TYPE_FLASK) std::cout << "FLASK"; \
+    else if (attrs == ITEM_TYPE_GOLD) std::cout << "GOLD"; \
+    else if (attrs == ITEM_TYPE_AMMUNITION) std::cout << "AMMUNITION"; \
+    else if (attrs == ITEM_TYPE_FOOD) std::cout << "FOOD"; \
+    else if (attrs == ITEM_TYPE_WAND) std::cout << "WAND"; \
+    else if (attrs == ITEM_TYPE_CONTAINER) std::cout << "CONTAINER"; }
 
 
 int main(int argc, char* argv[]) {
@@ -103,11 +103,11 @@ int main(int argc, char* argv[]) {
         delete monst->damage;
         delete monst->hp;
         delete monst;
-        std::cout << "--------------------" << std::endl;
+        std::cout << std::endl;
     }
 
 
-    std::cout << std::endl << std::endl;
+    std::cout << std::endl;
     std::vector<item_definition_t *> items;
 
     std::ifstream item_file(path_prefix + "/.rlg327/object_desc.txt");

@@ -35,7 +35,7 @@ echo "creating tar"
 tar cvfz "$package_dir.tar.gz" "$package_dir" 1> /dev/null
 
 echo "removing package directory"
-#rm -r "$package_dir"
+rm -r "$package_dir"
 
 echo "testing tar"
 if [ -d "test" ]; then
