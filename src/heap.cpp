@@ -5,7 +5,6 @@
 
 #include "heap.h"
 #include "macros.h"
-#include <stdexcept>
 
 #define INITIAL_CAPACITY 10
 

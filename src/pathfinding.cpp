@@ -1,11 +1,9 @@
 #include <cstdio>
 
 #include "pathfinding.h"
-#include "macros.h"
 #include "heap.h"
 #include "dungeon.h"
 #include "character.h"
-#include <stdexcept>
 
 #define HARDNESS_OF(hardness) (hardness == 0 ? 1 : 1 + (hardness / 85))
 
@@ -42,7 +40,7 @@ void generate_pathfinding_map(dungeon_t *dungeon, uint32_t **grid, int allow_tun
     grid[src_x][src_y] = 0;
     coords = (coordinates_t) {src_x, src_y};
     queue.insert(&coords, 0);
-    
+
     // Add every other cell with a distance of infinity
     for (x = 0; x < dungeon->width; x++) {
         for (y = 0; y < dungeon->height; y++) {

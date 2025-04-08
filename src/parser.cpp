@@ -7,16 +7,21 @@
 #include <fstream>
 #include <cstring>
 
-void convert(void *item, std::string line, std::ifstream &input, parse_type_t type) {
+void convert(void *item, std::string line, std::ifstream &input, parse_type_t type, int &line_i) {
     switch (type) {
         case PARSE_TYPE_STRING:
             write_to_string(item, line, input);
             break;
         case PARSE_TYPE_LONG_STRING:
-            write_to_long_string(item, line, input);
+            write_to_long_string(item, line, input, line_i);
             break;
         case PARSE_TYPE_INT:
             write_to_int(item, line, input);
+            break;
+        case PARSE_TYPE_RARITY:
+            write_to_int(item, line, input);
+            if (*((int *) item) < 1 || *((int *) item) > 100)
+                throw dungeon_exception(__PRETTY_FUNCTION__, "rarities must be between 1 and 100");
             break;
         case PARSE_TYPE_DICE:
             write_to_dice(item, line, input);
@@ -46,7 +51,7 @@ void write_to_string(void *item, std::string line, std::ifstream &input) {
     *str += line;
 }
 
-void write_to_long_string(void *item, std::string line, std::ifstream &input) {
+void write_to_long_string(void *item, std::string line, std::ifstream &input, int &line_i) {
     std::string *buf = (std::string *) item;
     if (line.length() != 0) {
         *buf += line;
@@ -55,6 +60,7 @@ void write_to_long_string(void *item, std::string line, std::ifstream &input) {
     while (true) {
         if (!std::getline(input, line))
             throw dungeon_exception(__PRETTY_FUNCTION__, "unterminated long string in file");
+        line_i++;
 
         if (line.length() > 77)
             throw dungeon_exception(__PRETTY_FUNCTION__, "line is too long (max 77, got " + std::to_string(line.length()) + ")");
@@ -74,16 +80,17 @@ void write_to_int(void *item, std::string line, std::ifstream &input) {
 }
 
 void write_to_dice(void *item, std::string line, std::ifstream &input) {
-    int base, dice, sides, i, j;
+    int base, dice, sides;
+    unsigned long i, j;
     i = line.find('+');
-    if ((unsigned long) i == line.length())
+    if (i == std::string::npos)
         throw dungeon_exception(__PRETTY_FUNCTION__, "dice definition must be formatted <base>+<dice>d<sides>, got " + line);
     base = std::stoi(line.substr(0, i));
     j = line.find('d', i);
-    if ((unsigned long) j == line.length())
+    if (j == std::string::npos)
         throw dungeon_exception(__PRETTY_FUNCTION__, "dice definition must be formatted <base>+<dice>d<sides>, got " + line);
     dice = std::stoi(line.substr(i + 1, j));
-    if ((unsigned long) (j + 1) >= line.length())
+    if (j + 1 >= line.length())
         throw dungeon_exception(__PRETTY_FUNCTION__, "dice definition must be formatted <base>+<dice>d<sides>, got " + line);
     sides = std::stoi(line.substr(j + 1, line.length()));
 

@@ -7,7 +7,6 @@
 #include <cstdio>
 #include <cmath>
 #include <cstdlib>
-#include <stdexcept>
 
 #define MAX_ATTEMPTS 2 * DUNGEON_WIDTH * DUNGEON_HEIGHT
 

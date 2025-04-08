@@ -17,6 +17,7 @@ typedef enum {
     PARSE_TYPE_STRING,
     PARSE_TYPE_LONG_STRING,
     PARSE_TYPE_INT,
+    PARSE_TYPE_RARITY,
     PARSE_TYPE_DICE,
     PARSE_TYPE_CHAR,
     PARSE_TYPE_MONSTER_ATTRIBUTES,
@@ -26,15 +27,16 @@ typedef enum {
 } parse_type_t;
 
 void write_to_string(void *item, std::string line, std::ifstream &input);
-void write_to_long_string(void *item, std::string line, std::ifstream &input);
+void write_to_long_string(void *item, std::string line, std::ifstream &input, int &line_i);
 void write_to_int(void *item, std::string line, std::ifstream &input);
+void write_to_rarity(void *item, std::string line, std::ifstream &input);
 void write_to_dice(void *item, std::string line, std::ifstream &input);
 void write_to_char(void *item, std::string line, std::ifstream &input);
 void write_to_monster_attributes(void *item, std::string line, std::ifstream &input);
 void write_to_color(void *item, std::string line, std::ifstream &input);
 void write_to_item_type(void *item, std::string line, std::ifstream &input);
 void write_to_bool(void *item, std::string line, std::ifstream &input);
-void convert(void *item, std::string line, std::ifstream &input, parse_type_t type);
+void convert(void *item, std::string line, std::ifstream &input, parse_type_t type, int &line_i);
 
 typedef struct {
     std::string name;
@@ -111,7 +113,7 @@ class parser_t {
                         // This line must be a BEGIN directive.
                         // This is where we'll allocate our new objects.
                         if (keyword != "BEGIN" || line != begin_header)
-                            throw dungeon_exception(__PRETTY_FUNCTION__, "line " + std::to_string(line_i) + ": expected BEGIN " + begin_header + ", got " + keyword + " " + line);
+                            throw dungeon_exception(__PRETTY_FUNCTION__, "expected BEGIN " + begin_header + ", got " + keyword + " " + line);
 
                         cur = new T;
 
@@ -123,7 +125,7 @@ class parser_t {
                         // Make sure all required fields have been set on this object.
                         for (i = 0; i < definition_count; i++) {
                             if (definitions[i].required && !is_set[i])
-                                throw dungeon_exception(__PRETTY_FUNCTION__, "line " + std::to_string(line_i) + ": incomplete declaration, missing " + definitions[i].name);
+                                throw dungeon_exception(__PRETTY_FUNCTION__, "incomplete declaration, missing " + definitions[i].name);
                         }
                         // We can now toss it on the result list and move on to the next one.
                         results.push_back(cur);
@@ -140,22 +142,22 @@ class parser_t {
                         }
                     }
                     if (target == NULL)
-                        throw dungeon_exception(__PRETTY_FUNCTION__, "line " + std::to_string(line_i) + ": unrecognized keyword " + keyword);
+                        throw dungeon_exception(__PRETTY_FUNCTION__, "unrecognized keyword " + keyword);
 
-                    convert(((char *) cur) + target->offset, line, stream, target->type);
+                    convert(((char *) cur) + target->offset, line, stream, target->type, line_i);
                     is_set[i] = true;
                 }
 
                 if (cur != NULL)
-                    throw dungeon_exception(__PRETTY_FUNCTION__, "line " + std::to_string(line_i) + ": expected END");
+                    throw dungeon_exception(__PRETTY_FUNCTION__, "expected END");
             } catch (dungeon_exception &e) {
                 for (T *t : results) // neat
-                    free(t);
-                throw e;
+                    delete t;
+                throw dungeon_exception(__PRETTY_FUNCTION__, e, "while parsing file at line " + std::to_string(line_i));
             } catch (std::exception &e) {
                 for (T *t : results)
-                    free(t);
-                throw e;
+                    delete t;
+                throw dungeon_exception(__PRETTY_FUNCTION__, "while parsing file at line " + std::to_string(line_i) + ": " + e.what());
             }
         }
 };

@@ -1,7 +1,6 @@
 #include <ncurses.h>
 #include <cstring>
 #include <cstdlib>
-#include <stdexcept>
 
 #include "game.h"
 #include "macros.h"
@@ -89,7 +88,7 @@ void game_t::run() {
         if (keypad(stdscr, TRUE) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (special kb keys)");
                         // man this library is weird
         if (curs_set(0) == ERR) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (disable cursor)");
-        if (noecho() == ERR) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (noecho)");    
+        if (noecho() == ERR) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (noecho)");
 
         run_internal();
     } catch (dungeon_exception &e) {
@@ -213,10 +212,10 @@ void game_t::run_internal() {
                         x_offset = ((int) pc.x) - ((int) ch->x);
                         y_offset = ((int) pc.y) - ((int) ch->y);
 
-                        PRINTW_CENTERED_AT(WIDTH / 2, MONSTER_MENU_Y_BEGIN + 3 + monster_count - monster_menu_i, 
+                        PRINTW_CENTERED_AT(WIDTH / 2, MONSTER_MENU_Y_BEGIN + 3 + monster_count - monster_menu_i,
                             "%c: %2d %s, %2d %s", ch->display,
                             y_offset < 0 ? -1 * y_offset : y_offset,
-                            y_offset < 0 ? "south" : "north", 
+                            y_offset < 0 ? "south" : "north",
                             x_offset < 0 ? -1 * x_offset : x_offset,
                             x_offset < 0 ? "east" : "west"
                         );

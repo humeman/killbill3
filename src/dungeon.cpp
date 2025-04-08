@@ -3,9 +3,7 @@
 #include <cmath>
 #include "dungeon.h"
 #include "macros.h"
-#include <stdexcept>
 #include <string.h>
-#include "character.h"
 
 #define STONE_SEED_COUNT 10
 #define GAUSSIAN_CONVOLUTION_COUNT 2
@@ -222,7 +220,7 @@ void dungeon_t::create_rooms(int count, uint8_t min_width, uint8_t min_height, i
             create_room(rooms + i, room_width, room_height);
         }
         catch (dungeon_exception &e) {
-            if (i < min_room_count) 
+            if (i < min_room_count)
                 throw dungeon_exception(__PRETTY_FUNCTION__, e, "failed to create the minimum number of rooms (full?)");
         }
 
@@ -237,7 +235,7 @@ void dungeon_t::create_room(room_t *room, uint8_t room_width, uint8_t room_heigh
     uint8_t x, y;
     int16_t jx, jy;
     int placed = 0;
-    
+
     for (ix = 0; ix < width && !placed; ix++) {
         x = (ix + x_offset) % width;
         for (iy = 0; iy < height && !placed; iy++) {
@@ -247,7 +245,7 @@ void dungeon_t::create_room(room_t *room, uint8_t room_width, uint8_t room_heigh
             placed = 1;
             for (jx = x - 1; jx < x + room_width + 1 && placed; jx++) {
                 for (jy = y - 1; jy < y + room_height + 1; jy++) {
-                    if (jx < 0 || jx >= width || jy < 0 || jy >= height 
+                    if (jx < 0 || jx >= width || jy < 0 || jy >= height
                         || cells[jx][jy].type != CELL_TYPE_STONE
                         || cells[jx][jy].attributes & CELL_ATTRIBUTE_IMMUTABLE) {
                         placed = 0;
@@ -295,7 +293,7 @@ void dungeon_t::connect_rooms() {
                 visited[i] = 1;
                 break;
             }
-        
+
         // Find the nearest visited room.
         b = NULL;
         max_distance = INFINITY;
@@ -433,7 +431,7 @@ coordinates_t dungeon_t::random_location_in_room(room_t *room) {
 
                 // And, we can't place in an immutable cell.
                 if (cells[x][y].attributes & CELL_ATTRIBUTE_IMMUTABLE) continue;
-                
+
                 coords.x = x;
                 coords.y = y;
                 return coords;
@@ -467,7 +465,7 @@ void dungeon_t::fill_from_file(FILE *f, int debug, coordinates_t *pc_coords) {
     room_t *temp;
     int header_size = strlen(FILE_HEADER);
     char header[header_size + 1];
-    
+
     size = fread(header, sizeof (*header), header_size, f);
     if (size != strlen(FILE_HEADER)) throw dungeon_exception(__PRETTY_FUNCTION__, "the specified file is not an RLG327 file (file ended too early)");
     header[header_size] = 0; // ensures null byte to terminate
@@ -576,7 +574,7 @@ void dungeon_t::save_to_file(FILE *f, int debug, coordinates_t *pc_coords) {
                     up = (coordinates_t *) realloc(up, up_count * sizeof (*up));
                 up[up_count - 1].x = x;
                 up[up_count - 1].y = y;
-            } 
+            }
             else if (cells[x][y].type == CELL_TYPE_DOWN_STAIRCASE) {
                 down_count++;
                 if (down == NULL)

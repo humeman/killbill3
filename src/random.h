@@ -4,17 +4,17 @@
 #include <ostream>
 class dice_t {
     private:
-        int base, dice, size;
+        int base, dice, sides;
 
     public:
-        dice_t(int base, int dice, int size) {
+        dice_t(int base, int dice, int sides) {
             this->base = base;
             this->dice = dice;
-            this->size = size;
+            this->sides = sides;
         }
 
-        friend std::ostream &operator<<(std::ostream &o, const dice_t &die) {
-            return o << "base=" << std::to_string(die.base) << ", dice=" << std::to_string(die.dice) << ", size=" << std::to_string(die.size);
+        friend std::ostream &operator<<(std::ostream &o, const dice_t &dice) {
+            return o << "base=" << std::to_string(dice.base) << ", dice=" << std::to_string(dice.dice) << ", sides=" << std::to_string(dice.sides);
         }
 };
 

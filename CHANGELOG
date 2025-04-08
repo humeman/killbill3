@@ -19,9 +19,9 @@
          above the minimum, 6, may be added (if possible & chosen).
         Updated Makefile to compile files individually.
         Added immutable flag, and set it on the outside of the dungeon.
-        
+
 -- ASSIGNMENT 1.2 --
-2/6: 
+2/6:
     1p:  Created files and basic layout for I/O and new main method
          Wrote logic for reading command-line flags
          Added extra flag, -p, for a custom path
@@ -76,7 +76,7 @@
           two points and check if there is line of sight (no stone) between
           those points. Also added a function to get the next coordinate along
           that line.
-3/5 
+3/5
     11p: Wrote the logic for moving monsters around the game screen w/ lots of
           debugging.
          Discovered a bug in the line generation functions, so I rewrote them.
@@ -92,7 +92,7 @@
           and a new game.c/game.h and 1_05.c.
          Added enums/constants for all the colors, symbols, and keybinds we're
           using. Moved character choices into the game renderer, the actual stored
-          type ints are now arbitrary. 
+          type ints are now arbitrary.
     2p:  Got basic ncurses rendering working -- the dungeon is now drawn to the
           screen properly with colors.
 3/26:
@@ -114,8 +114,8 @@
            rendering system -- the loaded coordinates displayed (in the character
            struct only) incorrectly.
           Fixed an issue where using stairs in a loaded map had the potential to
-           crash the game, since the room count matched exactly what the file 
-           specified though the configured random room count could be higher. 
+           crash the game, since the room count matched exactly what the file
+           specified though the configured random room count could be higher.
           Cleaned up some debugging stuff.
           Fixed some inconsistencies with the dungeon_init function which led
            to uninitialized PC values being used if the map was loaded, not
@@ -162,7 +162,7 @@
              maps, pathfinding, PC, etc. are all defined here. This required a signficant
              refactor of dungeon/file/game code.
           - Moved a lot of the game prep logic into game_t and out of main. Now, the init
-             logic in main is just `new game_t` and `game.init_from_file()` or 
+             logic in main is just `new game_t` and `game.init_from_file()` or
              `game.init_random()`. Cleanup is also in the game destructor.
 3/29:
     9a:  Continued the Great C++ Refactor. Began to move on to debugging the now very,
@@ -196,8 +196,29 @@
          Moved the game loop out of game.cpp into game_loop.cpp since it's getting long.
 3/31:
     3p:  I had a random segfault while playtesting that I couldn't reproduce, so I created
-          a script to run the game with random inputs over and over until a crash. 
-          Discovered and fixed two out-of-bounds reads caused by typos in character 
+          a script to run the game with random inputs over and over until a crash.
+          Discovered and fixed two out-of-bounds reads caused by typos in character
           logic with it.
          The game now displays the final frame after win/lose.
          Teleportation now shows a message when killing a monster (was bugged).
+
+
+-- ASSIGNMENT 1.07 --
+4/3:
+    11p:
+         Made a new exception class, dungeon_exception, which is now used in place of
+          std::runtime_error. It enables passing in the __PRETTY_FUNCTION__ macro and
+          a causing exception, printing it all out nicely in what().
+4/7:
+    12p: Added basic assignment structure to Makefile, src/assignments, and readmes.
+         Created a skeleton structure for parser.h, which is a templated class that
+          operates on any class. The goal is to read from a list of config structs
+          which define a name, data type, and offset within the generic class. The
+          data will then be parsed given that type and set at the given offset.
+    3p:  Completed first iteration of the parser, and tested with STRING, LONG_STRING,
+          DICE, and INT.
+         Added the basic dice_t class in dice.h. It just stores the 3 values.
+         Tested against a simple monster declaration, fixed memory leaks.
+    6p:  Completed monster parsing. With it, added COLOR and MONSTER_ATTRIBUTE types.
+    9p:  Completed item parsing. With it, added ITEM_TYPE and BOOL types.
+    10p: Cleaned up some extra imports everywhere and tested against full files.

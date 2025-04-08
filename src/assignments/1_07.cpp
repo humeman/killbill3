@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
         {.name = "HP", .offset = offsetof(monster_definition_t, hp), .type = PARSE_TYPE_DICE, .required = true},
         {.name = "DAM", .offset = offsetof(monster_definition_t, damage), .type = PARSE_TYPE_DICE, .required = true},
         {.name = "SYMB", .offset = offsetof(monster_definition_t, symbol), .type = PARSE_TYPE_CHAR, .required = true},
-        {.name = "RRTY", .offset = offsetof(monster_definition_t, rarity), .type = PARSE_TYPE_INT, .required = true}
+        {.name = "RRTY", .offset = offsetof(monster_definition_t, rarity), .type = PARSE_TYPE_RARITY, .required = true}
     };
 
     parser_t<monster_definition_t> monst_parser(monst_definitions, sizeof (monst_definitions) / sizeof (monst_definitions[0]),
@@ -128,7 +128,7 @@ int main(int argc, char* argv[]) {
         {.name = "ATTR", .offset = offsetof(item_definition_t, attributes), .type = PARSE_TYPE_DICE, .required = true},
         {.name = "VAL", .offset = offsetof(item_definition_t, value), .type = PARSE_TYPE_DICE, .required = true},
         {.name = "ART", .offset = offsetof(item_definition_t, artifact), .type = PARSE_TYPE_BOOL, .required = true},
-        {.name = "RRTY", .offset = offsetof(item_definition_t, rarity), .type = PARSE_TYPE_INT, .required = true}
+        {.name = "RRTY", .offset = offsetof(item_definition_t, rarity), .type = PARSE_TYPE_RARITY, .required = true}
     };
 
     parser_t<item_definition_t> item_parser(item_definitions, sizeof (item_definitions) / sizeof (item_definitions[0]),

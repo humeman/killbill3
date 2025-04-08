@@ -1,7 +1,6 @@
 #include <ncurses.h>
 #include <cstring>
 #include <cstdlib>
-#include <stdexcept>
 
 #include "game.h"
 #include "macros.h"
