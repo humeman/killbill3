@@ -1,6 +1,6 @@
 # ASSIGNMENT BINARIES
-assignment1_07: dungeon.o heap.o pathfinding.o character.o game.o game_loop.o assignment1_07.o
-	g++ dungeon.o heap.o pathfinding.o character.o game.o game_loop.o assignment1_07.o -o assignment1_07 -lm -lncurses
+assignment1_07: dungeon.o heap.o pathfinding.o character.o game.o game_loop.o parser.o assignment1_07.o
+	g++ dungeon.o heap.o pathfinding.o character.o game.o game_loop.o parser.o assignment1_07.o -o assignment1_07 -lm -lncurses
 
 assignment1_06: dungeon.o heap.o pathfinding.o character.o game.o game_loop.o assignment1_06.o
 	g++ dungeon.o heap.o pathfinding.o character.o game.o game_loop.o assignment1_06.o -o assignment1_06 -lm -lncurses
@@ -59,6 +59,9 @@ pathfinding.o: src/pathfinding.cpp src/heap.h
 
 character.o: src/character.cpp src/character.h
 	g++ src/character.cpp -o character.o -Wall -Werror -c -g
+
+parser.o: src/parser.cpp src/parser.h
+	g++ src/parser.cpp -o parser.o -Wall -Werror -c -g
 
 # PHONY TARGETS
 clean:

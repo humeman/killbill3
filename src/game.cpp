@@ -112,7 +112,7 @@ game_t::~game_t() {
         if (character == &pc) continue;
         destroy_character(character_map, character);
     }
-    
+
     int i;
     delete turn_queue;
     free(message);
@@ -231,7 +231,7 @@ void game_t::try_move(int x_offset, int y_offset) {
     if (dungeon->cells[new_x][new_y].type == CELL_TYPE_STONE) {
         snprintf(message, 80, "There's stone in the way!");
     }
-    else { 
+    else {
         if (character_map[new_x][new_y] != NULL) {
             // Kill the monster there
             character_map[new_x][new_y]->dead = 1;

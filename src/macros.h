@@ -1,6 +1,6 @@
 /**
  * Simple macros used throughout the project.
- * 
+ *
  * Author: csenneff
  */
 
@@ -31,6 +31,17 @@
 
 #define FOG_OF_WAR_DISTANCE 2
 #define TELEPORT_POINTER '*'
+
+// This is distinct from the regular ncurses COLOR_* macros since we can store
+// multiple colors for one monster/item and I don't want an array of ints.
+#define FLAG_COLOR_RED 0x01
+#define FLAG_COLOR_GREEN 0x02
+#define FLAG_COLOR_YELLOW 0x04
+#define FLAG_COLOR_BLUE 0x08
+#define FLAG_COLOR_MAGENTA 0x10
+#define FLAG_COLOR_CYAN 0x20
+#define FLAG_COLOR_WHITE 0x40
+#define FLAG_COLOR_BLACK 0x80
 
 class dungeon_exception : public std::exception {
     private:
