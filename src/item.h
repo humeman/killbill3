@@ -24,7 +24,9 @@ typedef enum {
     ITEM_TYPE_AMMUNITION,
     ITEM_TYPE_FOOD,
     ITEM_TYPE_WAND,
-    ITEM_TYPE_CONTAINER
+    ITEM_TYPE_CONTAINER,
+    ITEM_TYPE_STACK,
+    ITEM_TYPE_UNKNOWN
 } item_type_t;
 
 typedef struct {
@@ -41,7 +43,26 @@ typedef struct {
     dice_t *attributes;
     dice_t *value;
     bool artifact;
+    bool artifact_created;
     int rarity;
 } item_definition_t;
+
+class item_t {
+    private:
+        item_t *next;
+    
+    public:
+        item_definition_t *definition;
+        int hit_bonus, dodge_bonus, defense_bonus, weight, speed_bonus, attributes, value;
+
+        item_t(item_definition_t *definition);
+        ~item_t();
+
+        int get_damage();
+        item_t *add_to_stack(item_t *item);
+        item_t *next_in_stack();
+        char current_symbol();
+        bool is_stacked();
+};
 
 #endif

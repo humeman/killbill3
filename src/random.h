@@ -13,6 +13,14 @@ class dice_t {
             this->sides = sides;
         }
 
+        int roll() {
+            int res = base;
+            int i;
+            for (i = 0; i < dice; i++)
+                res += rand() % sides + 1;
+            return res;
+        }
+
         friend std::ostream &operator<<(std::ostream &o, const dice_t &dice) {
             return o << std::to_string(dice.base) << "+" << std::to_string(dice.dice) << "d" << std::to_string(dice.sides);
         }

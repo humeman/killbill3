@@ -10,6 +10,35 @@
 #include "ascii.h"
 #include "pathfinding.h"
 
+parser_definition_t MONSTER_PARSE_RULES[] {
+    {.name = "NAME", .offset = offsetof(monster_definition_t, name), .type = PARSE_TYPE_STRING, .required = true},
+    {.name = "DESC", .offset = offsetof(monster_definition_t, description), .type = PARSE_TYPE_LONG_STRING, .required = true},
+    {.name = "COLOR", .offset = offsetof(monster_definition_t, color), .type = PARSE_TYPE_COLOR, .required = true},
+    {.name = "SPEED", .offset = offsetof(monster_definition_t, speed), .type = PARSE_TYPE_DICE, .required = true},
+    {.name = "ABIL", .offset = offsetof(monster_definition_t, abilities), .type = PARSE_TYPE_MONSTER_ATTRIBUTES, .required = true},
+    {.name = "HP", .offset = offsetof(monster_definition_t, hp), .type = PARSE_TYPE_DICE, .required = true},
+    {.name = "DAM", .offset = offsetof(monster_definition_t, damage), .type = PARSE_TYPE_DICE, .required = true},
+    {.name = "SYMB", .offset = offsetof(monster_definition_t, symbol), .type = PARSE_TYPE_CHAR, .required = true},
+    {.name = "RRTY", .offset = offsetof(monster_definition_t, rarity), .type = PARSE_TYPE_RARITY, .required = true}
+};
+
+parser_definition_t ITEM_PARSE_RULES[] {
+    {.name = "NAME", .offset = offsetof(item_definition_t, name), .type = PARSE_TYPE_STRING, .required = true},
+    {.name = "DESC", .offset = offsetof(item_definition_t, description), .type = PARSE_TYPE_LONG_STRING, .required = true},
+    {.name = "TYPE", .offset = offsetof(item_definition_t, type), .type = PARSE_TYPE_ITEM_TYPE, .required = true},
+    {.name = "COLOR", .offset = offsetof(item_definition_t, color), .type = PARSE_TYPE_COLOR, .required = true},
+    {.name = "HIT", .offset = offsetof(item_definition_t, hit_bonus), .type = PARSE_TYPE_DICE, .required = true},
+    {.name = "DAM", .offset = offsetof(item_definition_t, damage_bonus), .type = PARSE_TYPE_DICE, .required = true},
+    {.name = "DODGE", .offset = offsetof(item_definition_t, dodge_bonus), .type = PARSE_TYPE_DICE, .required = true},
+    {.name = "DEF", .offset = offsetof(item_definition_t, defense_bonus), .type = PARSE_TYPE_DICE, .required = true},
+    {.name = "WEIGHT", .offset = offsetof(item_definition_t, weight), .type = PARSE_TYPE_DICE, .required = true},
+    {.name = "SPEED", .offset = offsetof(item_definition_t, speed_bonus), .type = PARSE_TYPE_DICE, .required = true},
+    {.name = "ATTR", .offset = offsetof(item_definition_t, attributes), .type = PARSE_TYPE_DICE, .required = true},
+    {.name = "VAL", .offset = offsetof(item_definition_t, value), .type = PARSE_TYPE_DICE, .required = true},
+    {.name = "ART", .offset = offsetof(item_definition_t, artifact), .type = PARSE_TYPE_BOOL, .required = true},
+    {.name = "RRTY", .offset = offsetof(item_definition_t, rarity), .type = PARSE_TYPE_RARITY, .required = true}
+};
+
 game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
     int i, j;
     this->debug = debug;
@@ -75,6 +104,9 @@ game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
     }
     message[0] = '\0';
 
+    monst_parser = new parser_t<monster_definition_t>(MONSTER_PARSE_RULES, sizeof (MONSTER_PARSE_RULES) / sizeof (MONSTER_PARSE_RULES[0]), "RLG327 MONSTER DESCRIPTION 1", "MONSTER", true);
+    item_parser = new parser_t<item_definition_t>(ITEM_PARSE_RULES, sizeof (ITEM_PARSE_RULES) / sizeof (ITEM_PARSE_RULES[0]), "RLG327 OBJECT DESCRIPTION 1", "OBJECT", true);
+
     return;
 
     init_free_all_seen_map:
@@ -124,6 +156,43 @@ game_t::~game_t() {
     for (i = 0; i < dungeon->width; i++) free(seen_map[i]);
     free(seen_map);
     delete dungeon;
+
+    for (monster_definition_t *monst : monster_defs) {
+        delete monst->speed;
+        delete monst->damage;
+        delete monst->hp;
+        delete monst;
+    }
+    for (item_definition_t *item : item_defs) {
+        delete item->hit_bonus;
+        delete item->damage_bonus;
+        delete item->dodge_bonus;
+        delete item->defense_bonus;
+        delete item->weight;
+        delete item->speed_bonus;
+        delete item->attributes;
+        delete item->value;
+        delete item;
+    }
+    delete monst_parser;
+    delete item_parser;
+}
+
+void game_t::init_monster_defs(char *path) {
+    std::ifstream file(path);
+    if (file.fail())
+        throw dungeon_exception(__PRETTY_FUNCTION__, "failed to open file");
+    
+    monst_parser->parse(monster_defs, file);
+}
+
+
+void game_t::init_item_defs(char *path) {
+    std::ifstream file(path);
+    if (file.fail())
+        throw dungeon_exception(__PRETTY_FUNCTION__, "failed to open file");
+    
+    monst_parser->parse(monster_defs, file);
 }
 
 void game_t::init_from_file(char *path) {
@@ -204,7 +273,13 @@ void game_t::override_nummon(int nummon) {
 
 void game_t::random_monsters() {
     if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
-    generate_monsters(dungeon, turn_queue, character_map, nummon < 0 ? (rand() % (RANDOM_MONSTERS_MAX - RANDOM_MONSTERS_MIN + 1)) + RANDOM_MONSTERS_MIN : nummon);
+    if (monster_defs.size() == 0) throw dungeon_exception(__PRETTY_FUNCTION__, "no monster definitions are set");
+    // generate_monsters(dungeon, turn_queue, character_map, nummon < 0 ? (rand() % (RANDOM_MONSTERS_MAX - RANDOM_MONSTERS_MIN + 1)) + RANDOM_MONSTERS_MIN : nummon);
+}
+
+void game_t::random_items() {
+    if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
+    if (item_defs.size() == 0) throw dungeon_exception(__PRETTY_FUNCTION__, "no item definitions are set");
 }
 
 void game_t::update_fog_of_war() {

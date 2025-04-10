@@ -5,6 +5,8 @@
 
 #include "dungeon.h"
 #include "character.h"
+#include "parser.h"
+#include "item.h"
 
 typedef enum colors {
     COLORS_FLOOR = 1,
@@ -63,12 +65,33 @@ class game_t {
         int nummon = -1;
         int debug;
         char *message;
+        parser_t<monster_definition_t> *monst_parser;
+        parser_t<item_definition_t> *item_parser;
+        std::vector<monster_definition_t *> monster_defs;
+        std::vector<item_definition_t *> item_defs;
+
     
     public:
         dungeon_t *dungeon;
 
         game_t(int debug, uint8_t width, uint8_t height, int max_rooms);
         ~game_t();
+
+        /**
+         * Reads a monster definition file into this game.
+         * 
+         * Params:
+         * - path: Path to the file
+         */
+        void init_monster_defs(char *path);
+
+        /**
+         * Reads an item definition file into this game.
+         * 
+         * Params:
+         * - path: Path to the file
+         */
+        void init_item_defs(char *path);
 
         /**
          * Initializes the game's dungeon from an RLG327 file.
@@ -88,6 +111,11 @@ class game_t {
          *  if that hasn't been set).
          */
         void random_monsters();
+
+        /**
+         * Adds randomized items.
+         */
+        void random_items();
 
         /**
          * Writes the game's dungeon to an RLG327 file.
