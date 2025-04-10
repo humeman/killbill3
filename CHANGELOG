@@ -222,3 +222,9 @@
     6p:  Completed monster parsing. With it, added COLOR and MONSTER_ATTRIBUTE types.
     9p:  Completed item parsing. With it, added ITEM_TYPE and BOOL types.
     10p: Cleaned up some extra imports everywhere and tested against full files.
+4/9:
+    7p:  Realized there were some issues relative to the spec:
+         - Print format wasn't right
+         - Duplicate keywords wouldn't error
+         - Supposed to skip failed parses
+         Also made it resilient to extra whitespace anywhere.

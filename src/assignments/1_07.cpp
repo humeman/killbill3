@@ -23,7 +23,6 @@ int prepare_args(int argc, char* argv[], int *read, int *write, int *debug, int 
     if (attrs & MONSTER_ATTRIBUTE_UNIQUE) std::cout << "UNIQ "; \
     if (attrs & MONSTER_ATTRIBUTE_BOSS) std::cout << "BOSS "; }
 
-
 #define PRINT_COLORS(attrs) { \
     if (attrs & FLAG_COLOR_WHITE) std::cout << "WHITE "; \
     if (attrs & FLAG_COLOR_RED) std::cout << "RED "; \
@@ -72,7 +71,7 @@ int main(int argc, char* argv[]) {
         {.name = "DESC", .offset = offsetof(monster_definition_t, description), .type = PARSE_TYPE_LONG_STRING, .required = true},
         {.name = "COLOR", .offset = offsetof(monster_definition_t, color), .type = PARSE_TYPE_COLOR, .required = true},
         {.name = "SPEED", .offset = offsetof(monster_definition_t, speed), .type = PARSE_TYPE_DICE, .required = true},
-        {.name = "ABIL", .offset = offsetof(monster_definition_t, abilities), .type = PARSE_TYPE_MONSTER_ATTRIBUTES, .required = false},
+        {.name = "ABIL", .offset = offsetof(monster_definition_t, abilities), .type = PARSE_TYPE_MONSTER_ATTRIBUTES, .required = true},
         {.name = "HP", .offset = offsetof(monster_definition_t, hp), .type = PARSE_TYPE_DICE, .required = true},
         {.name = "DAM", .offset = offsetof(monster_definition_t, damage), .type = PARSE_TYPE_DICE, .required = true},
         {.name = "SYMB", .offset = offsetof(monster_definition_t, symbol), .type = PARSE_TYPE_CHAR, .required = true},
@@ -80,25 +79,23 @@ int main(int argc, char* argv[]) {
     };
 
     parser_t<monster_definition_t> monst_parser(monst_definitions, sizeof (monst_definitions) / sizeof (monst_definitions[0]),
-        "RLG327 MONSTER DESCRIPTION 1", "MONSTER");
+        "RLG327 MONSTER DESCRIPTION 1", "MONSTER", true);
 
     monst_parser.parse(monsters, monst_file);
 
     std::cout << "========= MONSTERS =========" << std::endl;
     for (monster_definition_t *monst : monsters) {
-        std::cout << "name: " << monst->name << std::endl;
-        std::cout << "description: " << monst->description << std::endl;
-        std::cout << "color: ";
+        std::cout << monst->name << std::endl;
+        std::cout << monst->description << std::endl;
         PRINT_COLORS(monst->color);
         std::cout << std::endl;
-        std::cout << "speed: " << *(monst->speed) << std::endl;
-        std::cout << "abilities: ";
+        std::cout << *(monst->speed) << std::endl;
         PRINT_MONST_ATTRS(monst->abilities);
         std::cout << std::endl;
-        std::cout << "hp: " << *(monst->hp) << std::endl;
-        std::cout << "damage: " << *(monst->damage) << std::endl;
-        std::cout << "symbol: " << monst->symbol << std::endl;
-        std::cout << "rarity: " << monst->rarity << std::endl;
+        std::cout << *(monst->hp) << std::endl;
+        std::cout << *(monst->damage) << std::endl;
+        std::cout << monst->symbol << std::endl;
+        std::cout << monst->rarity << std::endl;
         delete monst->speed;
         delete monst->damage;
         delete monst->hp;
@@ -132,31 +129,28 @@ int main(int argc, char* argv[]) {
     };
 
     parser_t<item_definition_t> item_parser(item_definitions, sizeof (item_definitions) / sizeof (item_definitions[0]),
-        "RLG327 OBJECT DESCRIPTION 1", "OBJECT");
+        "RLG327 OBJECT DESCRIPTION 1", "OBJECT", true);
 
     item_parser.parse(items, item_file);
 
     std::cout << "========= ITEMS =========" << std::endl;
     for (item_definition_t *item : items) {
-        std::cout << "--------------------" << std::endl;
-        std::cout << "name: " << item->name << std::endl;
-        std::cout << "description: " << item->description << std::endl;
-        std::cout << "type: ";
+        std::cout << item->name << std::endl;
+        std::cout << item->description << std::endl;
         PRINT_ITEM_TYPE(item->type);
         std::cout << std::endl;
-        std::cout << "color: ";
         PRINT_COLORS(item->color);
         std::cout << std::endl;
-        std::cout << "hit bonus: " << *(item->hit_bonus) << std::endl;
-        std::cout << "damage bonus: " << *(item->damage_bonus) << std::endl;
-        std::cout << "dodge bonus: " << *(item->dodge_bonus) << std::endl;
-        std::cout << "defense bonus: " << *(item->defense_bonus) << std::endl;
-        std::cout << "weight: " << *(item->weight) << std::endl;
-        std::cout << "speed bonus: " << *(item->speed_bonus) << std::endl;
-        std::cout << "attributes: " << *(item->attributes) << std::endl;
-        std::cout << "value: " << *(item->value) << std::endl;
-        std::cout << "artifact: " << item->artifact << std::endl;
-        std::cout << "rarity: " << item->rarity << std::endl;
+        std::cout << *(item->hit_bonus) << std::endl;
+        std::cout << *(item->damage_bonus) << std::endl;
+        std::cout << *(item->dodge_bonus) << std::endl;
+        std::cout << *(item->defense_bonus) << std::endl;
+        std::cout << *(item->weight) << std::endl;
+        std::cout << *(item->speed_bonus) << std::endl;
+        std::cout << *(item->attributes) << std::endl;
+        std::cout << *(item->value) << std::endl;
+        std::cout << (item->artifact ? "true" : "false") << std::endl;
+        std::cout << item->rarity << std::endl << std::endl;
         delete item->hit_bonus;
         delete item->damage_bonus;
         delete item->dodge_bonus;

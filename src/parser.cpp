@@ -8,6 +8,9 @@
 #include <cstring>
 
 void convert(void *item, std::string line, std::ifstream &input, parse_type_t type, int &line_i) {
+    if (type != PARSE_TYPE_LONG_STRING)
+        trim(line);
+
     switch (type) {
         case PARSE_TYPE_STRING:
             write_to_string(item, line, input);
@@ -112,9 +115,18 @@ void write_to_monster_attributes(void *item, std::string line, std::ifstream &in
     unsigned long i = 0;
     unsigned long j = 0;
     std::string cur;
+    bool set = false;
     while (i != std::string::npos) {
-        j = line.find(' ', i + 1);
-        cur = line.substr(i == 0 ? 0 : i + 1, j - i - (i == 0 ? 0 : 1));
+        // Find the beginning of this word
+        while (i < line.length() && (line[i] == ' ' || line[i] == '\t')) i++;
+        // And the end
+        j = i;
+        while (j < line.length() && line[j] != ' ' && line[j] != '\t') j++;
+        if (i == j) {
+            if (!set) throw dungeon_exception(__PRETTY_FUNCTION__, "no colors provided");
+            break;
+        }
+        cur = line.substr(i, j - i);
         i = j;
         if (cur == "SMART")
             *attr |= MONSTER_ATTRIBUTE_INTELLIGENT;
@@ -136,6 +148,7 @@ void write_to_monster_attributes(void *item, std::string line, std::ifstream &in
             *attr |= MONSTER_ATTRIBUTE_BOSS;
         else
             throw dungeon_exception(__PRETTY_FUNCTION__, "unrecognized monster attribute " + cur);
+        set = true;
     }
 }
 
@@ -146,9 +159,18 @@ void write_to_color(void *item, std::string line, std::ifstream &input) {
     unsigned long i = 0;
     unsigned long j = 0;
     std::string cur;
+    bool set = false;
     while (i != std::string::npos) {
-        j = line.find(' ', i + 1);
-        cur = line.substr(i == 0 ? 0 : i + 1, j - i - (i == 0 ? 0 : 1));
+        // Find the beginning of this word
+        while (i < line.length() && (line[i] == ' ' || line[i] == '\t')) i++;
+        // And the end
+        j = i;
+        while (j < line.length() && line[j] != ' ' && line[j] != '\t') j++;
+        if (i == j) {
+            if (!set) throw dungeon_exception(__PRETTY_FUNCTION__, "no attributes provided");
+            break;
+        }
+        cur = line.substr(i, j - i);
         i = j;
         if (cur == "WHITE")
             *attr |= FLAG_COLOR_WHITE;
@@ -168,6 +190,7 @@ void write_to_color(void *item, std::string line, std::ifstream &input) {
             *attr |= FLAG_COLOR_BLACK;
         else
             throw dungeon_exception(__PRETTY_FUNCTION__, "unrecognized color " + cur);
+        set = true;
     }
 }
 
@@ -200,4 +223,12 @@ void write_to_bool(void *item, std::string line, std::ifstream &input) {
     if (line == "TRUE") *b = true;
     else if (line == "FALSE") *b = false;
     else throw dungeon_exception(__PRETTY_FUNCTION__, "bool must be TRUE or FALSE, not " + line);
+}
+
+void trim(std::string &string) {
+    unsigned long i;
+    for (i = 0; i < string.length() && (string[i] == ' ' || string[i] == '\t'); i++);
+    string.erase(0, i);
+    for (i = string.length() - 1; i >= 0 && (string[i] == ' ' || string[i] == '\t'); i--);
+    string.erase(i + 1);
 }

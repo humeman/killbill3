@@ -14,7 +14,7 @@ class dice_t {
         }
 
         friend std::ostream &operator<<(std::ostream &o, const dice_t &dice) {
-            return o << "base=" << std::to_string(dice.base) << ", dice=" << std::to_string(dice.dice) << ", sides=" << std::to_string(dice.sides);
+            return o << std::to_string(dice.base) << "+" << std::to_string(dice.dice) << "d" << std::to_string(dice.sides);
         }
 };
 

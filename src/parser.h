@@ -38,6 +38,8 @@ void write_to_item_type(void *item, std::string line, std::ifstream &input);
 void write_to_bool(void *item, std::string line, std::ifstream &input);
 void convert(void *item, std::string line, std::ifstream &input, parse_type_t type, int &line_i);
 
+void trim(std::string &string);
+
 typedef struct {
     std::string name;
     size_t offset;
@@ -52,13 +54,15 @@ class parser_t {
         int definition_count;
         std::string header;
         std::string begin_header;
+        bool skip_failures;
 
     public:
-        parser_t(parser_definition_t definitions[], int definition_count, std::string header, std::string begin_header) {
+        parser_t(parser_definition_t definitions[], int definition_count, std::string header, std::string begin_header, bool skip_failures) {
             this->definitions = definitions;
             this->definition_count = definition_count;
             this->header = header;
             this->begin_header = begin_header;
+            this->skip_failures = skip_failures;
         }
         ~parser_t() {}
 
@@ -72,13 +76,13 @@ class parser_t {
           */
         void parse(std::vector<T*> &results, std::ifstream &stream) {
             // This implementation will just read line-by-line, writing into the struct's variables as it goes.
-            std::string line, keyword;
+            std::string line, keyword, err;
             T *cur = NULL;
             int i;
-            bool is_real;
             int line_i = 0;
             bool is_set[definition_count];
             parser_definition_t *target;
+            bool error_mode = false;
 
             try {
                 // Before we can begin, the first line must match the file header
@@ -91,15 +95,8 @@ class parser_t {
                 // Now we can begin parsing line by line
                 while (std::getline(stream, line)) {
                     line_i++;
-                    // Primitive filtering of whitespace...
-                    is_real = false;
-                    for (i = 0; line[i]; i++) {
-                        if (line[i] != ' ' && line[i] != '\t') {
-                            is_real = true;
-                            break;
-                        }
-                    }
-                    if (!is_real) continue;
+                    trim(line);
+                    if (line.length() == 0) continue;
 
                     // Pull out the keyword on this line...
                     i = line.find(' ');
@@ -109,11 +106,24 @@ class parser_t {
                     else
                         line = line.substr(i + 1);
 
+                    trim(keyword);
+
+                    if (error_mode) {
+                        if (keyword == "BEGIN") {
+                            error_mode = false;
+                            cur = NULL;
+                        } else {
+                            continue;
+                        }
+                    }
+
                     if (cur == NULL) {
                         // This line must be a BEGIN directive.
                         // This is where we'll allocate our new objects.
-                        if (keyword != "BEGIN" || line != begin_header)
-                            throw dungeon_exception(__PRETTY_FUNCTION__, "expected BEGIN " + begin_header + ", got " + keyword + " " + line);
+                        if (keyword != "BEGIN" || line != begin_header) {
+                            err = "expected BEGIN " + begin_header + ", got " + keyword + " " + line;
+                            goto err;
+                        }
 
                         cur = new T;
 
@@ -124,8 +134,10 @@ class parser_t {
                     if (keyword == "END") {
                         // Make sure all required fields have been set on this object.
                         for (i = 0; i < definition_count; i++) {
-                            if (definitions[i].required && !is_set[i])
-                                throw dungeon_exception(__PRETTY_FUNCTION__, "incomplete declaration, missing " + definitions[i].name);
+                            if (definitions[i].required && !is_set[i]) {
+                                err = "incomplete declaration, missing " + definitions[i].name;
+                                goto err;
+                            }
                         }
                         // We can now toss it on the result list and move on to the next one.
                         results.push_back(cur);
@@ -141,11 +153,33 @@ class parser_t {
                             break;
                         }
                     }
-                    if (target == NULL)
-                        throw dungeon_exception(__PRETTY_FUNCTION__, "unrecognized keyword " + keyword);
+                    if (target == NULL) {
+                        err = "unrecognized keyword " + keyword;
+                        goto err;
+                    }
 
-                    convert(((char *) cur) + target->offset, line, stream, target->type, line_i);
+                    if (is_set[i]) {
+                        err = "duplicate keyword " + keyword;
+                        goto err;
+                    }
+
+                    try {
+                        convert(((char *) cur) + target->offset, line, stream, target->type, line_i);
+                    } catch (std::exception &e) {
+                        err = "error while parsing data for " + keyword + ": " + e.what();
+                        goto err;
+                    }
                     is_set[i] = true;
+
+                    continue;
+
+                    err:
+                    if (skip_failures) {
+                        error_mode = true;
+                        std::cerr << "(warn) skipping to next definition due to error at line " << line_i << ": " << err << std::endl;
+                    } else {
+                        throw dungeon_exception(__PRETTY_FUNCTION__, err);
+                    }
                 }
 
                 if (cur != NULL)
