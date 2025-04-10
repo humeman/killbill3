@@ -188,6 +188,17 @@ coordinates_t monster_t::next_xy(dungeon_t *dungeon, coordinates_t to) {
     return next;
 }
 
+
+monster_t::monster_t(monster_definition_t *definition) {
+    this->definition = definition;
+    this->hp = definition->hp->roll();
+    this->speed = (uint8_t) CLAMP(definition->speed->roll(), 1, 255);
+    this->attributes = (uint16_t) definition->abilities;
+    this->display = definition->symbol;
+    this->pc_seen = false;
+    this->dead = false;
+}
+
 void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t *turn_queue, character_t ***character_map, uint32_t **pathfinding_tunnel, uint32_t **pathfinding_no_tunnel, game_result_t *result, bool *was_pc) {
     character_t *ch = NULL;
     monster_t *monster;

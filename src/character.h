@@ -46,7 +46,7 @@ class character_t {
         uint8_t x;
         uint8_t y;
         uint8_t speed;
-        uint8_t dead;
+        bool dead;
         virtual ~character_t() {};
 
         /**
@@ -84,10 +84,15 @@ class pc_t : public character_t {
 };
 
 class monster_t : public character_t {
+    private:
+        monster_definition_t *definition;
+        int hp;
+
     public:
+        monster_t(monster_definition_t *definition);
         ~monster_t() {};
         uint16_t attributes;
-        uint8_t pc_seen;
+        bool pc_seen;
         uint8_t pc_last_seen_x;
         uint8_t pc_last_seen_y;
         /**

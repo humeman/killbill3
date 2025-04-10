@@ -83,7 +83,7 @@ class game_t {
          * Params:
          * - path: Path to the file
          */
-        void init_monster_defs(char *path);
+        void init_monster_defs(const char *path);
 
         /**
          * Reads an item definition file into this game.
@@ -91,7 +91,7 @@ class game_t {
          * Params:
          * - path: Path to the file
          */
-        void init_item_defs(char *path);
+        void init_item_defs(const char *path);
 
         /**
          * Initializes the game's dungeon from an RLG327 file.
@@ -99,7 +99,7 @@ class game_t {
          * Params:
          * - path: The path to the file to read.
          */
-        void init_from_file(char *path);
+        void init_from_file(const char *path);
 
         /**
          * Initializes the game with a random dungeon.
@@ -123,7 +123,7 @@ class game_t {
          * Params:
          * - path: The path to the file to write.
          */
-        void write_to_file(char *path);
+        void write_to_file(const char *path);
 
         /**
          * Overrides the number of monsters used when calling random_monsters()

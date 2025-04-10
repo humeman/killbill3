@@ -178,7 +178,7 @@ game_t::~game_t() {
     delete item_parser;
 }
 
-void game_t::init_monster_defs(char *path) {
+void game_t::init_monster_defs(const char *path) {
     std::ifstream file(path);
     if (file.fail())
         throw dungeon_exception(__PRETTY_FUNCTION__, "failed to open file");
@@ -187,7 +187,7 @@ void game_t::init_monster_defs(char *path) {
 }
 
 
-void game_t::init_item_defs(char *path) {
+void game_t::init_item_defs(const char *path) {
     std::ifstream file(path);
     if (file.fail())
         throw dungeon_exception(__PRETTY_FUNCTION__, "failed to open file");
@@ -195,7 +195,7 @@ void game_t::init_item_defs(char *path) {
     monst_parser->parse(monster_defs, file);
 }
 
-void game_t::init_from_file(char *path) {
+void game_t::init_from_file(const char *path) {
     coordinates_t pc_coords;
     character_t *pc_pt;
     FILE *f;
@@ -207,7 +207,6 @@ void game_t::init_from_file(char *path) {
         this->dungeon->fill_from_file(f, debug, &pc_coords);
     }
     catch (dungeon_exception &e) {
-        free(path);
         fclose(f);
         throw dungeon_exception(__PRETTY_FUNCTION__, e);
     }
@@ -250,7 +249,7 @@ void game_t::init_random() {
     is_initialized = true;
 }
 
-void game_t::write_to_file(char *path) {
+void game_t::write_to_file(const char *path) {
     if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
     FILE *f;
     coordinates_t pc_coords;
