@@ -8,7 +8,7 @@ It expects files at two paths:
 These must both follow the expected RLG327 monster/object description formats.
 
 The files will be read, have all of their attributes parsed, and then be printed to the terminal one by one.
-All of the monsters will be printed, then all of the items. Dashes will separate each individual entry and a header is
+All of the monsters will be printed, then all of the items. A newline will separate each individual entry and a header is
  printed above the monster/item sections.
 Strict file validation is performed -- namely:
     - Headers must match
@@ -16,7 +16,8 @@ Strict file validation is performed -- namely:
     - Values must match the rules defined in the assignment spec (ie, valid types, dice formatting, long string formats, ...)
     - No unexpected data can be added (must wrap in a BEGIN <> / END, nothing else in between besides whitespace)
     - No unexpected EOFs (long strings must be terminated with ., entries must terminate with END)
-Exceptions are thrown and printed instead of the parsed data if anything is invalid.
+    - No duplicate values can be provided on one object (but duplicate flags, like COLOR/ABIL are fine since they're present in the sample files)
+Any failures in parsing (barring an invalid file format judging by the header, which will terminate the program) will result in the current object being skipped until the next BEGIN keyword or the end of the file. A warning is printed to stderr before any data is printed describing where in the file the error occurred and what's wrong.
 
 Internally, the parser is a template class which can read into any struct. It accepts a list of attribute definitions
  including the name, offset within the struct, data type, and required flag for each allowed key/value. It also gets the

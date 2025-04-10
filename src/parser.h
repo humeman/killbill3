@@ -106,8 +106,6 @@ class parser_t {
                     else
                         line = line.substr(i + 1);
 
-                    trim(keyword);
-
                     if (error_mode) {
                         if (keyword == "BEGIN") {
                             error_mode = false;
@@ -177,13 +175,18 @@ class parser_t {
                     if (skip_failures) {
                         error_mode = true;
                         std::cerr << "(warn) skipping to next definition due to error at line " << line_i << ": " << err << std::endl;
+                        cur = NULL;
                     } else {
                         throw dungeon_exception(__PRETTY_FUNCTION__, err);
                     }
                 }
 
-                if (cur != NULL)
-                    throw dungeon_exception(__PRETTY_FUNCTION__, "expected END");
+                if (cur != NULL) {
+                    if (skip_failures)
+                        std::cerr << "(warn) incomplete declaration at EOF, line " << line_i << std::endl;
+                    else
+                        throw dungeon_exception(__PRETTY_FUNCTION__, "expected END");
+                }
             } catch (dungeon_exception &e) {
                 for (T *t : results) // neat
                     delete t;
