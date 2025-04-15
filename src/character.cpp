@@ -333,6 +333,46 @@ void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t<character_t *>
     return;
 }
 
+int character_t::inventory_size() {
+    // We could use a separate size variable here, but we're returning item_ts directly,
+    // and they have methods on them to manage the stack. It's more reliable to re-count
+    // every time, though less efficient.
+    int i = 0;
+    item_t *current = item;
+    while (current != NULL) {
+        i++;
+        current = current->next_in_stack();
+    }
+    return i;
+}
+void character_t::add_to_inventory(item_t *item) {
+    if (this->item == NULL) this->item = item;
+    item->add_to_stack(item);
+    item_count++;
+}
+item_t *character_t::remove_from_inventory(int i) {
+    if (i < 0 || i >= item_count) throw dungeon_exception(__PRETTY_FUNCTION__, "inventory index out of bounds");
+    item_t *current = item;
+    int j;
+    for (j = 0; j < i - 1; j++) {
+        current = current->next_in_stack();
+        if (current == NULL) throw dungeon_exception(__PRETTY_FUNCTION__, "inventory index out of bounds");
+    }
+    if (i == 0) {
+        item = item->next_in_stack();
+        return current;
+    }
+    else {
+        return current->remove_next_in_stack();
+    }
+}
+item_t *character_t::remove_inventory_stack() {
+    item_t *stack = item;
+    item_count = 0;
+    item = NULL;
+    return stack;
+}
+
 character_type pc_t::type() {
     return CHARACTER_TYPE_PC;
 }

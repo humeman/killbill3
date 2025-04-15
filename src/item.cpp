@@ -57,6 +57,13 @@ void item_t::add_to_stack(item_t *item) {
     current->next = item;
 }
 
+item_t *item_t::remove_next_in_stack() {
+    item_t *removed = next;
+    if (removed != NULL) next = removed->next;
+    else next = NULL;
+    return removed;
+}
+
 item_t *item_t::next_in_stack() {
     return next;
 }

@@ -7,6 +7,7 @@
 #include <ncurses.h>
 #include "dungeon.h"
 #include "random.h"
+#include "item.h"
 
 #define MONSTER_ATTRIBUTE_INTELLIGENT 0x001
 #define MONSTER_ATTRIBUTE_TELEPATHIC 0x002
@@ -43,6 +44,10 @@ void verify_monster_definition(monster_definition_t *def);
  * The base class (abstract) for a dungeon character.
  */
 class character_t {
+    private:
+        item_t *item = NULL;
+        int item_count = 0;
+
     public:
         char display;
         uint8_t x;
@@ -77,6 +82,11 @@ class character_t {
          * Returns: CHARACTER_TYPE_PC or CHARACTER_TYPE_MONSTER
          */
         virtual character_type type() = 0;
+
+        int inventory_size();
+        void add_to_inventory(item_t *item);
+        item_t *remove_from_inventory(int i);
+        item_t *remove_inventory_stack();
 };
 
 // Just serves as a classification only -- no special stuff here (yet)

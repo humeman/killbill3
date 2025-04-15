@@ -48,7 +48,8 @@ typedef enum keybinds {
     KB_QUIT = 'Q',
     KB_TOGGLE_FOG = 'f',
     KB_TELEPORT = 'g',
-    KB_TELEPORT_RANDOM = 'r'
+    KB_TELEPORT_RANDOM = 'r',
+    KB_PICKUP = ','
 } keybinds_t;
 
 extern char CHARACTERS_BY_CELL_TYPE[CELL_TYPES];

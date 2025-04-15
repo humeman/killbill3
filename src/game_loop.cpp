@@ -90,6 +90,7 @@ void game_t::run_internal() {
     game_result_t result = GAME_RESULT_RUNNING;
     character_t *ch;
     char *ascii;
+    item_t *target_item;
     message[0] = '\0';
 
     update_fog_of_war();
@@ -346,6 +347,14 @@ void game_t::run_internal() {
                     teleport_mode = false;
                     next_turn_ready = true;
                 }
+                break;
+            case KB_PICKUP:
+                if (monster_menu_on || teleport_mode) break;
+                target_item = item_map[pc.x][pc.y];
+                if (target_item == NULL) snprintf(message, WIDTH, "There's no item here!");
+                pc.add_to_inventory(target_item);
+                snprintf(message, WIDTH, "You picked up the %s. You have %d items.", target_item->definition->name.c_str(), pc.inventory_size());
+                next_turn_ready = true;
                 break;
             case KB_QUIT:
                 return;
