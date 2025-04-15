@@ -347,7 +347,7 @@ int character_t::inventory_size() {
 }
 void character_t::add_to_inventory(item_t *item) {
     if (this->item == NULL) this->item = item;
-    item->add_to_stack(item);
+    else item->add_to_stack(item);
     item_count++;
 }
 item_t *character_t::remove_from_inventory(int i) {

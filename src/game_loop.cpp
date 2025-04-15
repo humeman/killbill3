@@ -293,6 +293,7 @@ void game_t::run_internal() {
                 if (monster_menu_on || teleport_mode) break;
                 if (dungeon->cells[pc.x][pc.y].type != CELL_TYPE_UP_STAIRCASE) {
                     snprintf(message, WIDTH, "There isn't an up staircase here.");
+                    break;
                 }
                 fill_and_place_on(CELL_TYPE_DOWN_STAIRCASE);
                 snprintf(message, WIDTH, "You went up the stairs.");
@@ -301,6 +302,7 @@ void game_t::run_internal() {
                 if (monster_menu_on || teleport_mode) break;
                 if (dungeon->cells[pc.x][pc.y].type != CELL_TYPE_DOWN_STAIRCASE) {
                     snprintf(message, WIDTH, "There isn't a down staircase here.");
+                    break;
                 }
                 fill_and_place_on(CELL_TYPE_UP_STAIRCASE);
                 snprintf(message, WIDTH, "You went down the stairs.");
@@ -351,7 +353,10 @@ void game_t::run_internal() {
             case KB_PICKUP:
                 if (monster_menu_on || teleport_mode) break;
                 target_item = item_map[pc.x][pc.y];
-                if (target_item == NULL) snprintf(message, WIDTH, "There's no item here!");
+                if (target_item == NULL) {
+                    snprintf(message, WIDTH, "There's no item here.");
+                    break;
+                }
                 pc.add_to_inventory(target_item);
                 snprintf(message, WIDTH, "You picked up the %s. You have %d items.", target_item->definition->name.c_str(), pc.inventory_size());
                 next_turn_ready = true;
