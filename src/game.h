@@ -51,18 +51,23 @@ typedef enum keybinds {
     KB_TELEPORT_RANDOM = 'r'
 } keybinds_t;
 
+extern char CHARACTERS_BY_CELL_TYPE[CELL_TYPES];
+extern int COLORS_BY_CELL_TYPE[CELL_TYPES];
+
 // To split up the dungeon from the game controls and such, this class
 // stores all of the critical info for the game.
 class game_t {
     private:
         pc_t pc;
-        binary_heap_t *turn_queue;
+        binary_heap_t<character_t *> turn_queue;
         uint32_t **pathfinding_no_tunnel;
         uint32_t **pathfinding_tunnel;
-        cell_type_t **seen_map;
+        char **seen_map;
         character_t ***character_map;
+        item_t ***item_map;
         bool is_initialized = false;
         int nummon = -1;
+        int numitems = -1;
         int debug;
         char *message;
         parser_t<monster_definition_t> *monst_parser;
@@ -70,7 +75,7 @@ class game_t {
         std::vector<monster_definition_t *> monster_defs;
         std::vector<item_definition_t *> item_defs;
 
-    
+
     public:
         dungeon_t *dungeon;
 
@@ -79,7 +84,7 @@ class game_t {
 
         /**
          * Reads a monster definition file into this game.
-         * 
+         *
          * Params:
          * - path: Path to the file
          */
@@ -87,7 +92,7 @@ class game_t {
 
         /**
          * Reads an item definition file into this game.
-         * 
+         *
          * Params:
          * - path: Path to the file
          */
@@ -95,7 +100,7 @@ class game_t {
 
         /**
          * Initializes the game's dungeon from an RLG327 file.
-         * 
+         *
          * Params:
          * - path: The path to the file to read.
          */
@@ -119,7 +124,7 @@ class game_t {
 
         /**
          * Writes the game's dungeon to an RLG327 file.
-         * 
+         *
          * Params:
          * - path: The path to the file to write.
          */
@@ -128,11 +133,20 @@ class game_t {
         /**
          * Overrides the number of monsters used when calling random_monsters()
          *  or when the PC goes up/down staircases. By default, this is random.
-         * 
+         *
          * Params:
          * - nummon: New number of monsters per dungeon
          */
         void override_nummon(int nummon);
+
+        /**
+         * Overrides the number of items used when calling random_items()
+         *  or when the PC goes up/down staircases. By default, this is random.
+         *
+         * Params:
+         * - numitems: New number of items per dungeon
+         */
+        void override_numitems(int numitems);
 
         /**
          * Runs the game.
@@ -153,7 +167,7 @@ class game_t {
 
         /**
          * Tries to move the PC to a new location.
-         * 
+         *
          * Params:
          * - x_offset: Number to add to the X coordinate
          * - y_offset: Number to add to the Y coordinate
@@ -163,7 +177,7 @@ class game_t {
         /**
          * Changes the value of some coordinates, clamping each value to the
          *  size of the dungeon.
-         * 
+         *
          * Params:
          * - coords: Coordinates to update
          * - x_offset: Number to add to the X coordinate
@@ -180,7 +194,7 @@ class game_t {
         /**
          * Regenerates the dungeon, placing the PC on the first instance of
          *  a specified target cell.
-         * 
+         *
          * Params:
          * - target_cell: Cell type to place on
          */

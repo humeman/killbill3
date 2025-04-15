@@ -3,6 +3,7 @@
 
 #include <string>
 
+#include "dungeon.h"
 #include "random.h"
 
 typedef enum {
@@ -29,28 +30,29 @@ typedef enum {
     ITEM_TYPE_UNKNOWN
 } item_type_t;
 
-typedef struct {
-    std::string name;
-    std::string description;
-    item_type_t type;
-    int color;
-    dice_t *hit_bonus;
-    dice_t *damage_bonus;
-    dice_t *dodge_bonus;
-    dice_t *defense_bonus;
-    dice_t *weight;
-    dice_t *speed_bonus;
-    dice_t *attributes;
-    dice_t *value;
-    bool artifact;
-    bool artifact_created;
-    int rarity;
-} item_definition_t;
+class item_definition_t {
+    public:
+        std::string name;
+        std::string description;
+        item_type_t type;
+        int color;
+        dice_t *hit_bonus;
+        dice_t *damage_bonus;
+        dice_t *dodge_bonus;
+        dice_t *defense_bonus;
+        dice_t *weight;
+        dice_t *speed_bonus;
+        dice_t *attributes;
+        dice_t *value;
+        bool artifact;
+        bool artifact_created = false;
+        int rarity;
+};
 
 class item_t {
     private:
         item_t *next;
-    
+
     public:
         item_definition_t *definition;
         int hit_bonus, dodge_bonus, defense_bonus, weight, speed_bonus, attributes, value;
@@ -59,7 +61,7 @@ class item_t {
         ~item_t();
 
         int get_damage();
-        item_t *add_to_stack(item_t *item);
+        void add_to_stack(item_t *item);
         item_t *next_in_stack();
         char current_symbol();
         bool is_stacked();

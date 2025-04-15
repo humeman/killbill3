@@ -1,4 +1,7 @@
 # ASSIGNMENT BINARIES
+assignment1_08: build/dungeon.o build/pathfinding.o build/character.o build/game.o build/game_loop.o build/parser.o build/item.o build/assignment1_08.o
+	g++ build/dungeon.o build/pathfinding.o build/character.o build/game.o build/game_loop.o build/parser.o build/item.o build/assignment1_08.o -o assignment1_08 -lm -lncurses
+
 assignment1_07: dungeon.o heap.o pathfinding.o character.o game.o game_loop.o parser.o assignment1_07.o
 	g++ dungeon.o heap.o pathfinding.o character.o game.o game_loop.o parser.o assignment1_07.o -o assignment1_07 -lm -lncurses
 
@@ -42,30 +45,42 @@ assignment1_06.o: src/assignments/1_06.cpp
 assignment1_07.o: src/assignments/1_07.cpp
 	g++ src/assignments/1_07.cpp -o assignment1_07.o -Wall -Werror -c -g
 
-game.o: src/game.cpp src/game.h
-	g++ src/game.cpp -o game.o -Wall -Werror -c -g
+build/assignment1_08.o: src/assignments/1_08.cpp src/macros.h src/random.h src/ascii.h src/heap.h
+	@ mkdir -p build
+	g++ src/assignments/1_08.cpp -o build/assignment1_08.o -Wall -Werror -c -g
 
-game_loop.o: src/game_loop.cpp src/game.h
-	g++ src/game_loop.cpp -o game_loop.o -Wall -Werror -c -g
+build/game.o: src/game.cpp src/game.h src/macros.h src/random.h src/ascii.h src/heap.h
+	@ mkdir -p build
+	g++ src/game.cpp -o build/game.o -Wall -Werror -c -g
 
-dungeon.o: src/dungeon.cpp src/dungeon.h
-	g++ src/dungeon.cpp -o dungeon.o -Wall -Werror -c -g
+build/game_loop.o: src/game_loop.cpp src/game.h src/macros.h src/random.h src/ascii.h src/heap.h
+	@ mkdir -p build
+	g++ src/game_loop.cpp -o build/game_loop.o -Wall -Werror -c -g
 
-heap.o: src/heap.cpp src/heap.h
-	g++ src/heap.cpp -o heap.o -Wall -Werror -c -g
+build/dungeon.o: src/dungeon.cpp src/dungeon.h src/macros.h src/random.h src/ascii.h src/heap.h
+	@ mkdir -p build
+	g++ src/dungeon.cpp -o build/dungeon.o -Wall -Werror -c -g
 
-pathfinding.o: src/pathfinding.cpp src/heap.h
-	g++ src/pathfinding.cpp -o pathfinding.o -Wall -Werror -c -g
+build/pathfinding.o: src/pathfinding.cpp src/heap.h src/macros.h src/random.h src/ascii.h src/heap.h
+	@ mkdir -p build
+	g++ src/pathfinding.cpp -o build/pathfinding.o -Wall -Werror -c -g
 
-character.o: src/character.cpp src/character.h
-	g++ src/character.cpp -o character.o -Wall -Werror -c -g
+build/character.o: src/character.cpp src/character.h src/macros.h src/random.h src/ascii.h src/heap.h
+	@ mkdir -p build
+	g++ src/character.cpp -o build/character.o -Wall -Werror -c -g
 
-parser.o: src/parser.cpp src/parser.h
-	g++ src/parser.cpp -o parser.o -Wall -Werror -c -g
+build/parser.o: src/parser.cpp src/parser.h src/macros.h src/random.h src/ascii.h src/heap.h
+	@ mkdir -p build
+	g++ src/parser.cpp -o build/parser.o -Wall -Werror -c -g
+
+build/item.o: src/item.cpp src/item.h src/macros.h src/random.h src/ascii.h src/heap.h
+	@ mkdir -p build
+	g++ src/item.cpp -o build/item.o -Wall -Werror -c -g
 
 # PHONY TARGETS
 clean:
-	rm -f assignment1_* *.o *.tar.gz *.pgm
+	rm -f assignment1_* *.o *.tar.gz *.pgm; \
+	rm -rf build
 
 # This target creates a tarball ready to submit to Canvas for a particular assignment.
 # If this is a submitted file, the script will not exist and it will not work.

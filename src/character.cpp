@@ -23,66 +23,6 @@ coordinates_t random_location_no_kill(dungeon_t *dungeon, character_t ***charact
     throw dungeon_exception(__PRETTY_FUNCTION__, "no available space for a new monster in dungeon");
 }
 
-void place_monster(dungeon_t *dungeon, binary_heap_t *turn_queue, character_t ***character_map, uint8_t attributes) {
-    monster_t *monster = new monster_t;
-    coordinates_t coords;
-    try {
-        coords = random_location_no_kill(dungeon, character_map);
-    } catch (dungeon_exception &e) {
-        delete monster;
-        throw dungeon_exception(__PRETTY_FUNCTION__, e);
-    }
-    monster->x = coords.x;
-    monster->y = coords.y;
-    monster->speed = (rand() % 16) + 5;
-    monster->dead = 0;
-    monster->attributes = attributes;
-    monster->display = monster->attributes < 10 ? '0' + monster->attributes : 'a' + (monster->attributes - 10);
-    monster->pc_seen = 0;
-
-    character_map[coords.x][coords.y] = monster;
-    try {
-        turn_queue->insert((void *) &monster, monster->speed);
-     } catch (dungeon_exception &e) {
-        delete monster;
-        throw dungeon_exception(__PRETTY_FUNCTION__, e, "failed to insert monster into turn queue");
-    }
-}
-
-void generate_monsters(dungeon_t *dungeon, binary_heap_t *turn_queue, character_t ***character_map, int count) {
-    int i;
-    uint8_t attributes;
-    character_t *ch;
-    character_t *pc;
-    uint32_t pc_priority;
-    uint32_t priority;
-    for (i = 0; i < count; i++) {
-        attributes = 0;
-        if (rand() % 2 == 1) attributes |= MONSTER_ATTRIBUTE_INTELLIGENT;
-        if (rand() % 2 == 1) attributes |= MONSTER_ATTRIBUTE_TELEPATHIC;
-        if (rand() % 2 == 1) attributes |= MONSTER_ATTRIBUTE_TUNNELING;
-        if (rand() % 2 == 1) attributes |= MONSTER_ATTRIBUTE_ERRATIC;
-        try {
-            place_monster(dungeon, turn_queue, character_map, attributes);
-        } catch (dungeon_exception &e) {
-            pc = NULL;
-            while (turn_queue->size() != 0) {
-                priority = turn_queue->remove((void *) &ch);
-                if (ch->type() == CHARACTER_TYPE_PC) {
-                    pc = ch;
-                    pc_priority = priority;
-                }
-                else {
-                    destroy_character(character_map, ch);
-                }
-            }
-            if (pc != NULL)
-                turn_queue->insert((void *) &pc, pc_priority);
-            throw dungeon_exception(__PRETTY_FUNCTION__, e, "failed to generate monsters");
-        }
-    }
-}
-
 void destroy_character(character_t ***character_map, character_t *ch) {
     if (character_map[ch->x][ch->y] == ch)
         character_map[ch->x][ch->y] = NULL;
@@ -90,12 +30,13 @@ void destroy_character(character_t ***character_map, character_t *ch) {
 }
 
 void character_t::move_to(coordinates_t to, character_t ***character_map) {
-    if (character_map[x][y] == this) {
+    if (location_initialized && character_map[x][y] == this) {
         character_map[x][y] = NULL;
     }
     character_map[to.x][to.y] = this;
     x = to.x;
     y = to.y;
+    location_initialized = true;
 }
 
 bool character_t::has_los(dungeon_t *dungeon, coordinates_t to) {
@@ -199,7 +140,7 @@ monster_t::monster_t(monster_definition_t *definition) {
     this->dead = false;
 }
 
-void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t *turn_queue, character_t ***character_map, uint32_t **pathfinding_tunnel, uint32_t **pathfinding_no_tunnel, game_result_t *result, bool *was_pc) {
+void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t<character_t *> &turn_queue, character_t ***character_map, uint32_t **pathfinding_tunnel, uint32_t **pathfinding_no_tunnel, game_result_t *result, bool *was_pc) {
     character_t *ch = NULL;
     monster_t *monster;
     uint32_t priority;
@@ -210,8 +151,9 @@ void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t *turn_queue, c
     cell_t* next_cell;
     bool alive;
 
-    while (turn_queue->size() > 0 && ch == NULL) {
-        priority = turn_queue->remove((void*) &ch);
+    while (turn_queue.size() > 0 && ch == NULL) {
+        priority = turn_queue.top_priority();
+        ch = turn_queue.remove();
         // The dead flag here avoids us having to remove from the heap at an arbitrary location.
         // We just destroy it when it comes off the queue next.
         if (ch->dead) {
@@ -238,8 +180,8 @@ void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t *turn_queue, c
         // The dead flag makes the removal of monsters easy, but if it's the PC's turn
         // and the only other monster in the queue is dead, then the game won't end.
         alive = false;
-        for (i = 0; i < turn_queue->size(); i++) {
-            turn_queue->at(i, (void*) &ch);
+        for (i = 0; i < turn_queue.size(); i++) {
+            ch = turn_queue.at(i);
             if (!ch->dead) {
                 alive = true;
                 break;
@@ -248,7 +190,7 @@ void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t *turn_queue, c
         if (!alive) {
             *result = GAME_RESULT_WIN;
         }
-        turn_queue->insert((void*) &pc, priority + pc->speed);
+        turn_queue.insert(pc, priority + pc->speed);
         *was_pc = 1;
         return; // No open space (impossible with a normal map)
     }
@@ -379,7 +321,7 @@ void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t *turn_queue, c
                 if (character_map[next.x][next.y]->type() == CHARACTER_TYPE_PC) {
                     monster->move_to(next, character_map);
                     *result = GAME_RESULT_LOSE;
-                    turn_queue->insert(&ch, priority + ch->speed); // So this character gets free'd
+                    turn_queue.insert(ch, priority + ch->speed); // So this character gets free'd
                     return;
                 }
             }
@@ -387,7 +329,7 @@ void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t *turn_queue, c
         }
     }
 
-    turn_queue->insert(&ch, priority + ch->speed);
+    turn_queue.insert(ch, priority + ch->speed);
     return;
 }
 

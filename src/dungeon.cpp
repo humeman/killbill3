@@ -10,6 +10,10 @@
 
 #define ENSURE_INITIALIZED if (!is_initalized) throw dungeon_exception(__PRETTY_FUNCTION__, "dungeon is not initialized")
 
+bool coordinates_t::operator==(const coordinates_t &o) const {
+    return this->x == o.x && this->y == o.y;
+}
+
 dungeon_t::dungeon_t(uint8_t width, uint8_t height, int max_rooms) {
     int i, j;
     this->width = width;

@@ -10,28 +10,6 @@
 #include "ascii.h"
 #include "pathfinding.h"
 
-char CHARACTERS_BY_CELL_TYPE[CELL_TYPES] = {
-    [CELL_TYPE_STONE] = ' ',
-    [CELL_TYPE_ROOM] = '.',
-    [CELL_TYPE_HALL] = '#',
-    [CELL_TYPE_UP_STAIRCASE] = '<',
-    [CELL_TYPE_DOWN_STAIRCASE] = '>',
-    [CELL_TYPE_EMPTY] = '!',
-    [CELL_TYPE_DEBUG] = 'X',
-    [CELL_TYPE_HIDDEN] = ' '
-};
-
-int COLORS_BY_CELL_TYPE[CELL_TYPES] = {
-    [CELL_TYPE_STONE] = COLORS_STONE,
-    [CELL_TYPE_ROOM] = COLORS_FLOOR,
-    [CELL_TYPE_HALL] = COLORS_FLOOR,
-    [CELL_TYPE_UP_STAIRCASE] = COLORS_OBJECT,
-    [CELL_TYPE_DOWN_STAIRCASE] = COLORS_OBJECT,
-    [CELL_TYPE_EMPTY] = COLORS_OBJECT,
-    [CELL_TYPE_DEBUG] = COLORS_OBJECT,
-    [CELL_TYPE_HIDDEN] = COLORS_STONE
-};
-
 #define PRINT_REPEATED(x, y, count, char) { \
     move(y, x); \
     for (int i = 0; i < count; i++) addch(char); }
@@ -111,8 +89,6 @@ void game_t::run_internal() {
     coordinates_t teleport_pointer;
     game_result_t result = GAME_RESULT_RUNNING;
     character_t *ch;
-    cell_type_t cell_to_render;
-    bool in_sight;
     char *ascii;
     message[0] = '\0';
 
@@ -127,31 +103,32 @@ void game_t::run_internal() {
                 // Also, if FOW is disabled, render it.
                 if (hide_fog_of_war || teleport_mode || (x >= pc.x - FOG_OF_WAR_DISTANCE && x <= pc.x + FOG_OF_WAR_DISTANCE
                     && y >= pc.y - FOG_OF_WAR_DISTANCE && y <= pc.y + FOG_OF_WAR_DISTANCE)) {
-                    cell_to_render = dungeon->cells[x][y].type;
-                    in_sight = true;
+                    if (teleport_mode && x == teleport_pointer.x && y == teleport_pointer.y) {
+                        attrset(COLOR_PAIR(COLORS_PC) | A_BOLD);
+                        addch(TELEPORT_POINTER);
+                        attroff(COLOR_PAIR(COLORS_PC) | A_BOLD);
+                    } else if (character_map[x][y]) {
+                        c = character_map[x][y] == &pc ? COLORS_PC : COLORS_MONSTER;
+                        attrset(COLOR_PAIR(c) | A_BOLD);
+                        addch(character_map[x][y]->display);
+                        attroff(COLOR_PAIR(c) | A_BOLD);
+                    } else if (item_map[x][y]) {
+                        attrset(COLOR_PAIR(COLORS_OBJECT));
+                        addch(item_map[x][y]->current_symbol());
+                        attroff(COLOR_PAIR(COLORS_OBJECT));
+                    } else {
+                        c = COLORS_BY_CELL_TYPE[dungeon->cells[x][y].type];
+                        attrset(COLOR_PAIR(c));
+                        addch(CHARACTERS_BY_CELL_TYPE[dungeon->cells[x][y].type]);
+                        attrset(COLOR_PAIR(c));
+                    }
                 }
                 else {
                     // Otherwise, this is outside of the sight of the PC, and should be rendered
                     // using the seen map.
-                    cell_to_render = seen_map[x][y];
-                    in_sight = false;
-                }
-
-                if (teleport_mode && x == teleport_pointer.x && y == teleport_pointer.y) {
-                    attrset(COLOR_PAIR(COLORS_PC) | A_BOLD);
-                    addch(TELEPORT_POINTER);
-                    attroff(COLOR_PAIR(COLORS_PC) | A_BOLD);
-                } else if (in_sight && character_map[x][y]) {
-                    c = character_map[x][y] == &pc ? COLORS_PC : COLORS_MONSTER;
-                    attrset(COLOR_PAIR(c) | A_BOLD);
-                    addch(character_map[x][y]->display);
-                    attroff(COLOR_PAIR(c) | A_BOLD);
-                } else {
-                    attrset(COLOR_PAIR(in_sight ? COLORS_BY_CELL_TYPE[cell_to_render] : COLORS_FOG_OF_WAR_TERRAIN));
-                    if (!in_sight) attrset(A_DIM);
-                    addch(CHARACTERS_BY_CELL_TYPE[cell_to_render]);
-                    if (!in_sight) attroff(A_DIM);
-                    attroff(COLOR_PAIR(in_sight ? COLORS_BY_CELL_TYPE[cell_to_render] : COLORS_FOG_OF_WAR_TERRAIN));
+                    attrset(COLOR_PAIR(COLORS_FOG_OF_WAR_TERRAIN) | A_DIM);
+                    addch(seen_map[x][y]);
+                    attroff(COLOR_PAIR(COLORS_FOG_OF_WAR_TERRAIN) | A_DIM);
                 }
             }
         }
@@ -202,11 +179,11 @@ void game_t::run_internal() {
                 PRINT_REPEATED(MONSTER_MENU_X_BEGIN, y, MONSTER_MENU_WIDTH, ' ');
 
             attron(A_BOLD);
-            count = turn_queue->size();
+            count = turn_queue.size();
             PRINTW_CENTERED_AT(WIDTH / 2, MONSTER_MENU_Y_BEGIN + 1, "MONSTERS (%d)", count - 1);
             attroff(A_BOLD);
             for (i = 0, monster_count = 0; monster_count < MONSTER_MENU_HEIGHT - 6 + monster_menu_i && i < count; i++) {
-                turn_queue->at(i, &ch);
+                ch = turn_queue.at(i);
                 if (ch->type() == CHARACTER_TYPE_MONSTER) {
                     if (monster_count >= monster_menu_i) {
                         x_offset = ((int) pc.x) - ((int) ch->x);
@@ -255,7 +232,7 @@ void game_t::run_internal() {
                     snprintf(message, WIDTH, "Can't scroll without monster menu open!");
                     break;
                 }
-                count = turn_queue->size() - 1;
+                count = turn_queue.size() - 1;
                 overflow_count = count - (MONSTER_MENU_HEIGHT - 6);
                 if (overflow_count < 0) overflow_count = 0;
                 monster_menu_i++;

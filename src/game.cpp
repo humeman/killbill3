@@ -39,6 +39,28 @@ parser_definition_t ITEM_PARSE_RULES[] {
     {.name = "RRTY", .offset = offsetof(item_definition_t, rarity), .type = PARSE_TYPE_RARITY, .required = true}
 };
 
+char CHARACTERS_BY_CELL_TYPE[CELL_TYPES] = {
+    [CELL_TYPE_STONE] = ' ',
+    [CELL_TYPE_ROOM] = '.',
+    [CELL_TYPE_HALL] = '#',
+    [CELL_TYPE_UP_STAIRCASE] = '<',
+    [CELL_TYPE_DOWN_STAIRCASE] = '>',
+    [CELL_TYPE_EMPTY] = '!',
+    [CELL_TYPE_DEBUG] = 'X',
+    [CELL_TYPE_HIDDEN] = ' '
+};
+
+int COLORS_BY_CELL_TYPE[CELL_TYPES] = {
+    [CELL_TYPE_STONE] = COLORS_STONE,
+    [CELL_TYPE_ROOM] = COLORS_FLOOR,
+    [CELL_TYPE_HALL] = COLORS_FLOOR,
+    [CELL_TYPE_UP_STAIRCASE] = COLORS_OBJECT,
+    [CELL_TYPE_DOWN_STAIRCASE] = COLORS_OBJECT,
+    [CELL_TYPE_EMPTY] = COLORS_OBJECT,
+    [CELL_TYPE_DEBUG] = COLORS_OBJECT,
+    [CELL_TYPE_HIDDEN] = COLORS_STONE
+};
+
 game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
     int i, j;
     this->debug = debug;
@@ -67,15 +89,10 @@ game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
             goto init_free_pathfinding_tunnel;
         }
     }
-    try {
-        turn_queue = new binary_heap_t(sizeof (character_t *), NULL);
-    } catch (std::exception &e) {
-        goto init_free_all_pathfinding_tunnel;
-    }
 
     character_map = (character_t ***) malloc(width * sizeof (character_t**));
     if (character_map == NULL) {
-        goto init_free_heap;
+        goto init_free_all_pathfinding_tunnel;
     }
     for (i = 0; i < width; i++) {
         character_map[i] = (character_t **) malloc(height * sizeof (character_t*));
@@ -86,17 +103,30 @@ game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
         for (j = 0; j < height; j++) character_map[i][j] = NULL;
     }
 
-    seen_map = (cell_type_t **) malloc(width * sizeof (cell_type_t*));
-    if (seen_map == NULL) {
+    item_map = (item_t ***) malloc(width * sizeof (item_t**));
+    if (item_map == NULL) {
         goto init_free_all_character_map;
     }
     for (i = 0; i < width; i++) {
-        seen_map[i] = (cell_type_t *) malloc(height * sizeof (cell_type_t));
+        item_map[i] = (item_t **) malloc(height * sizeof (item_t*));
+        if (item_map[i] == NULL) {
+            for (j = 0; j < i; j++) free(item_map[j]);
+            goto init_free_item_map;
+        }
+        for (j = 0; j < height; j++) item_map[i][j] = NULL;
+    }
+
+    seen_map = (char **) malloc(width * sizeof (char*));
+    if (seen_map == NULL) {
+        goto init_free_all_item_map;
+    }
+    for (i = 0; i < width; i++) {
+        seen_map[i] = (char *) malloc(height * sizeof (char));
         if (seen_map[i] == NULL) {
             for (j = 0; j < i; j++) free(seen_map[j]);
             goto init_free_seen_map;
         }
-        for (j = 0; j < height; j++) seen_map[i][j] = CELL_TYPE_HIDDEN;
+        for (j = 0; j < height; j++) seen_map[i][j] = ' ';
     }
 
     if (!(message = (char *) malloc(1 + WIDTH))) {
@@ -117,8 +147,10 @@ game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
     for (j = 0; j < width; j++) free(character_map[j]);
     init_free_character_map:
     free(character_map);
-    init_free_heap:
-    delete turn_queue;
+    init_free_all_item_map:
+    for (j = 0; j < width; j++) free(item_map[j]);
+    init_free_item_map:
+    free(item_map);
     init_free_all_pathfinding_tunnel:
     for (j = 0; j < width; j++) free(pathfinding_tunnel[j]);
     init_free_pathfinding_tunnel:
@@ -133,9 +165,9 @@ game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
 
 game_t::~game_t() {
     character_t *character;
-    while (turn_queue->size() > 0) {
+    while (turn_queue.size() > 0) {
         try {
-            turn_queue->remove((void *) &character);
+            character = turn_queue.remove();
          } catch (std::exception &e) {
             // Nothing we can do here :shrug:
             fprintf(stderr, "err: catastrophe: failed to remove from heap while destroying game");
@@ -144,11 +176,17 @@ game_t::~game_t() {
         destroy_character(character_map, character);
     }
 
+    int x, y;
+    for (x = 0; x < dungeon->width; x++)
+        for (y = 0; y < dungeon->height; y++)
+            if (item_map[x][y]) delete item_map[x][y];
+
     int i;
-    delete turn_queue;
     free(message);
     for (i = 0; i < dungeon->width; i++) free(character_map[i]);
     free(character_map);
+    for (i = 0; i < dungeon->width; i++) free(item_map[i]);
+    free(item_map);
     for (i = 0; i < dungeon->width; i++) free(pathfinding_tunnel[i]);
     free(pathfinding_tunnel);
     for (i = 0; i < dungeon->width; i++) free(pathfinding_no_tunnel[i]);
@@ -182,22 +220,20 @@ void game_t::init_monster_defs(const char *path) {
     std::ifstream file(path);
     if (file.fail())
         throw dungeon_exception(__PRETTY_FUNCTION__, "failed to open file");
-    
+
     monst_parser->parse(monster_defs, file);
 }
-
 
 void game_t::init_item_defs(const char *path) {
     std::ifstream file(path);
     if (file.fail())
         throw dungeon_exception(__PRETTY_FUNCTION__, "failed to open file");
-    
-    monst_parser->parse(monster_defs, file);
+
+    item_parser->parse(item_defs, file);
 }
 
 void game_t::init_from_file(const char *path) {
     coordinates_t pc_coords;
-    character_t *pc_pt;
     FILE *f;
     f = fopen(path, "rb");
     if (f == NULL) {
@@ -213,39 +249,34 @@ void game_t::init_from_file(const char *path) {
     fclose(f);
 
     // Place the PC now
-    pc.x = pc_coords.x;
-    pc.y = pc_coords.y;
-    pc.dead = 0;
+    pc.move_to(pc_coords, character_map);
+    pc.dead = false;
     pc.display = '@';
     pc.speed = PC_SPEED;
     character_map[pc.x][pc.y] = &pc;
 
     update_pathfinding(dungeon, pathfinding_no_tunnel, pathfinding_tunnel, &pc);
 
-    pc_pt = &pc;
-    turn_queue->insert((void *) &pc_pt, 0);
+    turn_queue.insert(&pc, 0);
     is_initialized = true;
 }
 
 void game_t::init_random() {
     coordinates_t pc_coords;
-    character_t *pc_pt;
     dungeon->fill(ROOM_MIN_COUNT, ROOM_COUNT_MAX_RANDOMNESS, ROOM_MIN_WIDTH, ROOM_MIN_HEIGHT, ROOM_MAX_RANDOMNESS, debug);
 
     pc_coords = dungeon->random_location();
 
     // Place the PC now
-    pc.x = pc_coords.x;
-    pc.y = pc_coords.y;
-    pc.dead = 0;
+    pc.move_to(pc_coords, character_map);
+    pc.dead = false;
     pc.display = '@';
     pc.speed = PC_SPEED;
     character_map[pc.x][pc.y] = &pc;
 
     update_pathfinding(dungeon, pathfinding_no_tunnel, pathfinding_tunnel, &pc);
 
-    pc_pt = &pc;
-    turn_queue->insert((void *) &pc_pt, 0);
+    turn_queue.insert(&pc, 0);
     is_initialized = true;
 }
 
@@ -270,15 +301,84 @@ void game_t::override_nummon(int nummon) {
     this->nummon = nummon;
 }
 
+void game_t::override_numitems(int numitems) {
+    this->numitems = numitems;
+}
+
 void game_t::random_monsters() {
     if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
     if (monster_defs.size() == 0) throw dungeon_exception(__PRETTY_FUNCTION__, "no monster definitions are set");
-    // generate_monsters(dungeon, turn_queue, character_map, nummon < 0 ? (rand() % (RANDOM_MONSTERS_MAX - RANDOM_MONSTERS_MIN + 1)) + RANDOM_MONSTERS_MIN : nummon);
+
+    // Pick how many we want to generate.
+    int count = nummon < 0 ? (rand() % (RANDOM_MONSTERS_MAX - RANDOM_MONSTERS_MIN + 1)) + RANDOM_MONSTERS_MIN : nummon;
+
+    coordinates_t loc;
+    int monster_i, attempts;
+    monster_t *monst;
+    for (int i = 0; i < count; i++) {
+        attempts = 0;
+        while (attempts++ < MAX_GENERATION_ATTEMPTS) {
+            monster_i = rand() % monster_defs.size();
+            if (monster_defs[monster_i]->abilities | MONSTER_ATTRIBUTE_UNIQUE && monster_defs[monster_i]->unique_generated) continue;
+            if (rand() % 100 >= monster_defs[monster_i]->rarity) continue;
+
+            break;
+        }
+        if (attempts == MAX_GENERATION_ATTEMPTS)
+            throw dungeon_exception(__PRETTY_FUNCTION__, "no available monster definitions to use after " STRING(MAX_GENERATION_ATTEMPTS) "rolls (all unique or really unlucky)");
+
+        // Now we can make a monster from this definition.
+        monst = new monster_t(monster_defs[monster_i]);
+        // Pick a location...
+        try {
+            loc = random_location_no_kill(dungeon, character_map);
+        } catch (dungeon_exception &e) {
+            delete monst; // The rest of the ones in the queue already will be cleared out by the game destructor.
+            throw dungeon_exception(__PRETTY_FUNCTION__, e, "no available space in dungeon for monster placement");
+        }
+        try {
+            turn_queue.insert(monst, monst->speed);
+        } catch (dungeon_exception &e) {
+            delete monst;
+            throw dungeon_exception(__PRETTY_FUNCTION__, e, "couldn't insert new monster into turn queue");
+        }
+        monst->move_to(loc, character_map);
+    }
 }
 
 void game_t::random_items() {
     if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
     if (item_defs.size() == 0) throw dungeon_exception(__PRETTY_FUNCTION__, "no item definitions are set");
+    // Ripped for the most part from random_monsters().
+    // Pick how many we want to generate.
+    int count = nummon < 0 ? (rand() % (RANDOM_ITEMS_MAX - RANDOM_ITEMS_MIN + 1)) + RANDOM_ITEMS_MIN : nummon;
+
+    coordinates_t loc;
+    int item_i, attempts;
+    item_t *item;
+    for (int i = 0; i < count; i++) {
+        attempts = 0;
+        while (attempts++ < MAX_GENERATION_ATTEMPTS) {
+            item_i = rand() % item_defs.size();
+            if (item_defs[item_i]->artifact && item_defs[item_i]->artifact_created) continue;
+            if (rand() % 100 >= item_defs[item_i]->rarity) continue;
+
+            break;
+        }
+        if (attempts == MAX_GENERATION_ATTEMPTS)
+            throw dungeon_exception(__PRETTY_FUNCTION__, "no available item definitions to use after " STRING(MAX_GENERATION_ATTEMPTS) "rolls (all unique or really unlucky)");
+
+        // Now we can make a monster from this definition.
+        item = new item_t(item_defs[item_i]);
+        // Pick a location...
+        try {
+            loc = random_location_no_kill(dungeon, character_map);
+        } catch (dungeon_exception &e) {
+            delete item; // The rest of the ones in the queue already will be cleared out by the game destructor.
+            throw dungeon_exception(__PRETTY_FUNCTION__, e, "no available space in dungeon for item placement");
+        }
+        item_map[loc.x][loc.y] = item;
+    }
 }
 
 void game_t::update_fog_of_war() {
@@ -288,7 +388,7 @@ void game_t::update_fog_of_war() {
         if (x < 0 || x >= dungeon->width) continue;
         for (y = pc.y - FOG_OF_WAR_DISTANCE; y <= pc.y + FOG_OF_WAR_DISTANCE; y++) {
             if (y < 0 || y >= dungeon->height) continue;
-            seen_map[x][y] = dungeon->cells[x][y].type;
+            seen_map[x][y] = CHARACTERS_BY_CELL_TYPE[dungeon->cells[x][y].type];
         }
     }
 }
@@ -341,8 +441,8 @@ void game_t::fill_and_place_on(cell_type_t target_cell) {
     // Kill all the monsters (RIP)
     character_t *character;
     int x, y, placed;
-    while (turn_queue->size() > 0) {
-        turn_queue->remove((void *) &character);
+    while (turn_queue.size() > 0) {
+        character = turn_queue.remove();
         if (character == &pc) continue;
         destroy_character(character_map, character);
     }
@@ -359,9 +459,8 @@ void game_t::fill_and_place_on(cell_type_t target_cell) {
     }
     if (!placed) throw dungeon_exception(__PRETTY_FUNCTION__, "no target cell present to place PC on");
     // Readd the PC and new monsters
-    character = &pc;
-    turn_queue->insert((void *) &character, 0);
-    generate_monsters(dungeon, turn_queue, character_map, nummon < 0 ? (rand() % (RANDOM_MONSTERS_MAX - RANDOM_MONSTERS_MIN + 1)) + RANDOM_MONSTERS_MIN : nummon);
+    turn_queue.insert(&pc, 0);
+    random_monsters();
     for (x = 0; x < dungeon->width; x++) {
         for (y = 0; y < dungeon->height; y++) {
             seen_map[x][y] = CELL_TYPE_HIDDEN;

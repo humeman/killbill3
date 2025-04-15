@@ -23,17 +23,19 @@ typedef enum {
     CHARACTER_TYPE_MONSTER
 } character_type;
 
-typedef struct {
-    std::string name;
-    std::string description;
-    int color;
-    dice_t *speed;
-    int abilities;
-    dice_t *hp;
-    dice_t *damage;
-    char symbol;
-    int rarity;
-} monster_definition_t;
+class monster_definition_t {
+    public:
+        std::string name;
+        std::string description;
+        int color;
+        dice_t *speed;
+        int abilities;
+        dice_t *hp;
+        dice_t *damage;
+        char symbol;
+        int rarity;
+        bool unique_generated = false;
+};
 
 void verify_monster_definition(monster_definition_t *def);
 
@@ -47,6 +49,7 @@ class character_t {
         uint8_t y;
         uint8_t speed;
         bool dead;
+        bool location_initialized = false;
         virtual ~character_t() {};
 
         /**
@@ -128,7 +131,7 @@ coordinates_t random_location_no_kill(dungeon_t *dungeon, character_t ***charact
  * - character_map: Map of character pointers
  * - attributes: The attributes (0-F) to apply to the monster
  */
-void place_monster(dungeon_t *dungeon, binary_heap_t *turn_queue, character_t ***character_map, uint8_t attributes);
+void place_monster(dungeon_t *dungeon, binary_heap_t<character_t *> &turn_queue, character_t ***character_map, uint8_t attributes);
 
 /**
  * Generates a specified number of random monsters and inserts them
@@ -141,7 +144,7 @@ void place_monster(dungeon_t *dungeon, binary_heap_t *turn_queue, character_t **
  * - attributes: The attributes (0-F) to apply to the monster
  * - nummon: Number of monsters to generate
  */
-void generate_monsters(dungeon_t *dungeon, binary_heap_t *turn_queue, character_t ***character_map, int count);
+void generate_monsters(dungeon_t *dungeon, binary_heap_t<character_t *> &turn_queue, character_t ***character_map, int count);
 
 /**
  * Takes the turn of the next available character in the turn queue.
@@ -156,7 +159,7 @@ void generate_monsters(dungeon_t *dungeon, binary_heap_t *turn_queue, character_
  * - result: Pointer to a game result, which will be updated to reflect win/lose
  * - was_pc: Pointer that's set to true if the turn just taken was the PC's (NOOP)
  */
-void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t *turn_queue, character_t ***character_map, uint32_t **pathfinding_tunnel, uint32_t **pathfinding_no_tunnel, game_result_t *result, bool *was_pc);
+void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t<character_t *> &turn_queue, character_t ***character_map, uint32_t **pathfinding_tunnel, uint32_t **pathfinding_no_tunnel, game_result_t *result, bool *was_pc);
 
 /**
  * Cleans up the memory for a character and removes it from the character map.

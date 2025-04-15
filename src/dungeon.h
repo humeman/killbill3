@@ -1,6 +1,6 @@
 /**
  * Structures and functions useful for the generation of the dungeon data structure.
- * 
+ *
  * Author: csenneff
  */
 
@@ -65,7 +65,7 @@ class coordinates_t {
     public:
         uint8_t x;
         uint8_t y;
-
+        bool operator==(const coordinates_t &o) const;
 };
 
 class dungeon_t {
@@ -84,7 +84,7 @@ class dungeon_t {
         /**
          * Allocates memory for a dungeon. It still must be filled after creation
          *  to be usable.
-         * 
+         *
          * Params:
          * - width: Width of the dungeon
          * - height: Height of the dungeon
@@ -101,21 +101,21 @@ class dungeon_t {
 
         /**
          * Fills a dungeon (2D array) with a randomly generated one.
-         * 
+         *
          * Parameters:
          * - min_rooms: Minimum rooms to generate
          * - room_count_randomness_max: Max number of extra rooms to be randomly added
          * - room_min_width: Minimum room width.
          * - room_min_height: Minimum room height.
-         * - room_size_randomness_max: The maximum number that can be randomly 
+         * - room_size_randomness_max: The maximum number that can be randomly
          *      added to either dimension of the room size.
          * - debug: Enables debug logs/files if 1.
          */
         void fill(int min_rooms, int room_count_randomness_max, int room_min_width, int room_min_height, int room_size_randomness_max, int debug);
-       
+
         /**
          * Picks a random, unobstructred location in a room within a dungeon.
-         * 
+         *
          * Parameters:
          * - room: Room to find an open space in
          * Returns: The picked coordinates
@@ -124,14 +124,14 @@ class dungeon_t {
 
         /**
          * Picks a random, unobstructred location in any room within a dungeon.
-         * 
+         *
          * Returns: The picked coordinates
          */
         coordinates_t random_location();
 
         /**
          * Fills this dungeon with the data read from an RLG327 file.
-         * 
+         *
          * Params:
          * - f: File pointer to read
          * - debug: If true, debug messages will be printed
@@ -141,7 +141,7 @@ class dungeon_t {
 
         /**
          * Saves this dungeon to an RLG327 file.
-         * 
+         *
          * Params:
          * - f: File pointer to write
          * - debug: If true, debug messages will be printed
@@ -164,11 +164,11 @@ class dungeon_t {
 
         /**
          * Places several random rooms within the dungeon.
-         * 
+         *
          * Parameters:
          * - min_width: Minimum room width.
          * - min_height: Minimum room height.
-         * - size_randomness_max: The maximum number that can be randomly 
+         * - size_randomness_max: The maximum number that can be randomly
          *      added to either dimension of the room size.
          */
         void create_rooms(int count, uint8_t min_width, uint8_t min_height, int size_randomness_max);
@@ -177,7 +177,7 @@ class dungeon_t {
          * Places a single room of a particular width and height somewhere in the dungeon.
          * This will attempt every possible location, returning a non-zero status code if
          * placement fails.
-         * 
+         *
          * Parameters:
          * - room: Room struct to update with coordinates
          * - room_width: Width of the room
@@ -192,7 +192,7 @@ class dungeon_t {
 
         /**
          * Connects two points with a semi-random walkway.
-         * 
+         *
          * Parameters:
          * - x0: X point 0
          * - y0: Y point 0
@@ -205,7 +205,7 @@ class dungeon_t {
          * Places an up and down staircase somewhere on the map.
          * They will be placed randomly within the center of a room.
          * There must be at least 2 rooms.
-         * 
+         *
          * Returns: 0 if successful
          */
         void place_staircases();
@@ -215,7 +215,7 @@ class dungeon_t {
          * Avoids overwriting existing non-floor materials, and additionally
          * will not place such that it obstructs a hallway.
          * The provided room must be in the dungeon or an error may be returned.
-         * 
+         *
          * Parameters:
          * - room: Room to place in
          * - material: Material to place

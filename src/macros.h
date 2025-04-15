@@ -18,6 +18,8 @@
 #define DUNGEON_HEIGHT 21
 #define RANDOM_MONSTERS_MIN 5
 #define RANDOM_MONSTERS_MAX 10
+#define RANDOM_ITEMS_MIN 10
+#define RANDOM_ITEMS_MAX 15
 #define PC_SPEED 10
 
 #define FILE_HEADER "RLG327-S2025"
@@ -42,6 +44,18 @@
 #define FLAG_COLOR_CYAN 0x20
 #define FLAG_COLOR_WHITE 0x40
 #define FLAG_COLOR_BLACK 0x80
+
+#define DEFAULT_DUNGEON_PATH "/.rlg327/dungeon"
+#define DEFAULT_MONSTER_PATH "/.rlg327/monster_desc.txt"
+#define DEFAULT_ITEM_PATH "/.rlg327/object_desc.txt"
+
+// The spec for generating items and monsters involves redrawing if the randomly chosen
+// monster/item is invalid. This specifies a number of attempts beyond which it is considered
+// impossible to get a valid definition. Could occur if, for example, we only have unique
+// monsters and eventually run out.
+#define MAX_GENERATION_ATTEMPTS 500
+
+#define STRING(x) #x
 
 class dungeon_exception : public std::exception {
     private:

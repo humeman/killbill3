@@ -227,7 +227,9 @@ void write_to_bool(void *item, std::string line, std::ifstream &input) {
 
 void trim(std::string &string) {
     unsigned long i;
+    if (string.length() == 0) return;
     for (i = 0; i < string.length() && (string[i] == ' ' || string[i] == '\t'); i++);
+    if (string.length() == 0) return;
     string.erase(0, i);
     for (i = string.length() - 1; i >= 0 && (string[i] == ' ' || string[i] == '\t'); i--);
     string.erase(i + 1);

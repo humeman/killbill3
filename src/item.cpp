@@ -44,15 +44,13 @@ item_t::item_t(item_definition_t *definition) {
     this->next = NULL;
 }
 
-item_t::~item_t() {
-
-}
+item_t::~item_t() {}
 
 int item_t::get_damage() {
     return definition->damage_bonus->roll();
 }
 
-item_t *item_t::add_to_stack(item_t *item) {
+void item_t::add_to_stack(item_t *item) {
     item_t *current = this;
     while (current->next != NULL)
         current = current->next;

@@ -228,3 +228,20 @@
          - Duplicate keywords wouldn't error
          - Supposed to skip failed parses
          Also made it resilient to extra whitespace anywhere.
+
+-- ASSIGNMENT 1.08 --
+4/10:
+    12p: Worked the item parsing code into the game class so the game runs again.
+         Reworked monsters to new format and added basic item class.
+         Updated commandline flags to allow passing paths for monster/item files.
+4/14:
+    6p:  (finally) Fully C++ified the binary heap class to make debugging easier.
+         Created new random monster and item generation functions that use the definitions.
+         Created an item map & enabled primitive (no colors yet) item rendering.
+            -> Had to change the seen map to chars for this to work with fog of war.
+TODO:
+- PC inventory
+- Colors for monsters & items
+- Monster inventory (optional)
+- New monster attributes (optional)
+- Make monster menu show new info (optional)

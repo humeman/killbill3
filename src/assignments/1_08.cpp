@@ -3,17 +3,10 @@
 #include <ctime>
 #include <cstring>
 #include "../dungeon.h"
-#include "../pathfinding.h"
 #include "../macros.h"
-#include "../character.h"
 #include "../game.h"
 #include "../macros.h"
 
-#define DEFAULT_DUNGEON_PATH "/.rlg327/dungeon"
-#define DEFAULT_MONSTER_PATH "/.rlg327/monster_desc.txt"
-#define DEFAULT_ITEM_PATH "/.rlg327/object_desc.txt"
-
-int prepare_args(int argc, char* argv[], game_args_t &args);
 
 typedef struct {
     bool read;
@@ -25,14 +18,16 @@ typedef struct {
     std::string item_path;
 } game_args_t;
 
+int prepare_args(int argc, char* argv[], game_args_t &args);
+
 int main(int argc, char* argv[]) {
     srand(time(NULL));
 
-    game_args_t args;
+    game_args_t args = {.read = false, .write = false, .debug = false};
     if (prepare_args(argc, argv, args)) {
         return 1;
     }
-    
+
     game_t game(args.debug, DUNGEON_WIDTH, DUNGEON_HEIGHT, ROOM_MIN_COUNT + ROOM_COUNT_MAX_RANDOMNESS);
     if (args.nummon >= 0) game.override_nummon(args.nummon);
 
