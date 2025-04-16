@@ -52,7 +52,15 @@ typedef enum keybinds {
     KB_TOGGLE_FOG = 'f',
     KB_TELEPORT = 'g',
     KB_TELEPORT_RANDOM = 'r',
-    KB_PICKUP = ','
+    KB_PICKUP = ',',
+    KB_EQUIP = 'w',
+    KB_UNEQUIP = 't',
+    KB_DROP = 'd',
+    KB_EXPUNGE = 'x',
+    KB_INVENTORY = 'i',
+    KB_EQUIPMENT = 'e',
+    KB_INSPECT_ITEM = 'I',
+    KB_LOOK_MODE = 'L'
 } keybinds_t;
 
 extern char CHARACTERS_BY_CELL_TYPE[CELL_TYPES];
