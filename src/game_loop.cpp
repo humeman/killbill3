@@ -165,8 +165,8 @@ void game_t::run_internal() {
         // Find the percentage of health left
         hp = (float) pc.hp / pc.base_hp;
         attrset(COLOR_PAIR(COLORS_TEXT_RED));
-        for (i = 0; i < WIDTH - 11; i++) {
-            if (i < hp * (WIDTH - 11)) addch('#');
+        for (i = 0; i < WIDTH - 10; i++) {
+            if (i < hp * (WIDTH - 10)) addch('#');
             else addch(' ');
         }
         attroff(COLOR_PAIR(COLORS_TEXT_RED));
@@ -183,7 +183,7 @@ void game_t::run_internal() {
         }
         attroff(COLOR_PAIR(COLORS_TEXT) | A_DIM);
         attrset(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
-        printw(" EQUIPMENT: ");
+        printw("  EQUIPMENT: ");
         attroff(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
         attrset(COLOR_PAIR(COLORS_TEXT) | A_DIM);
         for (i = 0; i < 9; i++) {
@@ -195,9 +195,17 @@ void game_t::run_internal() {
                 target_item = pc.inventory_at(i);
                 c = COLORS_FLOOR_ANY + target_item->next_color();
                 attrset(COLOR_PAIR(c));
-                mvprintw(HEIGHT - 2, 13 + 2 * i, "%c", target_item->regular_symbol());
+                mvprintw(HEIGHT - 2, 12 + 3 * i, "%c", target_item->regular_symbol());
                 attroff(COLOR_PAIR(c));
             }
+        }
+        for (i = 0; i < 9; i++) {
+            target_item = pc.equipment[i];
+            if (target_item == NULL) continue;
+            c = COLORS_FLOOR_ANY + target_item->next_color();
+            attrset(COLOR_PAIR(c));
+            mvprintw(HEIGHT - 2, 55 + 3 * i, "%c", target_item->regular_symbol());
+            attroff(COLOR_PAIR(c));
         }
 
         if (result != GAME_RESULT_RUNNING) {
