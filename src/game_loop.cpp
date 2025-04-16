@@ -100,6 +100,7 @@ void game_t::run_internal() {
     coordinates_t teleport_pointer;
     game_result_t result = GAME_RESULT_RUNNING;
     char *ascii;
+    char sel;
     item_t *target_item;
     float hp;
     message[0] = '\0';
@@ -178,8 +179,8 @@ void game_t::run_internal() {
         attroff(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
         j = pc.inventory_size();
         attrset(COLOR_PAIR(COLORS_TEXT) | A_DIM);
-        for (i = 0; i < 10; i++) {
-            printw("%d  ", i);
+        for (i = 1; i < 11; i++) {
+            printw("%d  ", i % 10);
         }
         attroff(COLOR_PAIR(COLORS_TEXT) | A_DIM);
         attrset(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
@@ -372,6 +373,8 @@ void game_t::run_internal() {
                 snprintf(message, WIDTH, "You picked up the %s. You have %d items.", target_item->definition->name.c_str(), pc.inventory_size());
                 next_turn_ready = true;
                 break;
+            case KB_EQUIP:
+                sel = prompt("0123456789")
             case KB_QUIT:
                 return;
             default:
