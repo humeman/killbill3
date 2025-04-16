@@ -61,6 +61,30 @@ int COLORS_BY_CELL_TYPE[CELL_TYPES] = {
     [CELL_TYPE_HIDDEN] = COLORS_STONE
 };
 
+std::string ITEM_TYPE_STRINGS[ITEM_TYPE_UNKNOWN + 1] = {
+    [ITEM_TYPE_WEAPON] = "a weapon",
+    [ITEM_TYPE_OFFHAND] = "an offhand item",
+    [ITEM_TYPE_RANGED] = "a ranged weapon",
+    [ITEM_TYPE_ARMOR] = "an armor piece",
+    [ITEM_TYPE_HELMET] = "a helmet",
+    [ITEM_TYPE_CLOAK] = "a cloak",
+    [ITEM_TYPE_GLOVES] = "gloves",
+    [ITEM_TYPE_BOOTS] = "boots",
+    [ITEM_TYPE_RING] = "a ring",
+    [ITEM_TYPE_AMULET] = "an amulet",
+    [ITEM_TYPE_LIGHT] = "a light",
+    [ITEM_TYPE_SCROLL] = "a scroll",
+    [ITEM_TYPE_BOOK] = "a book",
+    [ITEM_TYPE_FLASK] = "a flask",
+    [ITEM_TYPE_GOLD] = "gold",
+    [ITEM_TYPE_AMMUNITION] = "ammunition",
+    [ITEM_TYPE_FOOD] = "food",
+    [ITEM_TYPE_WAND] = "a wand",
+    [ITEM_TYPE_CONTAINER] = "a container",
+    [ITEM_TYPE_STACK] = "a stack",
+    [ITEM_TYPE_UNKNOWN] = "a mysterious object"
+};
+
 game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
     int i, j;
     this->debug = debug;

@@ -1,4 +1,7 @@
 # ASSIGNMENT BINARIES
+assignment1_09: build/dungeon.o build/pathfinding.o build/character.o build/game.o build/game_loop.o build/parser.o build/item.o build/assignment1_09.o
+	g++ build/dungeon.o build/pathfinding.o build/character.o build/game.o build/game_loop.o build/parser.o build/item.o build/assignment1_09.o -o assignment1_09 -lm -lncurses
+
 assignment1_08: build/dungeon.o build/pathfinding.o build/character.o build/game.o build/game_loop.o build/parser.o build/item.o build/assignment1_08.o
 	g++ build/dungeon.o build/pathfinding.o build/character.o build/game.o build/game_loop.o build/parser.o build/item.o build/assignment1_08.o -o assignment1_08 -lm -lncurses
 
@@ -48,6 +51,10 @@ assignment1_07.o: src/assignments/1_07.cpp
 build/assignment1_08.o: src/assignments/1_08.cpp src/macros.h src/random.h src/ascii.h src/heap.h
 	@ mkdir -p build
 	g++ src/assignments/1_08.cpp -o build/assignment1_08.o -Wall -Werror -c -g
+
+build/assignment1_09.o: src/assignments/1_09.cpp src/macros.h src/random.h src/ascii.h src/heap.h
+	@ mkdir -p build
+	g++ src/assignments/1_09.cpp -o build/assignment1_09.o -Wall -Werror -c -g
 
 build/game.o: src/game.cpp src/game.h src/macros.h src/random.h src/ascii.h src/heap.h
 	@ mkdir -p build

@@ -65,6 +65,7 @@ typedef enum keybinds {
 
 extern char CHARACTERS_BY_CELL_TYPE[CELL_TYPES];
 extern int COLORS_BY_CELL_TYPE[CELL_TYPES];
+extern std::string ITEM_TYPE_STRINGS[ITEM_TYPE_UNKNOWN + 1];
 
 // To split up the dungeon from the game controls and such, this class
 // stores all of the critical info for the game.

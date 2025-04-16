@@ -27,7 +27,7 @@ typedef enum {
     ITEM_TYPE_WAND,
     ITEM_TYPE_CONTAINER,
     ITEM_TYPE_STACK,
-    ITEM_TYPE_UNKNOWN
+    ITEM_TYPE_UNKNOWN // This must always be the last one for counting.
 } item_type_t;
 
 class item_definition_t {

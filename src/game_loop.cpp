@@ -3,6 +3,7 @@
 #include <cstdlib>
 
 #include "game.h"
+#include "item.h"
 #include "macros.h"
 #include "dungeon.h"
 #include "heap.h"
@@ -39,15 +40,31 @@
         next_turn_ready = 1; \
     }
 
-char LOSE[] = ASCII_LOSE;
-char WIN[] = ASCII_WIN;
-char EQUIP_SLOT_CHARS[] = "asdfghjkl";
-
 #define MONSTER_MENU_WIDTH 40
 #define MONSTER_MENU_HEIGHT 10
 
 #define MONSTER_MENU_X_BEGIN WIDTH / 2 - MONSTER_MENU_WIDTH / 2
 #define MONSTER_MENU_Y_BEGIN 1
+
+char LOSE[] = ASCII_LOSE;
+char WIN[] = ASCII_WIN;
+char EQUIP_SLOT_CHARS[] = "asdfghjkl";
+
+item_type_t EQUIPPABLE_ITEMS[] = {
+    ITEM_TYPE_WEAPON,
+    ITEM_TYPE_OFFHAND,
+    ITEM_TYPE_RANGED,
+    ITEM_TYPE_ARMOR,
+    ITEM_TYPE_HELMET,
+    ITEM_TYPE_CLOAK,
+    ITEM_TYPE_GLOVES,
+    ITEM_TYPE_BOOTS,
+    ITEM_TYPE_AMULET,
+    ITEM_TYPE_LIGHT,
+    ITEM_TYPE_RING
+};
+
+char prompt(std::string options, std::string prompt);
 
 void game_t::run() {
     try {
@@ -90,10 +107,10 @@ void game_t::run() {
 
 void game_t::run_internal() {
     if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
-    int c, i, j;
-    bool next_turn_ready;
+    int c, i, j, swap_slot;
+    bool next_turn_ready, valid;
     uint8_t x, y;
-    bool monster_menu_on = 0;
+    bool monster_menu_on = false;
     bool hide_fog_of_war = false;
     bool teleport_mode = false;
     bool sticky_message = false;
@@ -103,7 +120,7 @@ void game_t::run_internal() {
     char sel;
     item_t *target_item;
     float hp;
-    message[0] = '\0';
+    snprintf(message, WIDTH, "Welcome to the dungeon.");
 
     update_fog_of_war();
     while (1) {
@@ -159,7 +176,7 @@ void game_t::run_internal() {
         attroff(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
 
         // And health/inventory at the bottom
-        move(HEIGHT - 3, 0);
+        move(HEIGHT - 2, 0);
         attrset(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
         printw("HEALTH: [");
         attroff(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
@@ -174,7 +191,7 @@ void game_t::run_internal() {
         attrset(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
         printw("]");
         // Now the carry slots
-        move(HEIGHT - 2, 0);
+        move(HEIGHT - 1, 0);
         printw("INVENTORY: ");
         attroff(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
         j = pc.inventory_size();
@@ -196,7 +213,7 @@ void game_t::run_internal() {
                 target_item = pc.inventory_at(i);
                 c = COLORS_FLOOR_ANY + target_item->next_color();
                 attrset(COLOR_PAIR(c));
-                mvprintw(HEIGHT - 2, 12 + 3 * i, "%c", target_item->regular_symbol());
+                mvprintw(HEIGHT - 1, 12 + 3 * i, "%c", target_item->regular_symbol());
                 attroff(COLOR_PAIR(c));
             }
         }
@@ -205,7 +222,7 @@ void game_t::run_internal() {
             if (target_item == NULL) continue;
             c = COLORS_FLOOR_ANY + target_item->next_color();
             attrset(COLOR_PAIR(c));
-            mvprintw(HEIGHT - 2, 55 + 3 * i, "%c", target_item->regular_symbol());
+            mvprintw(HEIGHT - 1, 55 + 3 * i, "%c", target_item->regular_symbol());
             attroff(COLOR_PAIR(c));
         }
 
@@ -370,11 +387,119 @@ void game_t::run_internal() {
                     item_map[pc.x][pc.y] = NULL;
                 }
                 pc.add_to_inventory(target_item);
-                snprintf(message, WIDTH, "You picked up the %s. You have %d items.", target_item->definition->name.c_str(), pc.inventory_size());
+                snprintf(message, WIDTH, "You picked up %s.", target_item->definition->name.c_str());
                 next_turn_ready = true;
                 break;
             case KB_EQUIP:
-                sel = prompt("0123456789")
+                sel = prompt("1234567890", "Enter a carry slot to equip (or ESC to cancel).");
+                if (sel == 0) break; // Cancelled
+                // Unfortunate thing here is that I've ordered it 1-9, then 0, to match the keyboard.
+                if (sel == '0') i = 9;
+                else i = sel - '1';
+                if (i >= pc.inventory_size()) {
+                    snprintf(message, WIDTH, "There's no item in slot %c.", sel);
+                    break;
+                }
+                target_item = pc.inventory_at(i);
+                // Make sure it's equippable.
+                valid = false;
+                for (j = 0; !valid && j < (int) (sizeof (EQUIPPABLE_ITEMS) / sizeof (EQUIPPABLE_ITEMS[0])); j++) {
+                    if (target_item->definition->type == EQUIPPABLE_ITEMS[j])
+                        valid = true;
+                }
+                if (!valid) {
+                    snprintf(message, WIDTH, "You can't equip %s.", ITEM_TYPE_STRINGS[target_item->definition->type].c_str());
+                    break;
+                }
+                c = 0;
+                valid = true;
+                swap_slot = -1;
+                // Make sure there's no duplicate item (besides RING).
+                for (j = 0; swap_slot < 0 && j < (int) (sizeof(pc.equipment) / sizeof(pc.equipment[0])); j++) {
+                    if (pc.equipment[j] == NULL) {
+                        swap_slot = j;
+                    }
+                    else if (pc.equipment[j]->definition->type == ITEM_TYPE_RING) {
+                        c++; // ha
+                        if (c == 2) {
+                            swap_slot = j;
+                        }
+                    }
+                    else if (pc.equipment[j]->definition->type == target_item->definition->type) {
+                        swap_slot = j;
+                    }
+                }
+                if (swap_slot < 0) {
+                    snprintf(message, WIDTH, "You have no equipment slots open!");
+                    break;
+                }
+                // Remove that item from the inventory...
+                target_item = pc.remove_from_inventory(i);
+                // If the swap slot is empty, just add the item there.
+                if (pc.equipment[swap_slot] == NULL) {
+                    snprintf(message, WIDTH, "You equipped %s.", target_item->definition->name.c_str());
+                    pc.equipment[swap_slot] = target_item;
+                } else {
+                    // Then we have to move that item out to the inventory.
+                    // This will reorder them, but it seems way more difficult than it's worth not to.
+                    snprintf(message, WIDTH, "You equipped %s, swapping out %s.", target_item->definition->name.c_str(),
+                        pc.equipment[swap_slot]->definition->name.c_str());
+                    pc.add_to_inventory(pc.equipment[swap_slot]);
+                    pc.equipment[swap_slot] = target_item;
+                }
+                break;
+            case KB_UNEQUIP:
+                // Check that there's space
+                if (pc.inventory_size() >= 10) {
+                    snprintf(message, WIDTH, "You have no carry slots open!");
+                    break;
+                }
+                sel = prompt(EQUIP_SLOT_CHARS, "Enter an equipment slot to unequip (or ESC to cancel).");
+                if (sel == 0) break; // Cancelled
+                for (i = 0; i < (int) (sizeof(EQUIP_SLOT_CHARS) / sizeof(EQUIP_SLOT_CHARS[0])); i++) {
+                    if (sel == EQUIP_SLOT_CHARS[i]) break;
+                }
+                target_item = pc.equipment[i];
+                if (target_item == NULL) {
+                    snprintf(message, WIDTH, "There's no item in slot %c!", sel);
+                    break;
+                }
+                pc.add_to_inventory(target_item);
+                pc.equipment[i] = NULL;
+                snprintf(message, WIDTH, "You unequipped %s.", target_item->definition->name.c_str());
+                break;
+            case KB_DROP:
+                sel = prompt("1234567890", "Enter a carry slot to drop (or ESC to cancel).");
+                if (sel == 0) break; // Cancelled
+                // Unfortunate thing here is that I've ordered it 1-9, then 0, to match the keyboard.
+                if (sel == '0') i = 9;
+                else i = sel - '1';
+                if (i >= pc.inventory_size()) {
+                    snprintf(message, WIDTH, "There's no item in slot %c.", sel);
+                    break;
+                }
+                target_item = pc.remove_from_inventory(i);
+                if (item_map[pc.x][pc.y]) {
+                    item_map[pc.x][pc.y]->add_to_stack(target_item);
+                } else {
+                    item_map[pc.x][pc.y] = target_item;
+                }
+                snprintf(message, WIDTH, "You dropped %s.", target_item->definition->name.c_str());
+                break;
+            case KB_EXPUNGE:
+                sel = prompt("1234567890", "Enter a carry slot to expunge (or ESC to cancel).");
+                if (sel == 0) break; // Cancelled
+                // Unfortunate thing here is that I've ordered it 1-9, then 0, to match the keyboard.
+                if (sel == '0') i = 9;
+                else i = sel - '1';
+                if (i >= pc.inventory_size()) {
+                    snprintf(message, WIDTH, "There's no item in slot %c.", sel);
+                    break;
+                }
+                target_item = pc.remove_from_inventory(i);
+                snprintf(message, WIDTH, "You expunged %s.", target_item->definition->name.c_str());
+                delete target_item;
+                break;
             case KB_QUIT:
                 return;
             default:
@@ -500,6 +625,33 @@ void game_t::monster_menu() {
                 break;
             case KB_ESCAPE:
                 return;
+        }
+    }
+}
+
+char prompt(std::string options, std::string prompt) {
+    int c = 0;
+    int i;
+    bool valid;
+    attron(A_BOLD);
+    PRINT_REPEATED(0, 0, WIDTH, ' ');
+    PRINTW_CENTERED_AT(WIDTH / 2, 0, "%s", prompt.c_str());
+    attroff(A_BOLD);
+    while (true) {
+        c = getch();
+        if (c == KB_ESCAPE) return 0;
+        valid = false;
+        for (i = 0; i < (int) options.length(); i++) {
+            if (c == options[i]) {
+                return options[i];
+            }
+        }
+        if (!valid) {
+            attron(A_BOLD);
+            PRINT_REPEATED(0, 0, WIDTH, ' ');
+            PRINTW_CENTERED_AT(WIDTH / 2, 0, "Invalid option. %s", prompt.c_str());
+            attroff(A_BOLD);
+            c = 0;
         }
     }
 }
