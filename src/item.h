@@ -68,8 +68,10 @@ class item_t {
         item_t *next_in_stack();
         item_t *remove_next_in_stack();
         char current_symbol();
+        char regular_symbol();
         bool is_stacked();
         uint8_t next_color();
+        uint8_t current_color();
 };
 
 #endif

@@ -374,6 +374,25 @@ item_t *character_t::remove_inventory_stack() {
     return stack;
 }
 
+item_t *character_t::inventory_at(int i) {
+    if (i < 0 || i >= item_count) throw dungeon_exception(__PRETTY_FUNCTION__, "inventory index out of bounds");
+    item_t *current = item;
+    int j;
+    for (j = 0; j < i; j++) {
+        current = current->next_in_stack();
+        if (current == NULL) throw dungeon_exception(__PRETTY_FUNCTION__, "inventory index out of bounds");
+    }
+    return current;
+}
+
+pc_t::pc_t() {
+    dice_t dice(100, 1, 20);
+    base_hp = dice.roll();
+    hp = base_hp;
+    for (unsigned long i = 0; i < sizeof (equipment) / sizeof (equipment[0]); i++)
+        equipment[i] = NULL;
+}
+
 character_type pc_t::type() {
     return CHARACTER_TYPE_PC;
 }

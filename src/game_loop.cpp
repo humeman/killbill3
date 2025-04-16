@@ -41,6 +41,7 @@
 
 char LOSE[] = ASCII_LOSE;
 char WIN[] = ASCII_WIN;
+char EQUIP_SLOT_CHARS[] = "asdfghjkl";
 
 #define MONSTER_MENU_WIDTH 40
 #define MONSTER_MENU_HEIGHT 10
@@ -61,6 +62,7 @@ void game_t::run() {
         if (init_pair(COLORS_OBJECT, COLOR_MAGENTA, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
         if (init_pair(COLORS_STONE, COLOR_BLACK, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
         if (init_pair(COLORS_TEXT, COLOR_WHITE, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
+        if (init_pair(COLORS_TEXT_RED, COLOR_RED, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
         if (init_pair(COLORS_MENU_TEXT, COLOR_BLACK, COLOR_WHITE) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
         if (init_pair(COLORS_MENU_TEXT_SELECTED, COLOR_WHITE, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
         if (init_pair(COLORS_FOG_OF_WAR_TERRAIN, COLOR_WHITE, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
@@ -88,7 +90,7 @@ void game_t::run() {
 
 void game_t::run_internal() {
     if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
-    int c, i;
+    int c, i, j;
     bool next_turn_ready;
     uint8_t x, y;
     bool monster_menu_on = 0;
@@ -99,6 +101,7 @@ void game_t::run_internal() {
     game_result_t result = GAME_RESULT_RUNNING;
     char *ascii;
     item_t *target_item;
+    float hp;
     message[0] = '\0';
 
     update_fog_of_war();
@@ -153,6 +156,49 @@ void game_t::run_internal() {
         attrset(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
         printw(" %s ", message);
         attroff(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
+
+        // And health/inventory at the bottom
+        move(HEIGHT - 3, 0);
+        attrset(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
+        printw("HEALTH: [");
+        attroff(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
+        // Find the percentage of health left
+        hp = (float) pc.hp / pc.base_hp;
+        attrset(COLOR_PAIR(COLORS_TEXT_RED));
+        for (i = 0; i < WIDTH - 11; i++) {
+            if (i < hp * (WIDTH - 11)) addch('#');
+            else addch(' ');
+        }
+        attroff(COLOR_PAIR(COLORS_TEXT_RED));
+        attrset(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
+        printw("]");
+        // Now the carry slots
+        move(HEIGHT - 2, 0);
+        printw("INVENTORY: ");
+        attroff(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
+        j = pc.inventory_size();
+        attrset(COLOR_PAIR(COLORS_TEXT) | A_DIM);
+        for (i = 0; i < 10; i++) {
+            printw("%d  ", i);
+        }
+        attroff(COLOR_PAIR(COLORS_TEXT) | A_DIM);
+        attrset(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
+        printw(" EQUIPMENT: ");
+        attroff(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
+        attrset(COLOR_PAIR(COLORS_TEXT) | A_DIM);
+        for (i = 0; i < 9; i++) {
+            printw("%c  ", EQUIP_SLOT_CHARS[i]);
+        }
+        attroff(COLOR_PAIR(COLORS_TEXT) | A_DIM);
+        for (i = 0; i < 10; i++) {
+            if (i < j) {
+                target_item = pc.inventory_at(i);
+                c = COLORS_FLOOR_ANY + target_item->next_color();
+                attrset(COLOR_PAIR(c));
+                mvprintw(HEIGHT - 2, 13 + 2 * i, "%c", target_item->regular_symbol());
+                attroff(COLOR_PAIR(c));
+            }
+        }
 
         if (result != GAME_RESULT_RUNNING) {
             getch();

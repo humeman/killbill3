@@ -59,10 +59,14 @@ item_t::~item_t() {
 }
 
 uint8_t item_t::next_color() {
+    color_i = (color_i + 1) % color_count;
+    return current_color();
+}
+
+uint8_t item_t::current_color() {
     int i;
     int found = -1;
     int color_val = definition->color;
-    color_i = (color_i + 1) % color_count;
     for (i = 0; i < 8; i++) {
         if (color_val & 1) found++;
         if (found == color_i) return i;
@@ -106,6 +110,12 @@ bool item_t::is_stacked() {
 char item_t::current_symbol() {
     if (next != NULL) return ITEM_TYPES[ITEM_TYPE_STACK];
     else if (definition->type >= 0 && definition->type <= sizeof (ITEM_TYPES) / sizeof (ITEM_TYPES[0]) - 3)
+        return ITEM_TYPES[definition->type];
+    else return ITEM_TYPES[ITEM_TYPE_UNKNOWN];
+}
+
+char item_t::regular_symbol() {
+    if (definition->type >= 0 && definition->type <= sizeof (ITEM_TYPES) / sizeof (ITEM_TYPES[0]) - 3)
         return ITEM_TYPES[definition->type];
     else return ITEM_TYPES[ITEM_TYPE_UNKNOWN];
 }

@@ -55,6 +55,8 @@ class character_t {
         uint8_t speed;
         bool dead;
         bool location_initialized = false;
+        int hp;
+        int base_hp;
         virtual ~character_t() {};
 
         /**
@@ -87,11 +89,15 @@ class character_t {
         void add_to_inventory(item_t *item);
         item_t *remove_from_inventory(int i);
         item_t *remove_inventory_stack();
+        item_t *inventory_at(int i);
 };
 
 // Just serves as a classification only -- no special stuff here (yet)
 class pc_t : public character_t {
     public:
+        item_t *equipment[9];
+
+        pc_t();
         ~pc_t() {};
         character_type type() override;
 };
