@@ -21,6 +21,7 @@
 #define RANDOM_ITEMS_MIN 10
 #define RANDOM_ITEMS_MAX 15
 #define PC_SPEED 10
+#define MAX_CARRY_SLOTS 10
 
 #define FILE_HEADER "RLG327-S2025"
 #define FILE_VERSION 0
@@ -144,5 +145,15 @@ class dungeon_exception : public std::exception {
     if (size != 1) throw dungeon_exception(__PRETTY_FUNCTION__, "could not write to file"); \
     if (debug) printf("debug: %s = %u, wrote %ld bytes\n", description, var, sizeof (var)); }
 
+#define APPEND_MONST_ATTRS(attrs, str) { \
+    if (attrs & MONSTER_ATTRIBUTE_BOSS) str += "*BOSS* "; \
+    if (attrs & MONSTER_ATTRIBUTE_INTELLIGENT) str += "smart "; \
+    if (attrs & MONSTER_ATTRIBUTE_TELEPATHIC) str += "telepathic "; \
+    if (attrs & MONSTER_ATTRIBUTE_TUNNELING) str += "tunneling "; \
+    if (attrs & MONSTER_ATTRIBUTE_ERRATIC) str += "erratic "; \
+    if (attrs & MONSTER_ATTRIBUTE_GHOST) str += "ghost "; \
+    if (attrs & MONSTER_ATTRIBUTE_PICKUP) str += "pickup "; \
+    if (attrs & MONSTER_ATTRIBUTE_DESTROY) str += "destroy "; \
+    if (attrs & MONSTER_ATTRIBUTE_UNIQUE) str += "unique "; }
 
 #endif

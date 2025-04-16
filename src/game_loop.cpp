@@ -35,7 +35,7 @@
     if (teleport_mode) \
         move_coords(teleport_pointer, x, y); \
     else { \
-        try_move(x, y); \
+        try_move(result, x, y); \
         next_turn_ready = 1; \
     }
 
@@ -43,10 +43,10 @@ char LOSE[] = ASCII_LOSE;
 char WIN[] = ASCII_WIN;
 
 #define MONSTER_MENU_WIDTH 40
-#define MONSTER_MENU_HEIGHT 15
+#define MONSTER_MENU_HEIGHT 10
 
 #define MONSTER_MENU_X_BEGIN WIDTH / 2 - MONSTER_MENU_WIDTH / 2
-#define MONSTER_MENU_Y_BEGIN HEIGHT / 2 - MONSTER_MENU_HEIGHT / 2
+#define MONSTER_MENU_Y_BEGIN 1
 
 void game_t::run() {
     try {
@@ -56,13 +56,23 @@ void game_t::run() {
                 + std::to_string(WIDTH) + "x" + std::to_string(HEIGHT) + " (yours is " + std::to_string(COLS) + "x" + std::to_string(LINES) + ")");
         if (start_color() != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (no color support)");
         if (init_pair(COLORS_FLOOR, COLOR_BLUE, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
-        if (init_pair(COLORS_PC, COLOR_GREEN, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
+        if (init_pair(COLORS_PC, COLOR_WHITE, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
         if (init_pair(COLORS_MONSTER, COLOR_RED, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
         if (init_pair(COLORS_OBJECT, COLOR_MAGENTA, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
         if (init_pair(COLORS_STONE, COLOR_BLACK, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
         if (init_pair(COLORS_TEXT, COLOR_WHITE, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
         if (init_pair(COLORS_MENU_TEXT, COLOR_BLACK, COLOR_WHITE) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
+        if (init_pair(COLORS_MENU_TEXT_SELECTED, COLOR_WHITE, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
         if (init_pair(COLORS_FOG_OF_WAR_TERRAIN, COLOR_WHITE, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
+        if (init_pair(COLORS_FLOOR_ANY, COLOR_RED, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
+        if (init_pair(COLORS_FLOOR_ANY + 1, COLOR_GREEN, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
+        if (init_pair(COLORS_FLOOR_ANY + 2, COLOR_YELLOW, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
+        if (init_pair(COLORS_FLOOR_ANY + 3, COLOR_BLUE, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
+        if (init_pair(COLORS_FLOOR_ANY + 4, COLOR_MAGENTA, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
+        if (init_pair(COLORS_FLOOR_ANY + 5, COLOR_CYAN, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
+        if (init_pair(COLORS_FLOOR_ANY + 6, COLOR_WHITE, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
+        if (init_pair(COLORS_FLOOR_ANY + 7, COLOR_WHITE, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
+
         if (keypad(stdscr, TRUE) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (special kb keys)");
                         // man this library is weird
         if (curs_set(0) == ERR) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (disable cursor)");
@@ -78,17 +88,15 @@ void game_t::run() {
 
 void game_t::run_internal() {
     if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
-    int c, i, x_offset, y_offset, count, monster_count, overflow_count;
-    bool next_turn_ready, was_pc;
+    int c, i;
+    bool next_turn_ready;
     uint8_t x, y;
-    int monster_menu_i = 0;
     bool monster_menu_on = 0;
     bool hide_fog_of_war = false;
     bool teleport_mode = false;
     bool sticky_message = false;
     coordinates_t teleport_pointer;
     game_result_t result = GAME_RESULT_RUNNING;
-    character_t *ch;
     char *ascii;
     item_t *target_item;
     message[0] = '\0';
@@ -109,14 +117,19 @@ void game_t::run_internal() {
                         addch(TELEPORT_POINTER);
                         attroff(COLOR_PAIR(COLORS_PC) | A_BOLD);
                     } else if (character_map[x][y]) {
-                        c = character_map[x][y] == &pc ? COLORS_PC : COLORS_MONSTER;
+                        if (character_map[x][y] == &pc) {
+                            c = COLORS_PC;
+                        } else {
+                            c = COLORS_FLOOR_ANY + ((monster_t *) character_map[x][y])->next_color();
+                        }
                         attrset(COLOR_PAIR(c) | A_BOLD);
                         addch(character_map[x][y]->display);
                         attroff(COLOR_PAIR(c) | A_BOLD);
                     } else if (item_map[x][y]) {
-                        attrset(COLOR_PAIR(COLORS_OBJECT));
+                        c = COLORS_FLOOR_ANY + item_map[x][y]->next_color();
+                        attrset(COLOR_PAIR(c));
                         addch(item_map[x][y]->current_symbol());
-                        attroff(COLOR_PAIR(COLORS_OBJECT));
+                        attroff(COLOR_PAIR(c));
                     } else {
                         c = COLORS_BY_CELL_TYPE[dungeon->cells[x][y].type];
                         attrset(COLOR_PAIR(c));
@@ -149,11 +162,16 @@ void game_t::run_internal() {
                 ascii = LOSE;
                 x = WIDTH / 2 - ASCII_LOSE_WIDTH / 2;
                 y = HEIGHT / 2 - ASCII_LOSE_HEIGHT / 2;
+                PRINTW_CENTERED_AT(WIDTH / 2, 1, "You have failed your task; SpongeBob SquarePants remains unscathed.");
+                PRINTW_CENTERED_AT(WIDTH / 2, 2, "As you take your last breath,");
+                PRINTW_CENTERED_AT(WIDTH / 2, 3, "you hear his maniacal giggling taunts echo across the dungeon's walls.");
             }
             else {
                 ascii = WIN;
                 x = WIDTH / 2 - ASCII_WIN_WIDTH / 2;
                 y = HEIGHT / 2 - ASCII_WIN_HEIGHT / 2;
+                PRINTW_CENTERED_AT(WIDTH / 2, 1, "You have slain the evil SpongeBob SquarePants.");
+                PRINTW_CENTERED_AT(WIDTH / 2, 2, "Never again shall the wretched, porous creature torment this dungeon.");
             }
             move(y, x);
             for (i = 0; ascii[i]; i++) {
@@ -169,51 +187,6 @@ void game_t::run_internal() {
             return;
         }
 
-        // Print out the monster menu if available
-        if (monster_menu_on) {
-            attron(COLOR_PAIR(COLORS_MENU_TEXT));
-            // Requirements are the symbol and relative location.
-            // Doesn't take much space. We'll reserve half (40) for now.
-            // And add a border (of whitespace) around the screen too.
-            // To avoid complicating the PRINTW_CENTERED_AT macro, I'll just do that now.
-            for (y = MONSTER_MENU_Y_BEGIN; y < MONSTER_MENU_Y_BEGIN + MONSTER_MENU_HEIGHT; y++)
-                PRINT_REPEATED(MONSTER_MENU_X_BEGIN, y, MONSTER_MENU_WIDTH, ' ');
-
-            attron(A_BOLD);
-            count = turn_queue.size();
-            PRINTW_CENTERED_AT(WIDTH / 2, MONSTER_MENU_Y_BEGIN + 1, "MONSTERS (%d)", count - 1);
-            attroff(A_BOLD);
-            for (i = 0, monster_count = 0; monster_count < MONSTER_MENU_HEIGHT - 6 + monster_menu_i && i < count; i++) {
-                ch = turn_queue.at(i);
-                if (ch->type() == CHARACTER_TYPE_MONSTER) {
-                    if (monster_count >= monster_menu_i) {
-                        x_offset = ((int) pc.x) - ((int) ch->x);
-                        y_offset = ((int) pc.y) - ((int) ch->y);
-
-                        PRINTW_CENTERED_AT(WIDTH / 2, MONSTER_MENU_Y_BEGIN + 3 + monster_count - monster_menu_i,
-                            "%c: %2d %s, %2d %s", ch->display,
-                            y_offset < 0 ? -1 * y_offset : y_offset,
-                            y_offset < 0 ? "south" : "north",
-                            x_offset < 0 ? -1 * x_offset : x_offset,
-                            x_offset < 0 ? "east" : "west"
-                        );
-                    }
-                    monster_count++;
-                }
-            }
-            for (; monster_count < MONSTER_MENU_HEIGHT - 6; monster_count++)
-                PRINT_REPEATED(MONSTER_MENU_X_BEGIN, MONSTER_MENU_Y_BEGIN + 3 + monster_count, MONSTER_MENU_WIDTH, ' ');
-
-            // Add some nice indicators to say there's more monsters above/below
-            if (monster_menu_i > 0)
-                PRINTW_CENTERED_AT(WIDTH / 2, MONSTER_MENU_Y_BEGIN + 2, "^")
-            if (monster_menu_i < count - (MONSTER_MENU_HEIGHT - 6) - 1)
-                PRINTW_CENTERED_AT(WIDTH / 2, MONSTER_MENU_Y_BEGIN + MONSTER_MENU_HEIGHT - 3, "v")
-
-            PRINTW_CENTERED_AT(WIDTH / 2, MONSTER_MENU_Y_BEGIN + MONSTER_MENU_HEIGHT - 2, "Press ESC to return.");
-            attroff(COLOR_PAIR(COLORS_MENU_TEXT));
-        }
-
         // Ready to render
         refresh();
 
@@ -224,32 +197,7 @@ void game_t::run_internal() {
         next_turn_ready = 0;
         switch (c) {
             case KB_MONSTERS:
-                if (monster_menu_on) break;
-                monster_menu_on = 1;
-                monster_menu_i = 0;
-                break;
-            case KB_SCROLL_DOWN:
-                if (!monster_menu_on) {
-                    snprintf(message, WIDTH, "Can't scroll without monster menu open!");
-                    break;
-                }
-                count = turn_queue.size() - 1;
-                overflow_count = count - (MONSTER_MENU_HEIGHT - 6);
-                if (overflow_count < 0) overflow_count = 0;
-                monster_menu_i++;
-                if (monster_menu_i > overflow_count) monster_menu_i = overflow_count;
-                break;
-            case KB_SCROLL_UP:
-                if (!monster_menu_on) {
-                    snprintf(message, WIDTH, "Can't scroll without monster menu open!");
-                    break;
-                }
-                monster_menu_i--;
-                if (monster_menu_i < 0) monster_menu_i = 0;
-                break;
-            case KB_ESCAPE:
-                if (!monster_menu_on) break;
-                monster_menu_on = 0;
+                monster_menu();
                 break;
             case KB_UP_LEFT_0:
             case KB_UP_LEFT_1:
@@ -322,7 +270,7 @@ void game_t::run_internal() {
                 }
                 else {
                     message[0] = '\0';
-                    force_move(teleport_pointer);
+                    force_move(result, teleport_pointer);
                     sticky_message = false;
                     teleport_mode = false;
                     next_turn_ready = true;
@@ -344,7 +292,7 @@ void game_t::run_internal() {
                         teleport_pointer.y = pc.y;
                     }
                     message[0] = '\0';
-                    force_move(teleport_pointer);
+                    force_move(result, teleport_pointer);
                     sticky_message = false;
                     teleport_mode = false;
                     next_turn_ready = true;
@@ -357,6 +305,15 @@ void game_t::run_internal() {
                     snprintf(message, WIDTH, "There's no item here.");
                     break;
                 }
+                if (pc.inventory_size() >= MAX_CARRY_SLOTS) {
+                    snprintf(message, WIDTH, "Your carry slots are full!");
+                    break;
+                }
+                if (target_item->is_stacked()) {
+                    item_map[pc.x][pc.y] = target_item->detach_stack();
+                } else {
+                    item_map[pc.x][pc.y] = NULL;
+                }
                 pc.add_to_inventory(target_item);
                 snprintf(message, WIDTH, "You picked up the %s. You have %d items.", target_item->definition->name.c_str(), pc.inventory_size());
                 next_turn_ready = true;
@@ -367,19 +324,163 @@ void game_t::run_internal() {
                 snprintf(message, WIDTH, "Unrecognized command: %c", (char) c);
         }
 
-        if (next_turn_ready) {
+        if (result == GAME_RESULT_RUNNING && next_turn_ready) {
             update_pathfinding(dungeon, pathfinding_no_tunnel, pathfinding_tunnel, &pc);
-            result = GAME_RESULT_RUNNING;
-            was_pc = 0;
-            while (!was_pc && result == GAME_RESULT_RUNNING) {
-                next_turn(dungeon, &pc, turn_queue, character_map, pathfinding_tunnel, pathfinding_no_tunnel, &result, &was_pc);
-            }
-
+            // Run the game until the PC's turn comes up again (or it dies)
+            result = run_until_pc();
             hide_fog_of_war = false;
-            if (result != GAME_RESULT_RUNNING) {
-                hide_fog_of_war = true;
-                snprintf(message, 80, "Game over. Press any key to continue.");
+        }
+        if (result != GAME_RESULT_RUNNING) {
+            hide_fog_of_war = true;
+            snprintf(message, 80, "Game over. Press any key to continue.");
+        }
+    }
+}
+
+void game_t::monster_menu() {
+    int menu_i = 0;
+    int count;
+    int c, y, i, x_offset, y_offset;
+    character_t *ch;
+    monster_t *targeted_monster;
+    std::string desc;
+
+
+    while (true) {
+        attron(COLOR_PAIR(COLORS_MENU_TEXT));
+        // Requirements are the symbol and relative location.
+        // Doesn't take much space. We'll reserve half (40) for now.
+        // And add a border (of whitespace) around the screen too.
+        // To avoid complicating the PRINTW_CENTERED_AT macro, I'll just do that now.
+        for (y = MONSTER_MENU_Y_BEGIN; y < MONSTER_MENU_Y_BEGIN + MONSTER_MENU_HEIGHT; y++)
+            PRINT_REPEATED(MONSTER_MENU_X_BEGIN, y, MONSTER_MENU_WIDTH, ' ');
+
+        attron(A_BOLD);
+        count = turn_queue.size();
+        PRINTW_CENTERED_AT(WIDTH / 2, MONSTER_MENU_Y_BEGIN, "MONSTERS (%d)", count - 1);
+        attroff(A_BOLD);
+
+        // Find the first n monsters starting at menu_i (irrespective of PC).
+        c = -1;
+        targeted_monster = NULL;
+        for (i = 0; i < count; i++) {
+            ch = turn_queue.at(i);
+            if (ch == &pc) continue;
+            c++;
+            if (c >= menu_i + MONSTER_MENU_HEIGHT - 4) break; // Screen is full
+            if (c >= menu_i) {
+                // We can render this one.
+                if (c == menu_i) {
+                    targeted_monster = (monster_t *) ch;
+                    attroff(COLOR_PAIR(COLORS_MENU_TEXT));
+                    attrset(COLOR_PAIR(COLORS_MENU_TEXT_SELECTED) | A_BOLD);
+                }
+                x_offset = ((int) pc.x) - ((int) ch->x);
+                y_offset = ((int) pc.y) - ((int) ch->y);
+                PRINTW_CENTERED_AT(WIDTH / 2, MONSTER_MENU_Y_BEGIN + 2 + c - menu_i,
+                    " %c: %2d %s, %2d %s ", ch->display,
+                    y_offset < 0 ? -1 * y_offset : y_offset,
+                    y_offset < 0 ? "south" : "north",
+                    x_offset < 0 ? -1 * x_offset : x_offset,
+                    x_offset < 0 ? "east" : "west"
+                );
+                if (c == menu_i) {
+                    attroff(COLOR_PAIR(COLORS_MENU_TEXT_SELECTED) | A_BOLD);
+                    attrset(COLOR_PAIR(COLORS_MENU_TEXT));
+                }
             }
         }
+
+        // Add some nice indicators to say there's more monsters above/below
+        if (menu_i > 0)
+            PRINTW_CENTERED_AT(WIDTH / 2, MONSTER_MENU_Y_BEGIN + 1, "^")
+        if (menu_i < count - (MONSTER_MENU_HEIGHT - 4) - 1)
+            PRINTW_CENTERED_AT(WIDTH / 2, MONSTER_MENU_Y_BEGIN + MONSTER_MENU_HEIGHT - 2, "v")
+
+        PRINTW_CENTERED_AT(WIDTH / 2, MONSTER_MENU_Y_BEGIN + MONSTER_MENU_HEIGHT - 1, "Press ESC to return.");
+
+        // And at the bottom of the screen, we'll display the attributes.
+        if (targeted_monster != NULL) {
+            for (y = HEIGHT - 12; y < HEIGHT; y++)
+                PRINT_REPEATED(0, y, WIDTH, ' ');
+
+            attron(A_BOLD);
+            PRINTW_CENTERED_AT(WIDTH / 2, HEIGHT - 12, "%s", targeted_monster->definition->name.c_str());
+            attroff(A_BOLD);
+            // Just printing out the whole string clears out the color on the remainder of the line when there's
+            // a newline character. It also doesn't let us protect against overflow, so unfortunately, this'll be
+            // by hand.
+            y = HEIGHT - 11;
+            move(y, 0);
+            desc = targeted_monster->definition->description;
+            for (i = 0; y < HEIGHT - 1 && desc[i]; i++) {
+                if (desc[i] == '\r') continue; // Fairly certain this breaks my parser anyway, but...
+                if (desc[i] == '\n') {
+                    y++;
+                    move(y, 0);
+                    continue;
+                }
+                addch(desc[i]);
+            }
+            // The last line will be the attributes.
+            desc = "";
+            APPEND_MONST_ATTRS(targeted_monster->definition->abilities, desc);
+            attron(A_DIM);
+            PRINTW_CENTERED_AT(WIDTH / 2, HEIGHT - 1, "%s", desc.c_str());
+            attroff(A_DIM);
+        }
+        attroff(COLOR_PAIR(COLORS_MENU_TEXT));
+
+        c = getch();
+        count = turn_queue.size() - 1;
+        switch (c) {
+            case KB_SCROLL_DOWN:
+                menu_i = (menu_i + 1) % count;
+                break;
+            case KB_SCROLL_UP:
+                menu_i--;
+                if (menu_i < 0) menu_i = count - 1;
+                break;
+            case KB_ESCAPE:
+                return;
+        }
+    }
+}
+
+game_result_t game_t::run_until_pc() {
+    character_t *ch = NULL;
+    monster_t *monster;
+    uint32_t priority;
+    game_result_t result;
+
+    while (true) {
+        ch = NULL;
+        while (turn_queue.size() > 0 && ch == NULL) {
+            priority = turn_queue.top_priority();
+            ch = turn_queue.remove();
+            // The dead flag here avoids us having to remove from the heap at an arbitrary location.
+            // We just destroy it when it comes off the queue next.
+            if (ch->dead) {
+                if (ch != &pc) {
+                    destroy_character(character_map, ch);
+                    ch = NULL;
+                }
+            }
+        }
+
+        if (ch == NULL)
+            throw dungeon_exception(__PRETTY_FUNCTION__, "turn queue is empty");
+
+        // If this was the PC's turn, signal that back to the caller
+        if (ch == &pc) {
+            turn_queue.insert(&pc, priority + pc.speed);
+            return GAME_RESULT_RUNNING;
+        }
+
+        monster = (monster_t *) ch;
+        result = GAME_RESULT_RUNNING;
+        monster->take_turn(dungeon, &pc, turn_queue, character_map, item_map, pathfinding_tunnel, pathfinding_no_tunnel, priority, result);
+        if (pc.dead) result = GAME_RESULT_LOSE;
+        return result;
     }
 }

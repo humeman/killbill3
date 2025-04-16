@@ -315,11 +315,27 @@ void game_t::random_monsters() {
     coordinates_t loc;
     int monster_i, attempts;
     monster_t *monst;
-    for (int i = 0; i < count; i++) {
+    character_t *ch;
+    int i, j;
+    bool allowed;
+    for (i = 0; i < count; i++) {
         attempts = 0;
         while (attempts++ < MAX_GENERATION_ATTEMPTS) {
             monster_i = rand() % monster_defs.size();
-            if (monster_defs[monster_i]->abilities | MONSTER_ATTRIBUTE_UNIQUE && monster_defs[monster_i]->unique_generated) continue;
+            if (monster_defs[monster_i]->abilities & MONSTER_ATTRIBUTE_UNIQUE) {
+                if (monster_defs[monster_i]->unique_slain) continue; // If we've already killed this type of unique monster
+                // Or, if there's already one in the dungeon.
+                allowed = true;
+                for (j = 0; j < turn_queue.size(); j++) {
+                    ch = turn_queue.at(i);
+                    if (ch == &pc) continue;
+                    if (&(((monster_t *) ch)->definition) == &(monster_defs[monster_i])) {
+                        allowed = false;
+                        break;
+                    }
+                }
+                if (!allowed) continue;
+            }
             if (rand() % 100 >= monster_defs[monster_i]->rarity) continue;
 
             break;
@@ -351,7 +367,7 @@ void game_t::random_items() {
     if (item_defs.size() == 0) throw dungeon_exception(__PRETTY_FUNCTION__, "no item definitions are set");
     // Ripped for the most part from random_monsters().
     // Pick how many we want to generate.
-    int count = nummon < 0 ? (rand() % (RANDOM_ITEMS_MAX - RANDOM_ITEMS_MIN + 1)) + RANDOM_ITEMS_MIN : nummon;
+    int count = numitems < 0 ? (rand() % (RANDOM_ITEMS_MAX - RANDOM_ITEMS_MIN + 1)) + RANDOM_ITEMS_MIN : numitems;
 
     coordinates_t loc;
     int item_i, attempts;
@@ -372,12 +388,16 @@ void game_t::random_items() {
         item = new item_t(item_defs[item_i]);
         // Pick a location...
         try {
-            loc = random_location_no_kill(dungeon, character_map);
+            loc = dungeon->random_location();
         } catch (dungeon_exception &e) {
             delete item; // The rest of the ones in the queue already will be cleared out by the game destructor.
             throw dungeon_exception(__PRETTY_FUNCTION__, e, "no available space in dungeon for item placement");
         }
-        item_map[loc.x][loc.y] = item;
+        if (item_map[loc.x][loc.y]) {
+            item_map[loc.x][loc.y]->add_to_stack(item);
+        } else {
+            item_map[loc.x][loc.y] = item;
+        }
     }
 }
 
@@ -388,12 +408,13 @@ void game_t::update_fog_of_war() {
         if (x < 0 || x >= dungeon->width) continue;
         for (y = pc.y - FOG_OF_WAR_DISTANCE; y <= pc.y + FOG_OF_WAR_DISTANCE; y++) {
             if (y < 0 || y >= dungeon->height) continue;
-            seen_map[x][y] = CHARACTERS_BY_CELL_TYPE[dungeon->cells[x][y].type];
+            if (item_map[x][y]) seen_map[x][y] = item_map[x][y]->current_symbol();
+            else seen_map[x][y] = CHARACTERS_BY_CELL_TYPE[dungeon->cells[x][y].type];
         }
     }
 }
 
-void game_t::try_move(int x_offset, int y_offset) {
+void game_t::try_move(game_result_t &result, int x_offset, int y_offset) {
     if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
     int new_x = pc.x + x_offset;
     int new_y = pc.y + y_offset;
@@ -405,10 +426,11 @@ void game_t::try_move(int x_offset, int y_offset) {
         snprintf(message, 80, "There's stone in the way!");
     }
     else {
-        if (character_map[new_x][new_y] != NULL) {
+        if (character_map[new_x][new_y] && character_map[new_x][new_y]->type() == CHARACTER_TYPE_MONSTER) {
+            // If that second condition didn't hit, we're moving to our own location (or there are two PCs somehow).
             // Kill the monster there
-            character_map[new_x][new_y]->dead = 1;
             snprintf(message, 80, "You ate the %c in the way.", character_map[new_x][new_y]->display);
+            ((monster_t *) character_map[new_x][new_y])->die(result, character_map, item_map);
         }
         pc.move_to((coordinates_t) {(uint8_t) new_x, (uint8_t) new_y}, character_map);
         update_fog_of_war();
@@ -426,11 +448,11 @@ void game_t::move_coords(coordinates_t &coords, int x_offset, int y_offset) {
     coords.y = new_y;
 }
 
-void game_t::force_move(coordinates_t dest) {
-    if (character_map[dest.x][dest.y] != NULL && character_map[dest.x][dest.y] != &pc) {
+void game_t::force_move(game_result_t &result, coordinates_t dest) {
+    if (character_map[dest.x][dest.y] && character_map[dest.x][dest.y]->type() == CHARACTER_TYPE_MONSTER) {
         // Kill the monster there
-        character_map[dest.x][dest.y]->dead = 1;
         snprintf(message, 80, "The poor %c stood no chance. Cheater!", character_map[dest.x][dest.y]->display);
+        ((monster_t *) character_map[dest.x][dest.y])->die(result, character_map, item_map);
     }
     pc.move_to(dest, character_map);
     update_fog_of_war();
@@ -446,6 +468,16 @@ void game_t::fill_and_place_on(cell_type_t target_cell) {
         if (character == &pc) continue;
         destroy_character(character_map, character);
     }
+    // And kill all the items
+    for (x = 0; x < dungeon->width; x++) {
+        for (y = 0; y < dungeon->height; y++) {
+            if (item_map[x][y]) {
+                delete item_map[x][y];
+                item_map[x][y] = NULL;
+            }
+        }
+    }
+
     dungeon->fill(ROOM_MIN_COUNT, ROOM_COUNT_MAX_RANDOMNESS, ROOM_MIN_WIDTH, ROOM_MIN_HEIGHT, ROOM_MAX_RANDOMNESS, 0);
     placed = 0;
     for (x = 0; x < dungeon->width; x++) {
@@ -461,9 +493,10 @@ void game_t::fill_and_place_on(cell_type_t target_cell) {
     // Readd the PC and new monsters
     turn_queue.insert(&pc, 0);
     random_monsters();
+    random_items();
     for (x = 0; x < dungeon->width; x++) {
         for (y = 0; y < dungeon->height; y++) {
-            seen_map[x][y] = CELL_TYPE_HIDDEN;
+            seen_map[x][y] = ' ';
         }
     }
     update_fog_of_war();

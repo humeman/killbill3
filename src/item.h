@@ -52,6 +52,8 @@ class item_definition_t {
 class item_t {
     private:
         item_t *next;
+        int color_count;
+        uint8_t color_i = 0;
 
     public:
         item_definition_t *definition;
@@ -62,10 +64,12 @@ class item_t {
 
         int get_damage();
         void add_to_stack(item_t *item);
+        item_t *detach_stack();
         item_t *next_in_stack();
         item_t *remove_next_in_stack();
         char current_symbol();
         bool is_stacked();
+        uint8_t next_color();
 };
 
 #endif

@@ -16,7 +16,9 @@ typedef enum colors {
     COLORS_OBJECT,
     COLORS_TEXT,
     COLORS_MENU_TEXT,
-    COLORS_FOG_OF_WAR_TERRAIN
+    COLORS_MENU_TEXT_SELECTED,
+    COLORS_FOG_OF_WAR_TERRAIN,
+    COLORS_FLOOR_ANY // This must be the last color in this enum. It is the beginning offset for the 7 item/monster color options.
 } colors_t;
 
 typedef enum keybinds {
@@ -162,6 +164,19 @@ class game_t {
         void run_internal();
 
         /**
+          * Takes the turns of everything in the turn queue until the PC's turn (or
+          *  until it dies).
+          *
+          * Returns: Game result denoting the current state
+          */
+        game_result_t run_until_pc();
+
+        /**
+          * Displays the monster menu.
+          */
+        void monster_menu();
+
+        /**
          * Updates the PC's fog of war map with what it currently sees.
          */
         void update_fog_of_war();
@@ -173,7 +188,7 @@ class game_t {
          * - x_offset: Number to add to the X coordinate
          * - y_offset: Number to add to the Y coordinate
          */
-        void try_move(int x_offset, int y_offset);
+        void try_move(game_result_t &result, int x_offset, int y_offset);
 
         /**
          * Changes the value of some coordinates, clamping each value to the
@@ -190,7 +205,7 @@ class game_t {
          * Forces the PC to move to some new coordinates, regardless of if
          *  they represent a possible PC location.
          */
-        void force_move(coordinates_t dest);
+        void force_move(game_result_t &result, coordinates_t dest);
 
         /**
          * Regenerates the dungeon, placing the PC on the first instance of

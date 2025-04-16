@@ -138,103 +138,73 @@ monster_t::monster_t(monster_definition_t *definition) {
     this->display = definition->symbol;
     this->pc_seen = false;
     this->dead = false;
+    color_count = 0;
+    int i;
+    int color_val = definition->color;
+    for (i = 0; i < 8; i++) {
+        if (color_val & 1) color_count++;
+        color_val >>= 1;
+    }
 }
 
-void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t<character_t *> &turn_queue, character_t ***character_map, uint32_t **pathfinding_tunnel, uint32_t **pathfinding_no_tunnel, game_result_t *result, bool *was_pc) {
-    character_t *ch = NULL;
-    monster_t *monster;
-    uint32_t priority;
-    uint8_t x, y, min, x_offset, y_offset, can_move, target_x, target_y;
-    coordinates_t next;
-    int i, j, x1, y1;
-    uint32_t** map;
-    cell_t* next_cell;
-    bool alive;
-
-    while (turn_queue.size() > 0 && ch == NULL) {
-        priority = turn_queue.top_priority();
-        ch = turn_queue.remove();
-        // The dead flag here avoids us having to remove from the heap at an arbitrary location.
-        // We just destroy it when it comes off the queue next.
-        if (ch->dead) {
-            if (ch != pc) {
-                destroy_character(character_map, ch);
-                ch = NULL;
-            }
-        }
+uint8_t monster_t::next_color() {
+    int i;
+    int found = -1;
+    int color_val = definition->color;
+    color_i = (color_i + 1) % color_count;
+    for (i = 0; i < 8; i++) {
+        if (color_val & 1) found++;
+        if (found == color_i) return i;
+        color_val >>= 1;
     }
-    // if (ch == NULL || (ch == pc && turn_queue->size() == 0)) {
-    //     // Everyone is dead. Game over.
-    //     *result = GAME_RESULT_WIN;
-    //     return;
-    // }
+    throw dungeon_exception(__PRETTY_FUNCTION__, "did not find target color (was it modified?)");
+}
 
-    x = ch->x;
-    y = ch->y;
-
-    // If this was the PC's turn, signal that back to the caller
-    // Previously for random movement, but now we'll render the changes
-    // and wait for user input
-    if (ch == pc) {
-        // Iterate over the turn queue and count the alive monsters.
-        // The dead flag makes the removal of monsters easy, but if it's the PC's turn
-        // and the only other monster in the queue is dead, then the game won't end.
-        alive = false;
-        for (i = 0; i < turn_queue.size(); i++) {
-            ch = turn_queue.at(i);
-            if (!ch->dead) {
-                alive = true;
-                break;
-            }
-        }
-        if (!alive) {
-            *result = GAME_RESULT_WIN;
-        }
-        turn_queue.insert(pc, priority + pc->speed);
-        *was_pc = 1;
-        return; // No open space (impossible with a normal map)
-    }
-
-    monster = (monster_t *) ch;
-
+void monster_t::take_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t<character_t *> &turn_queue, character_t ***character_map, item_t ***item_map, uint32_t **pathfinding_tunnel, uint32_t **pathfinding_no_tunnel, uint32_t priority, game_result_t &result) {
     // Find out which direction this monster wants to go.
     // - Telepathic: Directly to the PC
     // - Intelligent: Towards the last seen location
     // - None: Only towards the PC if there's LOS
+    uint8_t min, x_offset, y_offset, target_x, target_y;
+    coordinates_t next;
+    int i, j, x1, y1;
+    uint32_t** map;
+    cell_t* next_cell;
+    bool can_move;
 
     // Slightly inefficient but I prefer the readability since this algorithm is a bit more complex.
     // 1: Determine if the monster is allowed to go to the PC.
-    can_move = 0;
+    can_move = false;
     //    a: If it's telepathic, it can.
-    if (monster->attributes & MONSTER_ATTRIBUTE_TELEPATHIC) {
+    if (attributes & MONSTER_ATTRIBUTE_TELEPATHIC) {
         can_move = 1;
         target_x = pc->x;
         target_y = pc->y;
     }
     //    b: If it has line of sight, it can.
-    else if (monster->has_los(dungeon, (coordinates_t) {pc->x, pc->y})) {
+    else if (has_los(dungeon, (coordinates_t) {pc->x, pc->y})) {
         can_move = 1;
         target_x = pc->x;
         target_y = pc->y;
 
         // For future use, we can also mark that the PC was seen.
-        monster->pc_seen = 1;
-        monster->pc_last_seen_x = pc->x;
-        monster->pc_last_seen_y = pc->y;
+        pc_seen = 1;
+        pc_last_seen_x = pc->x;
+        pc_last_seen_y = pc->y;
     }
     //    c: If it has a last seen location in mind, it can.
-    else if (monster->pc_seen)  {
+    else if (pc_seen) {
         can_move = 1;
-        target_x = monster->pc_last_seen_x;
-        target_y = monster->pc_last_seen_y;
+        target_x = pc_last_seen_x;
+        target_y = pc_last_seen_y;
     }
 
     // 2: If we can move, find out the cell we'll move to next.
     if (can_move) {
         // If the monster's intelligent, follow the shortest path to the destination.
-        if (monster->attributes & MONSTER_ATTRIBUTE_INTELLIGENT) {
+        if (attributes & MONSTER_ATTRIBUTE_INTELLIGENT) {
             // We can use the pathfinding maps to go to the PC
-            if (monster->attributes & MONSTER_ATTRIBUTE_TUNNELING)
+            if (attributes & (MONSTER_ATTRIBUTE_TUNNELING | MONSTER_ATTRIBUTE_GHOST))
                 map = pathfinding_tunnel;
             else
                 map = pathfinding_no_tunnel;
@@ -263,16 +233,16 @@ void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t<character_t *>
 
         // Otherwise, we'll go in a straight line.
         else {
-            next = monster->next_xy(dungeon, (coordinates_t) {target_x, target_y});
+            next = next_xy(dungeon, (coordinates_t) {target_x, target_y});
             // Can't if it's non-tunneling and going towards stone.
-            if (!(monster->attributes & MONSTER_ATTRIBUTE_TUNNELING) && dungeon->cells[next.x][next.y].type == CELL_TYPE_STONE) {
+            if (!(attributes & (MONSTER_ATTRIBUTE_TUNNELING | MONSTER_ATTRIBUTE_GHOST)) && dungeon->cells[next.x][next.y].type == CELL_TYPE_STONE) {
                 can_move = 0;
             }
         }
     }
 
     // And, of course, there's the possibility that the monster is erratic and will move randomly.
-    if ((monster->attributes & MONSTER_ATTRIBUTE_ERRATIC) && rand() % 2 == 1) {
+    if ((attributes & MONSTER_ATTRIBUTE_ERRATIC) && rand() % 2 == 1) {
         // Pick a random available cell around the monster.
         x_offset = rand();
         y_offset = rand();
@@ -285,7 +255,7 @@ void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t<character_t *>
                 if (y1 < 0 || y1 >= dungeon->height) continue;
                 if (x1 == x && y1 == y) continue;
                 if (dungeon->cells[x1][y1].attributes & CELL_ATTRIBUTE_IMMUTABLE) continue;
-                if (dungeon->cells[x1][y1].type == CELL_TYPE_STONE && !(monster->attributes & MONSTER_ATTRIBUTE_TUNNELING)) continue;
+                if (dungeon->cells[x1][y1].type == CELL_TYPE_STONE && !(attributes & (MONSTER_ATTRIBUTE_TUNNELING | MONSTER_ATTRIBUTE_GHOST))) continue;
                 // This cell is open
                 next.x = x1;
                 next.y = y1;
@@ -300,37 +270,68 @@ void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t<character_t *>
     if (can_move && (next.x != x || next.y != y)) {
         // In the special case of non-telepathic monsters, we want to clear out the PC seen flag once we reach
         // its last known location.
-        if (monster->pc_seen && monster->pc_last_seen_x == next.x && monster->pc_last_seen_y == next.y)
-            monster->pc_seen = 0;
+        if (pc_seen && pc_last_seen_x == next.x && pc_last_seen_y == next.y)
+            pc_seen = 0;
 
         // Our next coordinates are in next_x and next_y.
         // If that's open space, just go there.
         next_cell = &(dungeon->cells[next.x][next.y]);
         if (next_cell->type == CELL_TYPE_STONE) {
-            next_cell->hardness -= MIN(next_cell->hardness, 85);
-            if (next_cell->hardness > 0) can_move = 0;
-            else next_cell->type = CELL_TYPE_HALL;
+            if (attributes & MONSTER_ATTRIBUTE_TUNNELING) {
+                next_cell->hardness -= MIN(next_cell->hardness, 85);
+                if (next_cell->hardness > 0) can_move = 0;
+                else next_cell->type = CELL_TYPE_HALL;
+            }
         }
         // This use of can_move is separate from the can_move that brought us into this loop.
         // 1 byte of memory > readability :)
         if (can_move) {
-            // If there's already a character there, kill it.
-            if (character_map[next.x][next.y] != NULL) {
-                character_map[next.x][next.y]->dead = 1;
-                // Special case is the PC, in which case the game ends.
-                if (character_map[next.x][next.y]->type() == CHARACTER_TYPE_PC) {
-                    monster->move_to(next, character_map);
-                    *result = GAME_RESULT_LOSE;
-                    turn_queue.insert(ch, priority + ch->speed); // So this character gets free'd
-                    return;
+            // If there's an item there, destroy it or pick it up.
+            if (item_map[next.x][next.y] != NULL) {
+                if (attributes & MONSTER_ATTRIBUTE_PICKUP) {
+                    add_to_inventory(item_map[next.x][next.y]);
+                    item_map[next.x][next.y] = NULL;
+                }
+                else if (attributes & MONSTER_ATTRIBUTE_DESTROY) {
+                    delete item_map[next.x][next.y];
+                    item_map[next.x][next.y] = NULL;
                 }
             }
-            monster->move_to(next, character_map);
+
+            // If there's already a character there, kill it.
+            if (character_map[next.x][next.y] != NULL) {
+                // Special case is the PC, in which case the game ends.
+                if (character_map[next.x][next.y] == pc) {
+                    pc->dead = true;
+                } else if (character_map[next.x][next.y]->type() == CHARACTER_TYPE_MONSTER) {
+                    ((monster_t *) character_map[next.x][next.y])->die(result, character_map, item_map);
+                }
+            }
+            move_to(next, character_map);
         }
     }
 
-    turn_queue.insert(ch, priority + ch->speed);
+    turn_queue.insert(this, priority + speed);
     return;
+}
+
+void monster_t::die(game_result_t &result, character_t ***character_map, item_t ***item_map) {
+    // If the monster has stuff in its inventory, drop it here.
+    if (item != NULL) {
+        if (item_map[x][y]) {
+            item_map[x][y]->add_to_stack(item);
+        } else {
+            item_map[x][y] = item;
+        }
+    }
+    // Clear out this location on the character map...
+    if (character_map[x][y] == this)
+        character_map[x][y] = NULL;
+    // Deleting is left to whatever called this.
+    dead = true;
+
+    if (definition->abilities & MONSTER_ATTRIBUTE_UNIQUE) definition->unique_slain = true;
+    if (definition->abilities & MONSTER_ATTRIBUTE_BOSS) result = GAME_RESULT_WIN;
 }
 
 int character_t::inventory_size() {
@@ -347,7 +348,7 @@ int character_t::inventory_size() {
 }
 void character_t::add_to_inventory(item_t *item) {
     if (this->item == NULL) this->item = item;
-    else item->add_to_stack(item);
+    else this->item->add_to_stack(item);
     item_count++;
 }
 item_t *character_t::remove_from_inventory(int i) {

@@ -35,7 +35,7 @@ class monster_definition_t {
         dice_t *damage;
         char symbol;
         int rarity;
-        bool unique_generated = false;
+        bool unique_slain = false;
 };
 
 void verify_monster_definition(monster_definition_t *def);
@@ -44,7 +44,7 @@ void verify_monster_definition(monster_definition_t *def);
  * The base class (abstract) for a dungeon character.
  */
 class character_t {
-    private:
+    protected:
         item_t *item = NULL;
         int item_count = 0;
 
@@ -98,16 +98,18 @@ class pc_t : public character_t {
 
 class monster_t : public character_t {
     private:
-        monster_definition_t *definition;
         int hp;
-
-    public:
-        monster_t(monster_definition_t *definition);
-        ~monster_t() {};
-        uint16_t attributes;
         bool pc_seen;
         uint8_t pc_last_seen_x;
         uint8_t pc_last_seen_y;
+        uint16_t attributes;
+        uint8_t color_i = 0;
+        uint8_t color_count;
+
+    public:
+        monster_definition_t *definition;
+        monster_t(monster_definition_t *definition);
+        ~monster_t() {};
         /**
          * Finds the next coordinate to move to on a direct line to a
          *  coordinate pair.
@@ -119,6 +121,10 @@ class monster_t : public character_t {
          *  otherwise the current coordinates
          */
         coordinates_t next_xy(dungeon_t *dungeon, coordinates_t to);
+        // A few too many parameters, but it'd be annoying to rework. Oh well.
+        void take_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t<character_t *> &turn_queue, character_t ***character_map, item_t ***item_map, uint32_t **pathfinding_tunnel, uint32_t **pathfinding_no_tunnel, uint32_t priority, game_result_t &result);
+        void die(game_result_t &result, character_t ***character_map, item_t ***item_map);
+        uint8_t next_color();
         character_type type() override;
 };
 

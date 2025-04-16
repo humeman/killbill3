@@ -239,9 +239,19 @@
          Created new random monster and item generation functions that use the definitions.
          Created an item map & enabled primitive (no colors yet) item rendering.
             -> Had to change the seen map to chars for this to work with fog of war.
-TODO:
-- PC inventory
-- Colors for monsters & items
-- Monster inventory (optional)
-- New monster attributes (optional)
-- Make monster menu show new info (optional)
+4/15:
+    4p:  Implemented inventory. The PC picks up items with the ',' key. It can hold up
+          to 10 items (to fit with the carry slots coming up in 1.09). Monsters can
+          hold infinite items. They drop them when they die.
+         Implemented the GHOST attribute (I think it's actually called PASS, but GHOST is
+          cooler)
+         Made it so items can stack. Picking up an item removes the top one from the stack.
+          Monsters grab the entire stack if they pick up/destroy one.
+         Implemented PICKUP and DESTROY.
+         Added item/monster colors, including multiple colors which cycle through every
+          redraw.
+         Remade the monster menu, which now allows the user to select a monster and displays
+          its name, description, and attributes at the bottom of the screen. (not required,
+          but seemed nice)
+         Made the game end when a boss is killed. I think that was for 1.09, but oh well
+         Fixed unique generation to match up with the spec (didn't work properly).
