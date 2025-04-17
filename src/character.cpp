@@ -360,7 +360,8 @@ item_t *character_t::remove_from_inventory(int i) {
         if (current == NULL) throw dungeon_exception(__PRETTY_FUNCTION__, "inventory index out of bounds");
     }
     if (i == 0) {
-        item = item->next_in_stack();
+        current = item;
+        item = item->detach_stack();
         return current;
     }
     else {

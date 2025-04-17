@@ -415,6 +415,7 @@ void game_t::run_internal() {
                 }
                 // Remove that item from the inventory...
                 target_item = pc.remove_from_inventory(i);
+                if (target_item->is_stacked()) throw dungeon_exception(__PRETTY_FUNCTION__, "invalid state: removed item is stacked");
                 // If the swap slot is empty, just add the item there.
                 if (pc.equipment[swap_slot] == NULL) {
                     snprintf(message, WIDTH, "You equipped %s.", target_item->definition->name.c_str());

@@ -96,6 +96,7 @@ item_t *item_t::remove_next_in_stack() {
     item_t *removed = next;
     if (removed != NULL) next = removed->next;
     else next = NULL;
+    removed->next = NULL;
     return removed;
 }
 
