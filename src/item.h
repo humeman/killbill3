@@ -7,17 +7,17 @@
 #include "random.h"
 
 typedef enum {
-    ITEM_TYPE_WEAPON,
-    ITEM_TYPE_OFFHAND,
+    ITEM_TYPE_WEAPON,  // Start of PC-equippable items
+    ITEM_TYPE_OFFHAND, // If more are added, they must be between WEAPON and RING
     ITEM_TYPE_RANGED,
     ITEM_TYPE_ARMOR,
     ITEM_TYPE_HELMET,
     ITEM_TYPE_CLOAK,
     ITEM_TYPE_GLOVES,
     ITEM_TYPE_BOOTS,
-    ITEM_TYPE_RING,
     ITEM_TYPE_AMULET,
     ITEM_TYPE_LIGHT,
+    ITEM_TYPE_RING,    // End of PC-equippable items
     ITEM_TYPE_SCROLL,
     ITEM_TYPE_BOOK,
     ITEM_TYPE_FLASK,

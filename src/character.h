@@ -92,10 +92,24 @@ class character_t {
         item_t *inventory_at(int i);
 };
 
-// Just serves as a classification only -- no special stuff here (yet)
+typedef enum {
+    PC_SLOT_WEAPON,
+    PC_SLOT_OFFHAND,
+    PC_SLOT_RANGED,
+    PC_SLOT_ARMOR,
+    PC_SLOT_HELMET,
+    PC_SLOT_CLOAK,
+    PC_SLOT_GLOVES,
+    PC_SLOT_BOOTS,
+    PC_SLOT_AMULET,
+    PC_SLOT_LIGHT,
+    PC_SLOT_RING_0,
+    PC_SLOT_RING_1 // Must be the last one for counting
+} pc_slot_t;
+
 class pc_t : public character_t {
     public:
-        item_t *equipment[9];
+        item_t *equipment[12];
 
         pc_t();
         ~pc_t() {};

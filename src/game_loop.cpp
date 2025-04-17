@@ -48,7 +48,7 @@
 
 char LOSE[] = ASCII_LOSE;
 char WIN[] = ASCII_WIN;
-char EQUIP_SLOT_CHARS[] = "asdfghjkl";
+char EQUIP_SLOT_CHARS[] = "abcdefghijkl";
 
 item_type_t EQUIPPABLE_ITEMS[] = {
     ITEM_TYPE_WEAPON,
@@ -107,8 +107,8 @@ void game_t::run() {
 
 void game_t::run_internal() {
     if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
-    int c, i, j, swap_slot;
-    bool next_turn_ready, valid;
+    int c, i, j, swap_slot, type;
+    bool next_turn_ready;
     uint8_t x, y;
     bool monster_menu_on = false;
     bool hide_fog_of_war = false;
@@ -201,11 +201,11 @@ void game_t::run_internal() {
         }
         attroff(COLOR_PAIR(COLORS_TEXT) | A_DIM);
         attrset(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
-        printw("  EQUIPMENT: ");
+        printw("    ");
         attroff(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
         attrset(COLOR_PAIR(COLORS_TEXT) | A_DIM);
-        for (i = 0; i < 9; i++) {
-            printw("%c  ", EQUIP_SLOT_CHARS[i]);
+        for (i = 0; i < 12; i++) {
+            printw("%c  ", 'a' + i);
         }
         attroff(COLOR_PAIR(COLORS_TEXT) | A_DIM);
         for (i = 0; i < 10; i++) {
@@ -217,12 +217,12 @@ void game_t::run_internal() {
                 attroff(COLOR_PAIR(c));
             }
         }
-        for (i = 0; i < 9; i++) {
+        for (i = 0; i < (int) (sizeof (pc.equipment) / sizeof(pc.equipment[0])); i++) {
             target_item = pc.equipment[i];
             if (target_item == NULL) continue;
             c = COLORS_FLOOR_ANY + target_item->next_color();
             attrset(COLOR_PAIR(c));
-            mvprintw(HEIGHT - 1, 55 + 3 * i, "%c", target_item->regular_symbol());
+            mvprintw(HEIGHT - 1, 46 + 3 * i, "%c", target_item->regular_symbol());
             attroff(COLOR_PAIR(c));
         }
 
@@ -401,37 +401,17 @@ void game_t::run_internal() {
                     break;
                 }
                 target_item = pc.inventory_at(i);
+                type = target_item->definition->type;
                 // Make sure it's equippable.
-                valid = false;
-                for (j = 0; !valid && j < (int) (sizeof (EQUIPPABLE_ITEMS) / sizeof (EQUIPPABLE_ITEMS[0])); j++) {
-                    if (target_item->definition->type == EQUIPPABLE_ITEMS[j])
-                        valid = true;
-                }
-                if (!valid) {
-                    snprintf(message, WIDTH, "You can't equip %s.", ITEM_TYPE_STRINGS[target_item->definition->type].c_str());
+                if (type < ITEM_TYPE_WEAPON || type > ITEM_TYPE_RING) {
+                    snprintf(message, WIDTH, "You can't equip %s.", target_item->definition->name.c_str());
                     break;
                 }
                 c = 0;
-                valid = true;
-                swap_slot = -1;
-                // Make sure there's no duplicate item (besides RING).
-                for (j = 0; swap_slot < 0 && j < (int) (sizeof(pc.equipment) / sizeof(pc.equipment[0])); j++) {
-                    if (pc.equipment[j] == NULL) {
-                        swap_slot = j;
-                    }
-                    else if (pc.equipment[j]->definition->type == ITEM_TYPE_RING) {
-                        c++; // ha
-                        if (c == 2) {
-                            swap_slot = j;
-                        }
-                    }
-                    else if (pc.equipment[j]->definition->type == target_item->definition->type) {
-                        swap_slot = j;
-                    }
-                }
-                if (swap_slot < 0) {
-                    snprintf(message, WIDTH, "You have no equipment slots open!");
-                    break;
+                swap_slot = type;
+                // Prefer the second ring slot if they're both full.
+                if (pc.equipment[type] != NULL && type == ITEM_TYPE_RING) {
+                    swap_slot = type + 1;
                 }
                 // Remove that item from the inventory...
                 target_item = pc.remove_from_inventory(i);
@@ -456,9 +436,7 @@ void game_t::run_internal() {
                 }
                 sel = prompt(EQUIP_SLOT_CHARS, "Enter an equipment slot to unequip (or ESC to cancel).");
                 if (sel == 0) break; // Cancelled
-                for (i = 0; i < (int) (sizeof(EQUIP_SLOT_CHARS) / sizeof(EQUIP_SLOT_CHARS[0])); i++) {
-                    if (sel == EQUIP_SLOT_CHARS[i]) break;
-                }
+                i = sel - 'a';
                 target_item = pc.equipment[i];
                 if (target_item == NULL) {
                     snprintf(message, WIDTH, "There's no item in slot %c!", sel);
