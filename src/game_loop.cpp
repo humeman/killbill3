@@ -40,6 +40,9 @@
         next_turn_ready = 1; \
     }
 
+#define SET_COLOR(name, fg, bg) if (init_pair(name, fg, bg) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
+
+#define INVENTORY_BOX_WIDTH 38
 #define MONSTER_MENU_WIDTH 40
 #define MONSTER_MENU_HEIGHT 10
 
@@ -73,24 +76,32 @@ void game_t::run() {
             throw dungeon_exception(__PRETTY_FUNCTION__, "terminal size is too small, minimum is "
                 + std::to_string(WIDTH) + "x" + std::to_string(HEIGHT) + " (yours is " + std::to_string(COLS) + "x" + std::to_string(LINES) + ")");
         if (start_color() != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (no color support)");
-        if (init_pair(COLORS_FLOOR, COLOR_BLUE, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
-        if (init_pair(COLORS_PC, COLOR_WHITE, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
-        if (init_pair(COLORS_MONSTER, COLOR_RED, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
-        if (init_pair(COLORS_OBJECT, COLOR_MAGENTA, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
-        if (init_pair(COLORS_STONE, COLOR_BLACK, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
-        if (init_pair(COLORS_TEXT, COLOR_WHITE, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
-        if (init_pair(COLORS_TEXT_RED, COLOR_RED, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
-        if (init_pair(COLORS_MENU_TEXT, COLOR_BLACK, COLOR_WHITE) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
-        if (init_pair(COLORS_MENU_TEXT_SELECTED, COLOR_WHITE, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
-        if (init_pair(COLORS_FOG_OF_WAR_TERRAIN, COLOR_WHITE, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
-        if (init_pair(COLORS_FLOOR_ANY, COLOR_RED, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
-        if (init_pair(COLORS_FLOOR_ANY + 1, COLOR_GREEN, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
-        if (init_pair(COLORS_FLOOR_ANY + 2, COLOR_YELLOW, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
-        if (init_pair(COLORS_FLOOR_ANY + 3, COLOR_BLUE, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
-        if (init_pair(COLORS_FLOOR_ANY + 4, COLOR_MAGENTA, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
-        if (init_pair(COLORS_FLOOR_ANY + 5, COLOR_CYAN, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
-        if (init_pair(COLORS_FLOOR_ANY + 6, COLOR_WHITE, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
-        if (init_pair(COLORS_FLOOR_ANY + 7, COLOR_WHITE, COLOR_BLACK) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (init color)");
+        SET_COLOR(COLORS_FLOOR, COLOR_BLUE, COLOR_BLACK);
+        SET_COLOR(COLORS_PC, COLOR_WHITE, COLOR_BLACK);
+        SET_COLOR(COLORS_MONSTER, COLOR_RED, COLOR_BLACK);
+        SET_COLOR(COLORS_OBJECT, COLOR_MAGENTA, COLOR_BLACK);
+        SET_COLOR(COLORS_STONE, COLOR_BLACK, COLOR_BLACK);
+        SET_COLOR(COLORS_TEXT, COLOR_WHITE, COLOR_BLACK);
+        SET_COLOR(COLORS_TEXT_RED, COLOR_RED, COLOR_BLACK);
+        SET_COLOR(COLORS_MENU_TEXT, COLOR_BLACK, COLOR_WHITE);
+        SET_COLOR(COLORS_MENU_TEXT_SELECTED, COLOR_WHITE, COLOR_BLACK);
+        SET_COLOR(COLORS_FOG_OF_WAR_TERRAIN, COLOR_WHITE, COLOR_BLACK);
+        SET_COLOR(COLORS_FLOOR_ANY, COLOR_RED, COLOR_BLACK);
+        SET_COLOR(COLORS_FLOOR_ANY + 1, COLOR_GREEN, COLOR_BLACK);
+        SET_COLOR(COLORS_FLOOR_ANY + 2, COLOR_YELLOW, COLOR_BLACK);
+        SET_COLOR(COLORS_FLOOR_ANY + 3, COLOR_BLUE, COLOR_BLACK);
+        SET_COLOR(COLORS_FLOOR_ANY + 4, COLOR_MAGENTA, COLOR_BLACK);
+        SET_COLOR(COLORS_FLOOR_ANY + 5, COLOR_CYAN, COLOR_BLACK);
+        SET_COLOR(COLORS_FLOOR_ANY + 6, COLOR_WHITE, COLOR_BLACK);
+        SET_COLOR(COLORS_FLOOR_ANY + 7, COLOR_WHITE, COLOR_BLACK);
+        SET_COLOR(COLORS_MENU_ANY, COLOR_RED, COLOR_WHITE);
+        SET_COLOR(COLORS_MENU_ANY + 1, COLOR_GREEN, COLOR_WHITE);
+        SET_COLOR(COLORS_MENU_ANY + 2, COLOR_YELLOW, COLOR_WHITE);
+        SET_COLOR(COLORS_MENU_ANY + 3, COLOR_BLUE, COLOR_WHITE);
+        SET_COLOR(COLORS_MENU_ANY + 4, COLOR_MAGENTA, COLOR_WHITE);
+        SET_COLOR(COLORS_MENU_ANY + 5, COLOR_CYAN, COLOR_WHITE);
+        SET_COLOR(COLORS_MENU_ANY + 6, COLOR_BLACK, COLOR_WHITE);
+        SET_COLOR(COLORS_MENU_ANY + 7, COLOR_BLACK, COLOR_WHITE);
 
         if (keypad(stdscr, TRUE) != OK) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to init ncurses (special kb keys)");
                         // man this library is weird
@@ -391,12 +402,19 @@ void game_t::run_internal() {
                 next_turn_ready = true;
                 break;
             case KB_EQUIP:
-                sel = prompt("1234567890", "Enter a carry slot to equip (or ESC to cancel).");
+                render_inventory_box("INVENTORY", "1234567890  ", "Select an item here.", 1, 1);
+                c = pc.inventory_size();
+                for (i = 0; i < c; i++)
+                    render_inventory_item(pc.inventory_at(i), i, false, 1, 1);
+                render_inventory_box("EQUIPMENT", EQUIP_SLOT_CHARS, "", 3 + INVENTORY_BOX_WIDTH, 1);
+                for (i = 0; i < (int) (sizeof (pc.equipment) / sizeof (pc.equipment[0])); i++)
+                    if (pc.equipment[i]) render_inventory_item(pc.equipment[i], i, false, 3 + INVENTORY_BOX_WIDTH, 1);
+                sel = prompt("1234567890", "Select an item or press ESC to cancel.");
                 if (sel == 0) break; // Cancelled
                 // Unfortunate thing here is that I've ordered it 1-9, then 0, to match the keyboard.
                 if (sel == '0') i = 9;
                 else i = sel - '1';
-                if (i >= pc.inventory_size()) {
+                if (i >= c) {
                     snprintf(message, WIDTH, "There's no item in slot %c.", sel);
                     break;
                 }
@@ -496,6 +514,101 @@ void game_t::run_internal() {
             snprintf(message, 80, "Game over. Press any key to continue.");
         }
     }
+}
+
+/*
+We need to be able to draw the inventory/equipment slots to the screen.
+Complicating this more, I want this to function like the monster menu -- they should be able to
+move up/down to select an item, reading its description. And this needs to happen without duplicate
+logic in each of the 4 different rendering possibilities:
+- Just display the inventory list
+- Just display the equipment list
+- Display both the inventory and equipment list in one (side-by-side?)
+- Display both the inventory and equipment list in one, enabling selection
+
+The first component is drawing the inventory and equipment. This should be able to operate on an array
+and an item stack.
+To accomplish the stack/array interoperability, there should be a starter function draws out the border
+of the menu and the slot labels, and another that adds an individual item to the menu. That leaves
+iterating over whatever method the items are stored in to the caller.
+Now we need to deal with just drawing one/both and allowing selection.
+The method to draw the border will take in a title, a string of labels, and a position (top left corner).
+The method to draw the items will take in an item (duh), the index it gets drawn at, and if it's selected or not.
+And a third method will draw the description at the bottom of the screen.
+
+That way, all of the input logic is left to the caller -- if it's the item list, the up/down arrows will change
+the index (or any of the label hotkeys) with selection enabled. If it's any of the other prompt-related ones,
+it'll just draw the list and use the normal prompt feature.
+*/
+void game_t::render_inventory_box(std::string title, std::string labels, std::string input_tip, int x0, int y0) {
+    // The width will be fixed to 38 chars so that we have room to draw both windows with borders.
+    // We need, like the monster menu, the top line for the title, and the last line to indicate how to leave.
+    int height = labels.length() + 2;
+    int i, y;
+    // Clear out the area.
+    attrset(COLOR_PAIR(COLORS_MENU_TEXT));
+    for (y = y0; y < y0 + height; y++)
+        PRINT_REPEATED(x0, y, INVENTORY_BOX_WIDTH, ' ');
+    // Title...
+    attron(A_BOLD);
+    PRINTW_CENTERED_AT(x0 + INVENTORY_BOX_WIDTH / 2, y0, "%s", title.c_str());
+    attroff(A_BOLD);
+    // Input tip...
+    PRINTW_CENTERED_AT(x0 + INVENTORY_BOX_WIDTH / 2, y0 + height - 1, "%s", input_tip.c_str());
+    // And the labels.
+    for (i = 0; i < (int) labels.length(); i++)
+        mvprintw(y0 + 1 + i, x0, "%c", labels[i]);
+    attroff(COLOR_PAIR(COLORS_MENU_TEXT));
+}
+
+void game_t::render_inventory_item(item_t *item, int i, bool selected, int x0, int y0) {
+    // First we'll draw out the item symbol (in color!)
+    int c = (selected ? COLORS_FLOOR_ANY : COLORS_MENU_ANY) + item->current_color();
+    attrset(COLOR_PAIR(c) | A_BOLD);
+    mvaddch(y0 + 1 + i, x0 + 2, item->regular_symbol());
+    attroff(COLOR_PAIR(c) | A_BOLD);
+    // Now the item title
+    c = selected ? COLORS_MENU_TEXT_SELECTED : COLORS_MENU_TEXT;
+    attrset(COLOR_PAIR(c));
+    printw(" %s", item->definition->name.c_str());
+    attroff(COLOR_PAIR(c));
+}
+
+void game_t::render_inventory_details(item_t *item, int y0) {
+    int i, y;
+    std::string desc;
+    // Draw out a box, taking up the whole width of the screen at y0.
+    // This determines how many lines of description we get until it cuts off.
+    for (y = y0; y < HEIGHT; y++)
+        PRINT_REPEATED(0, y, WIDTH, ' ');
+
+    attron(A_BOLD);
+    PRINTW_CENTERED_AT(WIDTH / 2, y0, "%s", item->definition->name.c_str());
+    attroff(A_BOLD);
+    // Just printing out the whole string clears out the color on the remainder of the line when there's
+    // a newline character. It also doesn't let us protect against overflow, so unfortunately, this'll be
+    // by hand.
+    y = y0 + 1;
+    move(y, 0);
+    desc = item->definition->description;
+    for (i = 0; y < HEIGHT - 1 && desc[i]; i++) {
+        if (desc[i] == '\r') continue; // Fairly certain this breaks my parser anyway, but...
+        if (desc[i] == '\n') {
+            y++;
+            move(y, 0);
+            continue;
+        }
+        addch(desc[i]);
+    }
+    // The last line will be the dice.
+    attron(A_DIM);
+    PRINTW_CENTERED_AT(WIDTH / 2, HEIGHT - 1, "%sdmg: %s, def: %s, speed: %s, dodge: %s",
+        item->definition->artifact ? "*ARTIFACT* " : "",
+        item->definition->damage_bonus->str().c_str(),
+        item->definition->defense_bonus->str().c_str(),
+        item->definition->speed_bonus->str().c_str(),
+        item->definition->dodge_bonus->str().c_str());
+    attroff(A_DIM);
 }
 
 void game_t::monster_menu() {

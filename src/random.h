@@ -21,8 +21,12 @@ class dice_t {
             return res;
         }
 
+        std::string str() const {
+            return std::to_string(base) + "+" + std::to_string(dice) + "d" + std::to_string(sides);
+        }
+
         friend std::ostream &operator<<(std::ostream &o, const dice_t &dice) {
-            return o << std::to_string(dice.base) << "+" << std::to_string(dice.dice) << "d" << std::to_string(dice.sides);
+            return o << dice.str();
         }
 };
 

@@ -19,7 +19,8 @@ typedef enum colors {
     COLORS_MENU_TEXT,
     COLORS_MENU_TEXT_SELECTED,
     COLORS_FOG_OF_WAR_TERRAIN,
-    COLORS_FLOOR_ANY // This must be the last color in this enum. It is the beginning offset for the 7 item/monster color options.
+    COLORS_FLOOR_ANY,
+    COLORS_MENU_ANY = COLORS_FLOOR_ANY + 8
 } colors_t;
 
 typedef enum keybinds {
@@ -225,6 +226,10 @@ class game_t {
          * - target_cell: Cell type to place on
          */
         void fill_and_place_on(cell_type_t target_cell);
+
+        void render_inventory_box(std::string title, std::string labels, std::string input_tip, int x0, int y0);
+        void render_inventory_item(item_t *item, int i, bool selected, int x0, int y0);
+        void render_inventory_details(item_t *item, int y0);
 };
 
 #endif

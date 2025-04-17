@@ -255,3 +255,9 @@
           but seemed nice)
          Made the game end when a boss is killed. I think that was for 1.09, but oh well
          Fixed unique generation to match up with the spec (didn't work properly).
+
+-- ASSIGNMENT 1.09 --
+4/16:
+    2p: Added rendering for health and inventory at the bottom of the UI.
+        Added equipment slots to the PC.
+        Added equip, unequip, drop, and expunge commands.
