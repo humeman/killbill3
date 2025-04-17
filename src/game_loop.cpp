@@ -402,6 +402,7 @@ void game_t::run_internal() {
                 next_turn_ready = true;
                 break;
             case KB_EQUIP:
+                if (monster_menu_on || teleport_mode) break;
                 render_inventory_box("INVENTORY", "1234567890  ", "Select an item here.", 1, 1);
                 c = pc.inventory_size();
                 for (i = 0; i < c; i++)
@@ -448,12 +449,20 @@ void game_t::run_internal() {
                 }
                 break;
             case KB_UNEQUIP:
+                if (monster_menu_on || teleport_mode) break;
                 // Check that there's space
                 if (pc.inventory_size() >= 10) {
                     snprintf(message, WIDTH, "You have no carry slots open!");
                     break;
                 }
-                sel = prompt(EQUIP_SLOT_CHARS, "Enter an equipment slot to unequip (or ESC to cancel).");
+                render_inventory_box("INVENTORY", "1234567890  ", "", 1, 1);
+                c = pc.inventory_size();
+                for (i = 0; i < c; i++)
+                    render_inventory_item(pc.inventory_at(i), i, false, 1, 1);
+                render_inventory_box("EQUIPMENT", EQUIP_SLOT_CHARS, "Select an item here.", 3 + INVENTORY_BOX_WIDTH, 1);
+                for (i = 0; i < (int) (sizeof (pc.equipment) / sizeof (pc.equipment[0])); i++)
+                    if (pc.equipment[i]) render_inventory_item(pc.equipment[i], i, false, 3 + INVENTORY_BOX_WIDTH, 1);
+                sel = prompt(EQUIP_SLOT_CHARS, "Select an item or press ESC to cancel.");
                 if (sel == 0) break; // Cancelled
                 i = sel - 'a';
                 target_item = pc.equipment[i];
@@ -466,7 +475,17 @@ void game_t::run_internal() {
                 snprintf(message, WIDTH, "You unequipped %s.", target_item->definition->name.c_str());
                 break;
             case KB_DROP:
-                sel = prompt("1234567890", "Enter a carry slot to drop (or ESC to cancel).");
+                if (monster_menu_on || teleport_mode) break;
+                if (pc.inventory_size() == 0) {
+                    snprintf(message, WIDTH, "You have no items!");
+                    break;
+                }
+                x = (WIDTH - INVENTORY_BOX_WIDTH) / 2;
+                render_inventory_box("INVENTORY", "1234567890", "Select an item here.", x, 1);
+                c = pc.inventory_size();
+                for (i = 0; i < c; i++)
+                    render_inventory_item(pc.inventory_at(i), i, false, x, 1);
+                sel = prompt("1234567890", "Select an item or press ESC to cancel.");
                 if (sel == 0) break; // Cancelled
                 // Unfortunate thing here is that I've ordered it 1-9, then 0, to match the keyboard.
                 if (sel == '0') i = 9;
@@ -484,7 +503,17 @@ void game_t::run_internal() {
                 snprintf(message, WIDTH, "You dropped %s.", target_item->definition->name.c_str());
                 break;
             case KB_EXPUNGE:
-                sel = prompt("1234567890", "Enter a carry slot to expunge (or ESC to cancel).");
+                if (monster_menu_on || teleport_mode) break;
+                if (pc.inventory_size() == 0) {
+                    snprintf(message, WIDTH, "You have no items!");
+                    break;
+                }
+                x = (WIDTH - INVENTORY_BOX_WIDTH) / 2;
+                render_inventory_box("INVENTORY", "1234567890", "Select an item here.", x, 1);
+                c = pc.inventory_size();
+                for (i = 0; i < c; i++)
+                    render_inventory_item(pc.inventory_at(i), i, false, x, 1);
+                sel = prompt("1234567890", "Select an item or press ESC to cancel.");
                 if (sel == 0) break; // Cancelled
                 // Unfortunate thing here is that I've ordered it 1-9, then 0, to match the keyboard.
                 if (sel == '0') i = 9;
