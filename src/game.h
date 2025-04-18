@@ -48,6 +48,8 @@ typedef enum keybinds {
     KB_MONSTERS = 'm',
     KB_SCROLL_UP = KEY_UP,
     KB_SCROLL_DOWN = KEY_DOWN,
+    KB_SCROLL_LEFT = KEY_LEFT,
+    KB_SCROLL_RIGHT = KEY_RIGHT,
     KB_ESCAPE = 27, // can't find a constant for this???
     KB_QUIT = 'Q',
     KB_TOGGLE_FOG = 'f',
@@ -186,6 +188,7 @@ class game_t {
           * Displays the monster menu.
           */
         void monster_menu();
+        void inventory_menu();
 
         /**
          * Updates the PC's fog of war map with what it currently sees.

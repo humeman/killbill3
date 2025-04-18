@@ -102,6 +102,8 @@ class dungeon_exception : public std::exception {
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define CLAMP(a, low, high) ((a < low) ? low : ((a > high) ? high : a))
 
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
+
 // These would be functions, but in the interest of saving on lines of code by avoiding any extra error checks,
 // these are simple macros that expand out to the 3/4 lines necessary to read, convert, and validate data.
 

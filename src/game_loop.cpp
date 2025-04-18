@@ -52,6 +52,7 @@
 char LOSE[] = ASCII_LOSE;
 char WIN[] = ASCII_WIN;
 char EQUIP_SLOT_CHARS[] = "abcdefghijkl";
+char INVENTORY_SLOT_CHARS[] = "0123456789";
 
 item_type_t EQUIPPABLE_ITEMS[] = {
     ITEM_TYPE_WEAPON,
@@ -281,6 +282,10 @@ void game_t::run_internal() {
         switch (c) {
             case KB_MONSTERS:
                 monster_menu();
+                break;
+            case KB_INVENTORY:
+            case KB_INSPECT_ITEM:
+                inventory_menu();
                 break;
             case KB_UP_LEFT_0:
             case KB_UP_LEFT_1:
@@ -608,8 +613,14 @@ void game_t::render_inventory_details(item_t *item, int y0) {
     std::string desc;
     // Draw out a box, taking up the whole width of the screen at y0.
     // This determines how many lines of description we get until it cuts off.
+    attrset(COLOR_PAIR(COLORS_MENU_TEXT));
     for (y = y0; y < HEIGHT; y++)
         PRINT_REPEATED(0, y, WIDTH, ' ');
+
+    if (!item) {
+        attroff(COLOR_PAIR(COLORS_MENU_TEXT));
+        return;
+    }
 
     attron(A_BOLD);
     PRINTW_CENTERED_AT(WIDTH / 2, y0, "%s", item->definition->name.c_str());
@@ -637,7 +648,98 @@ void game_t::render_inventory_details(item_t *item, int y0) {
         item->definition->defense_bonus->str().c_str(),
         item->definition->speed_bonus->str().c_str(),
         item->definition->dodge_bonus->str().c_str());
-    attroff(A_DIM);
+    attroff(COLOR_PAIR(COLORS_MENU_TEXT) | A_DIM);
+}
+
+bool str_contains_char(std::string str, char ch) {
+    for (int i = 0; str[i]; i++) if (str[i] == ch) return true;
+    return false;
+}
+
+void game_t::inventory_menu() {
+    bool inventory = true;
+    int menu_i = -1;
+    int i, j, c;
+    char ch;
+    item_t *item;
+    int scroll_dir;
+    int inv_count = pc.inventory_size();
+    int equip_count = ARRAY_SIZE(pc.equipment);
+
+    while (true) {
+        render_inventory_box("INVENTORY", "1234567890  ", "", 1, 1);
+        for (i = 0; i < inv_count; i++)
+            render_inventory_item(pc.inventory_at(i), i, inventory && i == menu_i, 1, 1);
+        render_inventory_box("EQUIPMENT", EQUIP_SLOT_CHARS, "", 3 + INVENTORY_BOX_WIDTH, 1);
+        for (i = 0; i < equip_count; i++)
+            if (pc.equipment[i]) render_inventory_item(pc.equipment[i], i, !inventory && i == menu_i, 3 + INVENTORY_BOX_WIDTH, 1);
+        if (menu_i < 0) item = NULL;
+        else item = inventory ? pc.inventory_at(menu_i) : pc.equipment[menu_i];
+        render_inventory_details(item, 16);
+
+        attrset(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
+        PRINT_REPEATED(0, 0, WIDTH, ' ');
+        PRINTW_CENTERED_AT(WIDTH / 2, 0, "Enter an item, use the arrow keys, or press ESC.");
+        c = getch();
+        scroll_dir = 0;
+        switch (c) {
+            case KB_SCROLL_DOWN:
+                scroll_dir = 1;
+                break;
+            case KB_SCROLL_UP:
+                scroll_dir = -1;
+                break;
+            case KB_SCROLL_LEFT:
+            case KB_SCROLL_RIGHT:
+                inventory = !inventory;
+                menu_i = 0;
+                break;
+            case KB_ESCAPE:
+                return;
+            default:
+                ch = (char) c;
+                if (ch == c) {
+                    // If it's one of our slot keys, use those
+                    if (str_contains_char(INVENTORY_SLOT_CHARS, c)) {
+                        inventory = true;
+                        i = c == '0' ? 9 : c - '1';
+                        if (i >= inv_count) {
+                            break;
+                        }
+                    }
+                    else if (str_contains_char(EQUIP_SLOT_CHARS, c)) {
+                        inventory = false;
+                        i = c - 'a';
+                    }
+                    menu_i = i;
+                    break;
+                }
+                break;
+        }
+        if (scroll_dir != 0) {
+            if (inventory) {
+                menu_i += scroll_dir;
+                if (menu_i >= inv_count) menu_i = 0;
+                else if (menu_i < 0) menu_i = inv_count - 1;
+            }
+            else {
+                // Seek to the next item
+                i = menu_i;
+                item = NULL;
+                for (j = 0; j < equip_count && !item; j++) {
+                    i += scroll_dir;
+                    if (i < 0) i += equip_count;
+                    i %= equip_count;
+                    item = pc.equipment[i];
+                }
+                if (!item) menu_i = -1;
+                else menu_i = i;
+            }
+        }
+        if (inventory && menu_i >= inv_count) menu_i = -1;
+        else if (!inventory && menu_i >= equip_count) menu_i = -1;
+        attroff(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
+    }
 }
 
 void game_t::monster_menu() {
