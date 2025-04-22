@@ -66,7 +66,7 @@ class character_t {
          * - amount: Amount of damage to deal
          * - character_map (modified if dead)
          */
-        virtual int damage(int amount, character_t ***character_map);
+        virtual int damage(int amount, game_result_t &result, item_t ***item_map, character_t ***character_map) = 0;
 
         /**
          * Moves this character to a location.
@@ -124,7 +124,7 @@ class pc_t : public character_t {
         pc_t();
         ~pc_t() {};
         character_type type() override;
-        int damage(int amount, character_t ***character_map) override;
+        int damage(int amount, game_result_t &result, item_t ***item_map, character_t ***character_map) override;
         int speed_bonus();
         int damage_bonus();
         int dodge_bonus();
@@ -161,6 +161,7 @@ class monster_t : public character_t {
         uint8_t next_color();
         uint8_t current_color();
         character_type type() override;
+        int damage(int amount, game_result_t &result, item_t ***item_map, character_t ***character_map) override;
 };
 
 /**

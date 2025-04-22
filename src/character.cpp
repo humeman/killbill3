@@ -30,12 +30,10 @@ void destroy_character(character_t ***character_map, character_t *ch) {
     delete ch;
 }
 
-int character_t::damage(int amount, character_t ***character_map) {
+int monster_t::damage(int amount, game_result_t &result, item_t ***item_map, character_t ***character_map) {
     hp -= amount;
     if (hp <= 0) {
-        dead = true;
-        if (character_map[x][y] == this)
-            character_map[x][y] = NULL;
+        die(result, character_map, item_map);
     }
     return amount;
 }
@@ -326,7 +324,7 @@ void monster_t::take_turn(dungeon_t *dungeon, pc_t *pc, binary_heap_t<character_
                             escape_col(definition->name) +
                             "&r.");
                     } else {
-                        dam = pc->damage(definition->damage->roll(), character_map);
+                        dam = pc->damage(definition->damage->roll(), result, item_map, character_map);
                         message_queue_t::get()->add(
                             "&" +
                             std::to_string(current_color()) +
@@ -510,7 +508,7 @@ int pc_t::defense_bonus() {
     return def;
 }
 
-int pc_t::damage(int amount, character_t ***character_map) {
+int pc_t::damage(int amount, game_result_t &result, item_t ***item_map, character_t ***character_map) {
     amount -= defense_bonus();
     if (amount <= 0) return 0;
     hp -= amount;

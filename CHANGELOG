@@ -281,3 +281,8 @@
          Made the game redraw every 100ms (to make the color switching clearer).
           Messages disappear automatically after 2500ms.
          Added a hotkey, ENTER, to clear the active message in the queue.
+         Issues:
+            - random segfault (monster displacement near edge?)
+            - monster displacement way off
+            - boss kill might not work
+            - pc kill might not work

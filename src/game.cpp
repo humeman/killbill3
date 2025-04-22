@@ -451,7 +451,7 @@ void game_t::try_move(game_result_t &result, int x_offset, int y_offset) {
             // Attack the monster there
             damage = pc.damage_bonus();
             monst = (monster_t *) (character_map[new_x][new_y]);
-            monst->damage(damage, character_map);
+            monst->damage(damage, result, item_map, character_map);
             message_queue_t::get()->add(
                 "You hit &" +
                 std::to_string(monst->current_color()) +
