@@ -60,6 +60,15 @@ class character_t {
         virtual ~character_t() {};
 
         /**
+         * Deals damage.
+         *
+         * Params:
+         * - amount: Amount of damage to deal
+         * - character_map (modified if dead)
+         */
+        virtual int damage(int amount, character_t ***character_map);
+
+        /**
          * Moves this character to a location.
          *
          * Params:
@@ -110,15 +119,20 @@ typedef enum {
 class pc_t : public character_t {
     public:
         item_t *equipment[12];
+        dice_t base_damage = dice_t(0, 1, 4);
 
         pc_t();
         ~pc_t() {};
         character_type type() override;
+        int damage(int amount, character_t ***character_map) override;
+        int speed_bonus();
+        int damage_bonus();
+        int dodge_bonus();
+        int defense_bonus();
 };
 
 class monster_t : public character_t {
     private:
-        int hp;
         bool pc_seen;
         uint8_t pc_last_seen_x;
         uint8_t pc_last_seen_y;
@@ -142,9 +156,10 @@ class monster_t : public character_t {
          */
         coordinates_t next_xy(dungeon_t *dungeon, coordinates_t to);
         // A few too many parameters, but it'd be annoying to rework. Oh well.
-        void take_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t<character_t *> &turn_queue, character_t ***character_map, item_t ***item_map, uint32_t **pathfinding_tunnel, uint32_t **pathfinding_no_tunnel, uint32_t priority, game_result_t &result);
+        void take_turn(dungeon_t *dungeon, pc_t *pc, binary_heap_t<character_t *> &turn_queue, character_t ***character_map, item_t ***item_map, uint32_t **pathfinding_tunnel, uint32_t **pathfinding_no_tunnel, uint32_t priority, game_result_t &result);
         void die(game_result_t &result, character_t ***character_map, item_t ***item_map);
         uint8_t next_color();
+        uint8_t current_color();
         character_type type() override;
 };
 

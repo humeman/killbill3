@@ -8,6 +8,7 @@
 #include "heap.h"
 #include "character.h"
 #include "ascii.h"
+#include "message_queue.h"
 #include "pathfinding.h"
 
 parser_definition_t MONSTER_PARSE_RULES[] {
@@ -153,18 +154,11 @@ game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
         for (j = 0; j < height; j++) seen_map[i][j] = ' ';
     }
 
-    if (!(message = (char *) malloc(1 + WIDTH))) {
-        goto init_free_all_seen_map;
-    }
-    message[0] = '\0';
-
     monst_parser = new parser_t<monster_definition_t>(MONSTER_PARSE_RULES, sizeof (MONSTER_PARSE_RULES) / sizeof (MONSTER_PARSE_RULES[0]), "RLG327 MONSTER DESCRIPTION 1", "MONSTER", true);
     item_parser = new parser_t<item_definition_t>(ITEM_PARSE_RULES, sizeof (ITEM_PARSE_RULES) / sizeof (ITEM_PARSE_RULES[0]), "RLG327 OBJECT DESCRIPTION 1", "OBJECT", true);
 
     return;
 
-    init_free_all_seen_map:
-    for (j = 0; j < width; j++) free(seen_map[j]);
     init_free_seen_map:
     free(seen_map);
     init_free_all_character_map:
@@ -206,7 +200,6 @@ game_t::~game_t() {
             if (item_map[x][y]) delete item_map[x][y];
 
     int i;
-    free(message);
     for (i = 0; i < dungeon->width; i++) free(character_map[i]);
     free(character_map);
     for (i = 0; i < dungeon->width; i++) free(item_map[i]);
@@ -439,6 +432,8 @@ void game_t::update_fog_of_war() {
 }
 
 void game_t::try_move(game_result_t &result, int x_offset, int y_offset) {
+    int damage;
+    monster_t *monst;
     if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
     int new_x = pc.x + x_offset;
     int new_y = pc.y + y_offset;
@@ -447,16 +442,25 @@ void game_t::try_move(game_result_t &result, int x_offset, int y_offset) {
     if (new_y < 0) new_y = 0;
     if (new_y >= dungeon->height) new_y = dungeon->height - 1;
     if (dungeon->cells[new_x][new_y].type == CELL_TYPE_STONE) {
-        snprintf(message, 80, "There's stone in the way!");
+        message_queue_t::get()->clear();
+        message_queue_t::get()->add("&0&bThere's stone in the way!");
     }
     else {
         if (character_map[new_x][new_y] && character_map[new_x][new_y]->type() == CHARACTER_TYPE_MONSTER) {
             // If that second condition didn't hit, we're moving to our own location (or there are two PCs somehow).
-            // Kill the monster there
-            snprintf(message, 80, "You ate the %c in the way.", character_map[new_x][new_y]->display);
-            ((monster_t *) character_map[new_x][new_y])->die(result, character_map, item_map);
+            // Attack the monster there
+            damage = pc.damage_bonus();
+            monst = (monster_t *) (character_map[new_x][new_y]);
+            monst->damage(damage, character_map);
+            message_queue_t::get()->add(
+                "You hit &" +
+                std::to_string(monst->current_color()) +
+                escape_col(monst->definition->name) +
+                "&r for &b" + std::to_string(damage) + "&r"
+                + (monst->hp <= 0 ? ", killing it" : (" (" + std::to_string(monst->hp) + " left)")) + ".");
+        } else {
+            pc.move_to((coordinates_t) {(uint8_t) new_x, (uint8_t) new_y}, character_map);
         }
-        pc.move_to((coordinates_t) {(uint8_t) new_x, (uint8_t) new_y}, character_map);
         update_fog_of_war();
     }
 }
@@ -473,10 +477,16 @@ void game_t::move_coords(coordinates_t &coords, int x_offset, int y_offset) {
 }
 
 void game_t::force_move(game_result_t &result, coordinates_t dest) {
+    monster_t *monst;
     if (character_map[dest.x][dest.y] && character_map[dest.x][dest.y]->type() == CHARACTER_TYPE_MONSTER) {
+        monst = (monster_t *) character_map[dest.x][dest.y];
         // Kill the monster there
-        snprintf(message, 80, "The poor %c stood no chance. Cheater!", character_map[dest.x][dest.y]->display);
-        ((monster_t *) character_map[dest.x][dest.y])->die(result, character_map, item_map);
+        message_queue_t::get()->add(
+            "You suddenly materialize above &" +
+            std::to_string(monst->current_color()) +
+            escape_col(monst->definition->name) +
+            "&r, killing it instantly. Poor thing.");
+        monst->die(result, character_map, item_map);
     }
     pc.move_to(dest, character_map);
     update_fog_of_war();

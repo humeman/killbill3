@@ -1,6 +1,6 @@
 # ASSIGNMENT BINARIES
-assignment1_09: build/dungeon.o build/pathfinding.o build/character.o build/game.o build/game_loop.o build/parser.o build/item.o build/assignment1_09.o
-	g++ build/dungeon.o build/pathfinding.o build/character.o build/game.o build/game_loop.o build/parser.o build/item.o build/assignment1_09.o -o assignment1_09 -lm -lncurses
+assignment1_09: build/dungeon.o build/pathfinding.o build/character.o build/game.o build/game_loop.o build/parser.o build/item.o build/message_queue.o build/assignment1_09.o
+	g++ build/dungeon.o build/pathfinding.o build/character.o build/game.o build/game_loop.o build/parser.o build/item.o build/message_queue.o build/assignment1_09.o -o assignment1_09 -lm -lncurses
 
 assignment1_08: build/dungeon.o build/pathfinding.o build/character.o build/game.o build/game_loop.o build/parser.o build/item.o build/assignment1_08.o
 	g++ build/dungeon.o build/pathfinding.o build/character.o build/game.o build/game_loop.o build/parser.o build/item.o build/assignment1_08.o -o assignment1_08 -lm -lncurses
@@ -83,6 +83,10 @@ build/parser.o: src/parser.cpp src/parser.h src/macros.h src/random.h src/ascii.
 build/item.o: src/item.cpp src/item.h src/macros.h src/random.h src/ascii.h src/heap.h
 	@ mkdir -p build
 	g++ src/item.cpp -o build/item.o -Wall -Werror -c -g
+
+build/message_queue.o: src/message_queue.cpp src/message_queue.h src/macros.h src/random.h src/ascii.h src/heap.h
+	@ mkdir -p build
+	g++ src/message_queue.cpp -o build/message_queue.o -Wall -Werror -c -g
 
 # PHONY TARGETS
 clean:

@@ -10,6 +10,7 @@
 #include "character.h"
 #include "ascii.h"
 #include "pathfinding.h"
+#include "message_queue.h"
 
 #define PRINT_REPEATED(x, y, count, char) { \
     move(y, x); \
@@ -126,13 +127,16 @@ void game_t::run_internal() {
     bool hide_fog_of_war = false;
     bool teleport_mode = false;
     bool sticky_message = false;
+    int no_action_time = 0;
     coordinates_t teleport_pointer;
     game_result_t result = GAME_RESULT_RUNNING;
     char *ascii;
     char sel;
     item_t *target_item;
     float hp;
-    snprintf(message, WIDTH, "Welcome to the dungeon.");
+    message_queue_t::get()->add("Welcome to the dungeon.");
+    message_queue_t::get()->add("Your task is to slay the ruthless &2&bSpongeBob SquarePants&r,");
+    message_queue_t::get()->add("and free the dungeon's creatures from his terrible grasp.");
 
     update_fog_of_war();
     while (1) {
@@ -181,11 +185,7 @@ void game_t::run_internal() {
         }
 
         // Print the status message at the top (approx. centered to 80 chars)
-        x = ((WIDTH - 1) / 2) - (strlen(message) / 2) - 1;
-        move(0, x);
-        attrset(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
-        printw(" %s ", message);
-        attroff(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
+        message_queue_t::get()->emit(0, true);
 
         // And health/inventory at the bottom
         move(HEIGHT - 2, 0);
@@ -274,10 +274,22 @@ void game_t::run_internal() {
         // Ready to render
         refresh();
 
-        // Now we can read the next command
-        if (!sticky_message)
-            message[0] = '\0';
+        timeout(REDRAW_TIMEOUT);
         c = getch();
+        timeout(-1);
+        if (c == ERR) {
+            // This forces a redraw of everything, removing from the message queue (if it's been a while)
+            // and cycling colors.
+            no_action_time += REDRAW_TIMEOUT;
+            if (no_action_time >= NO_ACTION_TIMEOUT) {
+                message_queue_t::get()->drop();
+                no_action_time = 0;
+            }
+            continue;
+        }
+        if (!sticky_message)
+            message_queue_t::get()->drop();
+        no_action_time = 0;
         next_turn_ready = 0;
         switch (c) {
             case KB_MONSTERS:
@@ -328,20 +340,22 @@ void game_t::run_internal() {
             case KB_UP_STAIRS:
                 if (monster_menu_on || teleport_mode) break;
                 if (dungeon->cells[pc.x][pc.y].type != CELL_TYPE_UP_STAIRCASE) {
-                    snprintf(message, WIDTH, "There isn't an up staircase here.");
+                    message_queue_t::get()->clear();
+                    message_queue_t::get()->add("&0&bThere isn't an up staircase here!");
                     break;
                 }
                 fill_and_place_on(CELL_TYPE_DOWN_STAIRCASE);
-                snprintf(message, WIDTH, "You went up the stairs.");
+                message_queue_t::get()->add("You went up the stairs.");
                 break;
             case KB_DOWN_STAIRS:
                 if (monster_menu_on || teleport_mode) break;
                 if (dungeon->cells[pc.x][pc.y].type != CELL_TYPE_DOWN_STAIRCASE) {
-                    snprintf(message, WIDTH, "There isn't a down staircase here.");
+                    message_queue_t::get()->clear();
+                    message_queue_t::get()->add("&0&bThere isn't a down staircase here!");
                     break;
                 }
                 fill_and_place_on(CELL_TYPE_UP_STAIRCASE);
-                snprintf(message, WIDTH, "You went down the stairs.");
+                message_queue_t::get()->add("You went down the stairs.");
                 break;
             case KB_TOGGLE_FOG:
                 if (monster_menu_on || teleport_mode) break;
@@ -351,13 +365,14 @@ void game_t::run_internal() {
                 if (monster_menu_on) break;
                 if (!teleport_mode) {
                     teleport_mode = true;
-                    snprintf(message, WIDTH, "-- TELEPORT MODE --");
+                    message_queue_t::get()->clear();
+                    message_queue_t::get()->add("-- TELEPORT MODE --");
                     sticky_message = true;
                     teleport_pointer.x = pc.x;
                     teleport_pointer.y = pc.y;
                 }
                 else {
-                    message[0] = '\0';
+                    message_queue_t::get()->drop();
                     force_move(result, teleport_pointer);
                     sticky_message = false;
                     teleport_mode = false;
@@ -367,7 +382,8 @@ void game_t::run_internal() {
             case KB_TELEPORT_RANDOM:
                 if (monster_menu_on) break;
                 if (!teleport_mode) {
-                    snprintf(message, WIDTH, "Enter teleport mode first.");
+                    message_queue_t::get()->clear();
+                    message_queue_t::get()->add("&0&bEnter teleport mode first.");
                 } else {
                     // It's not noted in the spec, but I don't know why we'd want to
                     // random teleport outside of the dungeon. We'll pick an open space.
@@ -379,7 +395,7 @@ void game_t::run_internal() {
                         teleport_pointer.x = pc.x;
                         teleport_pointer.y = pc.y;
                     }
-                    message[0] = '\0';
+                    message_queue_t::get()->clear();
                     force_move(result, teleport_pointer);
                     sticky_message = false;
                     teleport_mode = false;
@@ -390,11 +406,13 @@ void game_t::run_internal() {
                 if (monster_menu_on || teleport_mode) break;
                 target_item = item_map[pc.x][pc.y];
                 if (target_item == NULL) {
-                    snprintf(message, WIDTH, "There's no item here.");
+                    message_queue_t::get()->clear();
+                    message_queue_t::get()->add("&0&bThere's no item here!");
                     break;
                 }
                 if (pc.inventory_size() >= MAX_CARRY_SLOTS) {
-                    snprintf(message, WIDTH, "Your carry slots are full!");
+                    message_queue_t::get()->clear();
+                    message_queue_t::get()->add("&0&bYour carry slots are full!");
                     break;
                 }
                 if (target_item->is_stacked()) {
@@ -403,7 +421,8 @@ void game_t::run_internal() {
                     item_map[pc.x][pc.y] = NULL;
                 }
                 pc.add_to_inventory(target_item);
-                snprintf(message, WIDTH, "You picked up %s.", target_item->definition->name.c_str());
+                message_queue_t::get()->add("You picked up &" + std::to_string(
+                    target_item->current_color()) + escape_col(target_item->definition->name) + "&r.");
                 next_turn_ready = true;
                 break;
             case KB_EQUIP:
@@ -421,14 +440,20 @@ void game_t::run_internal() {
                 if (sel == '0') i = 9;
                 else i = sel - '1';
                 if (i >= c) {
-                    snprintf(message, WIDTH, "There's no item in slot %c.", sel);
+                    message_queue_t::get()->clear();
+                    std::string err = "&0&bThere's no item in slot ";
+                    err += sel;
+                    err += ".";
+                    message_queue_t::get()->add(err);
                     break;
                 }
                 target_item = pc.inventory_at(i);
                 type = target_item->definition->type;
                 // Make sure it's equippable.
                 if (type < ITEM_TYPE_WEAPON || type > ITEM_TYPE_RING) {
-                    snprintf(message, WIDTH, "You can't equip %s.", target_item->definition->name.c_str());
+                    message_queue_t::get()->clear();
+                    message_queue_t::get()->add("&0&bYou can't equip &" + std::to_string(
+                        target_item->current_color()) + escape_col(target_item->definition->name) + "&0&b!");
                     break;
                 }
                 c = 0;
@@ -442,13 +467,17 @@ void game_t::run_internal() {
                 if (target_item->is_stacked()) throw dungeon_exception(__PRETTY_FUNCTION__, "invalid state: removed item is stacked");
                 // If the swap slot is empty, just add the item there.
                 if (pc.equipment[swap_slot] == NULL) {
-                    snprintf(message, WIDTH, "You equipped %s.", target_item->definition->name.c_str());
+                    message_queue_t::get()->add("You equipped &" + std::to_string(
+                        target_item->current_color()) + escape_col(target_item->definition->name) + "&r.");
                     pc.equipment[swap_slot] = target_item;
                 } else {
                     // Then we have to move that item out to the inventory.
                     // This will reorder them, but it seems way more difficult than it's worth not to.
-                    snprintf(message, WIDTH, "You equipped %s, swapping out %s.", target_item->definition->name.c_str(),
-                        pc.equipment[swap_slot]->definition->name.c_str());
+                    message_queue_t::get()->add("You equipped &"
+                            + std::to_string(target_item->current_color())
+                            + escape_col(target_item->definition->name) + "&r, swapping out &"
+                            + std::to_string(pc.equipment[swap_slot]->current_color())
+                            + escape_col(pc.equipment[swap_slot]->definition->name) + "&r.");
                     pc.add_to_inventory(pc.equipment[swap_slot]);
                     pc.equipment[swap_slot] = target_item;
                 }
@@ -457,7 +486,8 @@ void game_t::run_internal() {
                 if (monster_menu_on || teleport_mode) break;
                 // Check that there's space
                 if (pc.inventory_size() >= 10) {
-                    snprintf(message, WIDTH, "You have no carry slots open!");
+                    message_queue_t::get()->clear();
+                    message_queue_t::get()->add("&0&bYou have no carry slots open!");
                     break;
                 }
                 render_inventory_box("INVENTORY", "1234567890  ", "", 1, 1);
@@ -472,17 +502,23 @@ void game_t::run_internal() {
                 i = sel - 'a';
                 target_item = pc.equipment[i];
                 if (target_item == NULL) {
-                    snprintf(message, WIDTH, "There's no item in slot %c!", sel);
+                    message_queue_t::get()->clear();
+                    std::string err = "&0&bThere's no item in slot ";
+                    err += sel;
+                    err += ".";
+                    message_queue_t::get()->add(err);
                     break;
                 }
                 pc.add_to_inventory(target_item);
                 pc.equipment[i] = NULL;
-                snprintf(message, WIDTH, "You unequipped %s.", target_item->definition->name.c_str());
+                message_queue_t::get()->add("You unequipped &" + std::to_string(
+                    target_item->current_color()) + escape_col(target_item->definition->name) + "&r.");
                 break;
             case KB_DROP:
                 if (monster_menu_on || teleport_mode) break;
                 if (pc.inventory_size() == 0) {
-                    snprintf(message, WIDTH, "You have no items!");
+                    message_queue_t::get()->clear();
+                    message_queue_t::get()->add("&0&bYou have no items!");
                     break;
                 }
                 x = (WIDTH - INVENTORY_BOX_WIDTH) / 2;
@@ -496,7 +532,11 @@ void game_t::run_internal() {
                 if (sel == '0') i = 9;
                 else i = sel - '1';
                 if (i >= pc.inventory_size()) {
-                    snprintf(message, WIDTH, "There's no item in slot %c.", sel);
+                    message_queue_t::get()->clear();
+                    std::string err = "&0&bThere's no item in slot ";
+                    err += sel;
+                    err += ".";
+                    message_queue_t::get()->add(err);
                     break;
                 }
                 target_item = pc.remove_from_inventory(i);
@@ -505,12 +545,14 @@ void game_t::run_internal() {
                 } else {
                     item_map[pc.x][pc.y] = target_item;
                 }
-                snprintf(message, WIDTH, "You dropped %s.", target_item->definition->name.c_str());
+                message_queue_t::get()->add("You dropped &" + std::to_string(
+                    target_item->current_color()) + escape_col(target_item->definition->name) + "&r.");
                 break;
             case KB_EXPUNGE:
                 if (monster_menu_on || teleport_mode) break;
                 if (pc.inventory_size() == 0) {
-                    snprintf(message, WIDTH, "You have no items!");
+                    message_queue_t::get()->clear();
+                    message_queue_t::get()->add("&0&bYou have no items!");
                     break;
                 }
                 x = (WIDTH - INVENTORY_BOX_WIDTH) / 2;
@@ -524,17 +566,26 @@ void game_t::run_internal() {
                 if (sel == '0') i = 9;
                 else i = sel - '1';
                 if (i >= pc.inventory_size()) {
-                    snprintf(message, WIDTH, "There's no item in slot %c.", sel);
+                    message_queue_t::get()->clear();
+                    std::string err = "&0&bThere's no item in slot ";
+                    err += sel;
+                    err += ".";
+                    message_queue_t::get()->add(err);
                     break;
                 }
                 target_item = pc.remove_from_inventory(i);
-                snprintf(message, WIDTH, "You expunged %s.", target_item->definition->name.c_str());
+                message_queue_t::get()->add("You expunged &" + std::to_string(
+                    target_item->current_color()) + escape_col(target_item->definition->name) + "&r.");
                 delete target_item;
+                break;
+            case KB_NEXT_MESSAGE:
                 break;
             case KB_QUIT:
                 return;
             default:
-                snprintf(message, WIDTH, "Unrecognized command: %c", (char) c);
+                message_queue_t::get()->clear();
+                message_queue_t::get()->add("&0&bUnrecognized command. &r&d(" + std::to_string(c) + ")");
+                std::cout << c << std::endl;
         }
 
         if (result == GAME_RESULT_RUNNING && next_turn_ready) {
@@ -545,7 +596,8 @@ void game_t::run_internal() {
         }
         if (result != GAME_RESULT_RUNNING) {
             hide_fog_of_war = true;
-            snprintf(message, 80, "Game over. Press any key to continue.");
+            message_queue_t::get()->clear();
+            message_queue_t::get()->add("&bGame over. Press any key to continue.");
         }
     }
 }
@@ -905,7 +957,7 @@ game_result_t game_t::run_until_pc() {
 
         // If this was the PC's turn, signal that back to the caller
         if (ch == &pc) {
-            turn_queue.insert(&pc, priority + pc.speed);
+            turn_queue.insert(&pc, priority + (pc.speed_bonus()));
             return GAME_RESULT_RUNNING;
         }
 

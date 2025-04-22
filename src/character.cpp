@@ -2,6 +2,7 @@
 #include "dungeon.h"
 #include "macros.h"
 #include "heap.h"
+#include "message_queue.h"
 
 #include <cstdint>
 #include <cstdio>
@@ -27,6 +28,16 @@ void destroy_character(character_t ***character_map, character_t *ch) {
     if (character_map[ch->x][ch->y] == ch)
         character_map[ch->x][ch->y] = NULL;
     delete ch;
+}
+
+int character_t::damage(int amount, character_t ***character_map) {
+    hp -= amount;
+    if (hp <= 0) {
+        dead = true;
+        if (character_map[x][y] == this)
+            character_map[x][y] = NULL;
+    }
+    return amount;
 }
 
 void character_t::move_to(coordinates_t to, character_t ***character_map) {
@@ -148,10 +159,14 @@ monster_t::monster_t(monster_definition_t *definition) {
 }
 
 uint8_t monster_t::next_color() {
+    color_i = (color_i + 1) % color_count;
+    return current_color();
+}
+
+uint8_t monster_t::current_color() {
     int i;
     int found = -1;
     int color_val = definition->color;
-    color_i = (color_i + 1) % color_count;
     for (i = 0; i < 8; i++) {
         if (color_val & 1) found++;
         if (found == color_i) return i;
@@ -160,17 +175,17 @@ uint8_t monster_t::next_color() {
     throw dungeon_exception(__PRETTY_FUNCTION__, "did not find target color (was it modified?)");
 }
 
-void monster_t::take_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t<character_t *> &turn_queue, character_t ***character_map, item_t ***item_map, uint32_t **pathfinding_tunnel, uint32_t **pathfinding_no_tunnel, uint32_t priority, game_result_t &result) {
+void monster_t::take_turn(dungeon_t *dungeon, pc_t *pc, binary_heap_t<character_t *> &turn_queue, character_t ***character_map, item_t ***item_map, uint32_t **pathfinding_tunnel, uint32_t **pathfinding_no_tunnel, uint32_t priority, game_result_t &result) {
     // Find out which direction this monster wants to go.
     // - Telepathic: Directly to the PC
     // - Intelligent: Towards the last seen location
     // - None: Only towards the PC if there's LOS
     uint8_t min, x_offset, y_offset, target_x, target_y;
     coordinates_t next;
-    int i, j, x1, y1;
+    int i, j, x1, y1, dam, r;
     uint32_t** map;
     cell_t* next_cell;
-    bool can_move;
+    bool can_move, picked;
 
     // Slightly inefficient but I prefer the readability since this algorithm is a bit more complex.
     // 1: Determine if the monster is allowed to go to the PC.
@@ -298,16 +313,58 @@ void monster_t::take_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t<cha
                 }
             }
 
-            // If there's already a character there, kill it.
+            // If there's already a character there, deal damage or displace.
             if (character_map[next.x][next.y] != NULL) {
-                // Special case is the PC, in which case the game ends.
+                // If it's the PC, deal damage.
                 if (character_map[next.x][next.y] == pc) {
-                    pc->dead = true;
-                } else if (character_map[next.x][next.y]->type() == CHARACTER_TYPE_MONSTER) {
-                    ((monster_t *) character_map[next.x][next.y])->die(result, character_map, item_map);
+                    // See if the PC dodges.
+                    r = rand() % 100;
+                    if (pc->dodge_bonus() >= r) {
+                        message_queue_t::get()->add(
+                            "You dodge an attack from &" +
+                            std::to_string(current_color()) +
+                            escape_col(definition->name) +
+                            "&r.");
+                    } else {
+                        dam = pc->damage(definition->damage->roll(), character_map);
+                        message_queue_t::get()->add(
+                            "&" +
+                            std::to_string(current_color()) +
+                            escape_col(definition->name) +
+                            "&r hits you for " + std::to_string(dam) + ".");
+                    }
                 }
+                // For monsters, we move them out of the way (or, if unavailable, swap).
+                else {
+                    picked = 0;
+                    for (x1 = next.x - 1; x1 <= next.x + 1; x1++) {
+                        if (x1 < 0 || x1 >= dungeon->width) continue;
+                        for (y1 = next.y - 1; y1 <= next.y + 1; y1++) {
+                            if (y1 < 0 || y1 >= dungeon->height) continue;
+                            // Only available if ROOM/HALL and no character.
+                            if (
+                                (dungeon->cells[x1][y1].type == CELL_TYPE_ROOM ||
+                                dungeon->cells[x1][y1].type == CELL_TYPE_HALL) &&
+                                !character_map[x1][y1]
+                            ) {
+                                picked = 1;
+                                break;
+                            }
+                        }
+                    }
+                    if (!picked) {
+                        // No location was found, so we swap.
+                        character_map[next.x][next.y]->move_to((coordinates_t) {x, y}, character_map);
+                    }
+                    else {
+                        // Move the monster to its displaced cell
+                        character_map[next.x][next.y]->move_to((coordinates_t) {(uint8_t) x1, (uint8_t) y1}, character_map);
+                    }
+                    move_to(next, character_map);
+                }
+            } else {
+                move_to(next, character_map);
             }
-            move_to(next, character_map);
         }
     }
 
@@ -400,4 +457,67 @@ character_type pc_t::type() {
 
 character_type monster_t::type() {
     return CHARACTER_TYPE_MONSTER;
+}
+
+
+int pc_t::speed_bonus() {
+    int i;
+    int sp = speed;
+    // Adding to speed makes us go slower, and we have a default of 10 speed.
+    // Items have speed bonuses up to 50. I'm dividing the numbers by 10
+    // and subtracting in an attempt to balance this.
+    for (i = 0; i < ARRAY_SIZE(equipment); i++) {
+        if (equipment[i]) {
+            sp -= equipment[i]->speed_bonus / 10;
+        }
+    };
+    // A speed of 0 means nothing else can move.
+    if (sp < 1) sp = 1;
+    return sp;
+}
+
+int pc_t::damage_bonus() {
+    int i;
+    int dm = base_damage.roll();
+    for (i = 0; i < ARRAY_SIZE(equipment); i++) {
+        if (equipment[i]) {
+            dm += equipment[i]->get_damage();
+        }
+    };
+    return dm;
+}
+
+int pc_t::dodge_bonus() {
+    int i;
+    int dodge = 0;
+    for (i = 0; i < ARRAY_SIZE(equipment); i++) {
+        if (equipment[i]) {
+            dodge += equipment[i]->dodge_bonus;
+        }
+    };
+    if (dodge > 99) dodge = 99; // At least there's a chance...
+    return dodge;
+}
+
+int pc_t::defense_bonus() {
+    int i;
+    int def = 0;
+    for (i = 0; i < ARRAY_SIZE(equipment); i++) {
+        if (equipment[i]) {
+            def += equipment[i]->defense_bonus;
+        }
+    };
+    return def;
+}
+
+int pc_t::damage(int amount, character_t ***character_map) {
+    amount -= defense_bonus();
+    if (amount <= 0) return 0;
+    hp -= amount;
+    if (hp <= 0) {
+        dead = true;
+        if (character_map[x][y] == this)
+            character_map[x][y] = NULL;
+    }
+    return amount;
 }

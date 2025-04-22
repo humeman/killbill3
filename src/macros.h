@@ -32,19 +32,22 @@
 #define WIDTH 80
 #define HEIGHT 24
 
+#define REDRAW_TIMEOUT 100
+#define NO_ACTION_TIMEOUT 2500
+
 #define FOG_OF_WAR_DISTANCE 2
 #define TELEPORT_POINTER '*'
 
 // This is distinct from the regular ncurses COLOR_* macros since we can store
 // multiple colors for one monster/item and I don't want an array of ints.
-#define FLAG_COLOR_RED 0x01
-#define FLAG_COLOR_GREEN 0x02
-#define FLAG_COLOR_YELLOW 0x04
-#define FLAG_COLOR_BLUE 0x08
-#define FLAG_COLOR_MAGENTA 0x10
-#define FLAG_COLOR_CYAN 0x20
-#define FLAG_COLOR_WHITE 0x40
-#define FLAG_COLOR_BLACK 0x80
+#define FLAG_COLOR_RED 0x01 // 0
+#define FLAG_COLOR_GREEN 0x02 // 1
+#define FLAG_COLOR_YELLOW 0x04 // 2
+#define FLAG_COLOR_BLUE 0x08 // 3
+#define FLAG_COLOR_MAGENTA 0x10 // 4
+#define FLAG_COLOR_CYAN 0x20 // 5
+#define FLAG_COLOR_WHITE 0x40 // 6
+#define FLAG_COLOR_BLACK 0x80 // 7
 
 #define DEFAULT_DUNGEON_PATH "/.rlg327/dungeon"
 #define DEFAULT_MONSTER_PATH "/.rlg327/monster_desc.txt"
@@ -57,6 +60,21 @@
 #define MAX_GENERATION_ATTEMPTS 500
 
 #define STRING(x) #x
+
+typedef enum colors {
+    COLORS_FLOOR = 1,
+    COLORS_STONE,
+    COLORS_PC,
+    COLORS_MONSTER,
+    COLORS_OBJECT,
+    COLORS_TEXT,
+    COLORS_TEXT_RED,
+    COLORS_MENU_TEXT,
+    COLORS_MENU_TEXT_SELECTED,
+    COLORS_FOG_OF_WAR_TERRAIN,
+    COLORS_FLOOR_ANY,
+    COLORS_MENU_ANY = COLORS_FLOOR_ANY + 8
+} colors_t;
 
 class dungeon_exception : public std::exception {
     private:
@@ -102,7 +120,7 @@ class dungeon_exception : public std::exception {
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define CLAMP(a, low, high) ((a < low) ? low : ((a > high) ? high : a))
 
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
+#define ARRAY_SIZE(x) ((int) (sizeof(x) / sizeof(x[0])))
 
 // These would be functions, but in the interest of saving on lines of code by avoiding any extra error checks,
 // these are simple macros that expand out to the 3/4 lines necessary to read, convert, and validate data.

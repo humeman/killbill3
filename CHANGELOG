@@ -258,6 +258,26 @@
 
 -- ASSIGNMENT 1.09 --
 4/16:
-    2p: Added rendering for health and inventory at the bottom of the UI.
-        Added equipment slots to the PC.
-        Added equip, unequip, drop, and expunge commands.
+    2p:  Added rendering for health and inventory at the bottom of the UI.
+         Added equipment slots to the PC.
+         Added equip, unequip, drop, and expunge commands.
+4/17:
+    12p: Created rendering methods for drawing the inventory, equipment,
+          and item details to the screen (reused in all inventory controls).
+4/18:
+    10p:
+         Added UI views to all the inventory-related prompts.
+         Added an inventory menu, which works like the monster menu, allowing
+          scrolling through the items along with entering hotkeys to select
+          and view details. Bound to i and I, since this fulfills both of their
+          specs.
+4/22:
+    1p:  Implemented new combat. Characters now have HP, and an attempt to move into
+          their space will deal them damage. If a monster tries to move into another
+          monster's cell, the old one is displaced.
+         Added a message queue to allow multiple messages per turn (and easier use).
+          This includes color formatting via string codes (&<num>, &b, &d, &r, &&).
+         Applied item bonuses to the PC, which included implementing dodging.
+         Made the game redraw every 100ms (to make the color switching clearer).
+          Messages disappear automatically after 2500ms.
+         Added a hotkey, ENTER, to clear the active message in the queue.

@@ -8,21 +8,6 @@
 #include "parser.h"
 #include "item.h"
 
-typedef enum colors {
-    COLORS_FLOOR = 1,
-    COLORS_STONE,
-    COLORS_PC,
-    COLORS_MONSTER,
-    COLORS_OBJECT,
-    COLORS_TEXT,
-    COLORS_TEXT_RED,
-    COLORS_MENU_TEXT,
-    COLORS_MENU_TEXT_SELECTED,
-    COLORS_FOG_OF_WAR_TERRAIN,
-    COLORS_FLOOR_ANY,
-    COLORS_MENU_ANY = COLORS_FLOOR_ANY + 8
-} colors_t;
-
 typedef enum keybinds {
     KB_UP_LEFT_0 = '7',
     KB_UP_LEFT_1 = 'y',
@@ -63,7 +48,8 @@ typedef enum keybinds {
     KB_INVENTORY = 'i',
     KB_EQUIPMENT = 'e',
     KB_INSPECT_ITEM = 'I',
-    KB_LOOK_MODE = 'L'
+    KB_LOOK_MODE = 'L',
+    KB_NEXT_MESSAGE = 10 // KEY_ENTER doesn't work here (weird)
 } keybinds_t;
 
 extern char CHARACTERS_BY_CELL_TYPE[CELL_TYPES];
@@ -85,7 +71,6 @@ class game_t {
         int nummon = -1;
         int numitems = -1;
         int debug;
-        char *message;
         parser_t<monster_definition_t> *monst_parser;
         parser_t<item_definition_t> *item_parser;
         std::vector<monster_definition_t *> monster_defs;
