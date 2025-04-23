@@ -33,9 +33,8 @@
 }
 
 #define KB_CONTROLS(x, y) \
-    if (monster_menu_on) break; \
-    if (teleport_mode) \
-        move_coords(teleport_pointer, x, y); \
+    if (teleport_mode || look_mode) \
+        move_coords(pointer, x, y); \
     else { \
         try_move(result, x, y); \
         next_turn_ready = 1; \
@@ -123,16 +122,17 @@ void game_t::run_internal() {
     int c, i, j, swap_slot, type;
     bool next_turn_ready;
     uint8_t x, y;
-    bool monster_menu_on = false;
     bool hide_fog_of_war = false;
     bool teleport_mode = false;
+    bool look_mode = false;
     bool sticky_message = false;
     int no_action_time = 0;
-    coordinates_t teleport_pointer;
+    coordinates_t pointer;
     game_result_t result = GAME_RESULT_RUNNING;
     char *ascii;
     char sel;
     item_t *target_item;
+    monster_t *target_monst;
     float hp;
     message_queue_t::get()->add("Welcome to the dungeon.");
     message_queue_t::get()->add("Your task is to slay the ruthless &2&bSpongeBob SquarePants&r,");
@@ -147,9 +147,9 @@ void game_t::run_internal() {
             for (x = 0; x < dungeon->width; x++) {
                 // If this is within the sight radius, render it.
                 // Also, if FOW is disabled, render it.
-                if (hide_fog_of_war || teleport_mode || (x >= pc.x - FOG_OF_WAR_DISTANCE && x <= pc.x + FOG_OF_WAR_DISTANCE
+                if (hide_fog_of_war || look_mode || teleport_mode || (x >= pc.x - FOG_OF_WAR_DISTANCE && x <= pc.x + FOG_OF_WAR_DISTANCE
                     && y >= pc.y - FOG_OF_WAR_DISTANCE && y <= pc.y + FOG_OF_WAR_DISTANCE)) {
-                    if (teleport_mode && x == teleport_pointer.x && y == teleport_pointer.y) {
+                    if ((teleport_mode || look_mode) && x == pointer.x && y == pointer.y) {
                         attrset(COLOR_PAIR(COLORS_PC) | A_BOLD);
                         addch(TELEPORT_POINTER);
                         attroff(COLOR_PAIR(COLORS_PC) | A_BOLD);
@@ -293,9 +293,10 @@ void game_t::run_internal() {
         next_turn_ready = 0;
         switch (c) {
             case KB_MONSTERS:
-                monster_menu();
+                monster_menu(0);
                 break;
             case KB_INVENTORY:
+            case KB_EQUIPMENT:
             case KB_INSPECT_ITEM:
                 inventory_menu();
                 break;
@@ -334,11 +335,11 @@ void game_t::run_internal() {
             case KB_REST_0:
             case KB_REST_1:
             case KB_REST_2:
-                if (monster_menu_on || teleport_mode) break;
+                if (teleport_mode || look_mode) break;
                 next_turn_ready = 1;
                 break;
             case KB_UP_STAIRS:
-                if (monster_menu_on || teleport_mode) break;
+                if (teleport_mode || look_mode) break;
                 if (dungeon->cells[pc.x][pc.y].type != CELL_TYPE_UP_STAIRCASE) {
                     message_queue_t::get()->clear();
                     message_queue_t::get()->add("&0&bThere isn't an up staircase here!");
@@ -348,7 +349,7 @@ void game_t::run_internal() {
                 message_queue_t::get()->add("You went up the stairs.");
                 break;
             case KB_DOWN_STAIRS:
-                if (monster_menu_on || teleport_mode) break;
+                if (teleport_mode || look_mode) break;
                 if (dungeon->cells[pc.x][pc.y].type != CELL_TYPE_DOWN_STAIRCASE) {
                     message_queue_t::get()->clear();
                     message_queue_t::get()->add("&0&bThere isn't a down staircase here!");
@@ -358,29 +359,46 @@ void game_t::run_internal() {
                 message_queue_t::get()->add("You went down the stairs.");
                 break;
             case KB_TOGGLE_FOG:
-                if (monster_menu_on || teleport_mode) break;
+                if (teleport_mode || look_mode) break;
                 hide_fog_of_war = !hide_fog_of_war;
                 break;
+            case KB_LOOK_MODE:
+                if (teleport_mode) break;
+                if (!look_mode) {
+                    look_mode = true;
+                    message_queue_t::get()->clear();
+                    message_queue_t::get()->add("-- LOOK MODE --");
+                    sticky_message = true;
+                    pointer.x = pc.x;
+                    pointer.y = pc.y;
+                }
+                else {
+                    message_queue_t::get()->drop();
+                    sticky_message = false;
+                    look_mode = false;
+                    next_turn_ready = true;
+                }
+                break;
             case KB_TELEPORT:
-                if (monster_menu_on) break;
+                if (look_mode) break;
                 if (!teleport_mode) {
                     teleport_mode = true;
                     message_queue_t::get()->clear();
                     message_queue_t::get()->add("-- TELEPORT MODE --");
                     sticky_message = true;
-                    teleport_pointer.x = pc.x;
-                    teleport_pointer.y = pc.y;
+                    pointer.x = pc.x;
+                    pointer.y = pc.y;
                 }
                 else {
                     message_queue_t::get()->drop();
-                    force_move(result, teleport_pointer);
+                    force_move(result, pointer);
                     sticky_message = false;
                     teleport_mode = false;
                     next_turn_ready = true;
                 }
                 break;
             case KB_TELEPORT_RANDOM:
-                if (monster_menu_on) break;
+                if (look_mode) break;
                 if (!teleport_mode) {
                     message_queue_t::get()->clear();
                     message_queue_t::get()->add("&0&bEnter teleport mode first.");
@@ -388,22 +406,22 @@ void game_t::run_internal() {
                     // It's not noted in the spec, but I don't know why we'd want to
                     // random teleport outside of the dungeon. We'll pick an open space.
                     try {
-                        teleport_pointer = random_location_no_kill(dungeon, character_map);
+                        pointer = random_location_no_kill(dungeon, character_map);
                     }
                     catch (dungeon_exception &e) {
                         // I don't see a reason to crash the game for this.
-                        teleport_pointer.x = pc.x;
-                        teleport_pointer.y = pc.y;
+                        pointer.x = pc.x;
+                        pointer.y = pc.y;
                     }
                     message_queue_t::get()->clear();
-                    force_move(result, teleport_pointer);
+                    force_move(result, pointer);
                     sticky_message = false;
                     teleport_mode = false;
                     next_turn_ready = true;
                 }
                 break;
             case KB_PICKUP:
-                if (monster_menu_on || teleport_mode) break;
+                if (teleport_mode || look_mode) break;
                 target_item = item_map[pc.x][pc.y];
                 if (target_item == NULL) {
                     message_queue_t::get()->clear();
@@ -426,7 +444,7 @@ void game_t::run_internal() {
                 next_turn_ready = true;
                 break;
             case KB_EQUIP:
-                if (monster_menu_on || teleport_mode) break;
+                if (teleport_mode || look_mode) break;
                 render_inventory_box("INVENTORY", "1234567890  ", "Select an item here.", 1, 1);
                 c = pc.inventory_size();
                 for (i = 0; i < c; i++)
@@ -482,8 +500,18 @@ void game_t::run_internal() {
                     pc.equipment[swap_slot] = target_item;
                 }
                 break;
-            case KB_UNEQUIP:
-                if (monster_menu_on || teleport_mode) break;
+            case KB_UNEQUIP: // which is also KB_LOOK_SELECT -- annoying
+                if (teleport_mode) break;
+                if (look_mode) {
+                    if (!character_map[pointer.x][pointer.y]) break;
+                    if (character_map[pointer.x][pointer.y]->type() != CHARACTER_TYPE_MONSTER) break;
+                    target_monst = (monster_t *) character_map[pointer.x][pointer.y];
+                    message_queue_t::get()->drop();
+                    sticky_message = false;
+                    look_mode = false;
+                    monster_menu(target_monst);
+                    break;
+                }
                 // Check that there's space
                 if (pc.inventory_size() >= 10) {
                     message_queue_t::get()->clear();
@@ -515,7 +543,7 @@ void game_t::run_internal() {
                     target_item->current_color()) + escape_col(target_item->definition->name) + "&r.");
                 break;
             case KB_DROP:
-                if (monster_menu_on || teleport_mode) break;
+                if (teleport_mode || look_mode) break;
                 if (pc.inventory_size() == 0) {
                     message_queue_t::get()->clear();
                     message_queue_t::get()->add("&0&bYou have no items!");
@@ -549,7 +577,7 @@ void game_t::run_internal() {
                     target_item->current_color()) + escape_col(target_item->definition->name) + "&r.");
                 break;
             case KB_EXPUNGE:
-                if (monster_menu_on || teleport_mode) break;
+                if (teleport_mode || look_mode) break;
                 if (pc.inventory_size() == 0) {
                     message_queue_t::get()->clear();
                     message_queue_t::get()->add("&0&bYou have no items!");
@@ -579,6 +607,14 @@ void game_t::run_internal() {
                 delete target_item;
                 break;
             case KB_NEXT_MESSAGE:
+                break;
+            case KB_ESCAPE:
+                if (look_mode || teleport_mode) {
+                    look_mode = false;
+                    teleport_mode = false;
+                    sticky_message = false;
+                    message_queue_t::get()->drop();
+                }
                 break;
             case KB_QUIT:
                 return;
@@ -794,13 +830,24 @@ void game_t::inventory_menu() {
     }
 }
 
-void game_t::monster_menu() {
+void game_t::monster_menu(monster_t *initial_target) {
     int menu_i = 0;
     int count;
     int c, y, i, x_offset, y_offset;
     character_t *ch;
     monster_t *targeted_monster;
     std::string desc;
+
+    count = turn_queue.size();
+
+    // If the initial target is set, we'll set the menu i to that index
+    if (initial_target) {
+        for (i = 0; i < count; i++) {
+            ch = turn_queue.at(i);
+            if (ch == initial_target) break;
+            if (ch->type() == CHARACTER_TYPE_MONSTER) menu_i++;
+        }
+    }
 
 
     while (true) {
@@ -813,7 +860,6 @@ void game_t::monster_menu() {
             PRINT_REPEATED(MONSTER_MENU_X_BEGIN, y, MONSTER_MENU_WIDTH, ' ');
 
         attron(A_BOLD);
-        count = turn_queue.size();
         PRINTW_CENTERED_AT(WIDTH / 2, MONSTER_MENU_Y_BEGIN, "MONSTERS (%d)", count - 1);
         attroff(A_BOLD);
 
@@ -889,14 +935,13 @@ void game_t::monster_menu() {
         attroff(COLOR_PAIR(COLORS_MENU_TEXT));
 
         c = getch();
-        count = turn_queue.size() - 1;
         switch (c) {
             case KB_SCROLL_DOWN:
-                menu_i = (menu_i + 1) % count;
+                menu_i = (menu_i + 1) % (count - 1);
                 break;
             case KB_SCROLL_UP:
                 menu_i--;
-                if (menu_i < 0) menu_i = count - 1;
+                if (menu_i < 0) menu_i = count - 2;
                 break;
             case KB_ESCAPE:
                 return;
@@ -957,7 +1002,7 @@ game_result_t game_t::run_until_pc() {
 
         // If this was the PC's turn, signal that back to the caller
         if (ch == &pc) {
-            turn_queue.insert(&pc, priority + (pc.speed_bonus()));
+            turn_queue.insert(&pc, priority + (1000 / pc.speed_bonus()));
             return GAME_RESULT_RUNNING;
         }
 

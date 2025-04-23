@@ -32,7 +32,7 @@
 #define WIDTH 80
 #define HEIGHT 24
 
-#define REDRAW_TIMEOUT 100
+#define REDRAW_TIMEOUT 500
 #define NO_ACTION_TIMEOUT 2500
 
 #define FOG_OF_WAR_DISTANCE 2

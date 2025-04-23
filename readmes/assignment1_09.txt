@@ -1,7 +1,44 @@
 COMS 3270
 Assignment 1.09
 ---
+This assignment fully implements items and combat in the game.
 
+Items are still picked up by the player using the ',' key, which places them
+ in the inventory slots (0-9). They can then equip items to their equipment
+ slots with the 'w' key, which applies any bonuses to the PC. Only one item
+ of a single type can be equipped, with the exception of 2 rings, so if one
+ is already present they are swapped. Items can be taken off with 't', dropped
+ with 'd', and expunged (deleted) with 'x'. Any of these will display a prompt
+ with a list of relevant items on the screen.
+
+An inventory menu was also added, accessible with 'I', 'i', or 'e'. It
+ displays both the inventory and equipment slots side by side, and with the
+ keyboard arrow keys or pressing [0-9a-l] an item can be selected, which
+ displays its name, description, and bonuses at the bottom of the screen.
+
+Full combat was also implemented. Whenever the PC attempts to move into a
+ monster's space or vice versa, it'll deal the other damage to its hitpoints.
+ Characters now only die when their HP drops to 0. The PC can randomly dodge
+ attacks (if it has items that give it a dodge bonus). If a monster moves to
+ another monster's space, the old monster is displaced to a nearby cell.
+* The game also ends when a BOSS dies or the PC dies, as required in the spec,
+   but I implemented that in 1.08.
+
+Items now give bonuses to the player -- the four used at this point are speed,
+ damage, defense, and dodge. Every eqipped item is applied to the PC's stats.
+ Speed will be added to the PC's speed, making its turns come sooner.
+ Damage will increase amount of HP damage dealt in attacks.
+ Defense will reduce the HP damage taken from monsters' attacks.
+ Dodge adds a probability (percent out of 100) that a monster's attack has no
+  effect.
+
+A message queue was also implemented to enable multiple messages per turn.
+ It renders messages to the top of the screen in place of the old status
+ string, in color using a color code system (&<num>, &b, &d, &r, &&,
+ heavy inspiration from Minecraft). If multiple messages are queued,
+ an arrow is displayed at the end, and ENTER will move to the next. The top
+ message is auto-cleared on each PC input. If the player does nothing for
+ 2500ms, it is also auto-cleared.
 
 Implemented controls:
     PC Movement:
@@ -19,18 +56,38 @@ Implemented controls:
       <: go up stairs
     Monster menu:
       m: open the monster list
-      <up arrow>: move selection up (if possible)
-      <down arrow>: move selection down (if possible)
-      <esc>: exit (ncurses adds a 1s delay here)
+        <up arrow>: move selection up (if possible)
+        <down arrow>: move selection down (if possible)
+        <esc>: exit (ncurses adds a 1s delay here)
+      L: enter look mode (to select a monster)
+        regular movement keys to pick a target
+        t: view info about the targeted monster
+        L: cancel
+        <esc>: cancel
     Teleport:
-      t: enter teleport mode/confirm
-      r: teleport randomly
+      g: enter teleport mode/confirm
+        regular movement keys to pick a target
+        g: confirm teleport
+        <esc>: cancel
+        r: teleport randomly
     Fog of War:
       f: toggle fog of war for this turn
     Items:
-      ,: Pick up the top item at the PC's location
+      ,: pick up the top item at the PC's location
+      w: wear an item in the inventory slots
+      t: take off an item in the equipment slots
+      d: drop an item in the inventory slots
+      x: expunge an item in the inventory slots
+      I, i, e: open the inventory/equipment menu
+        <up arrow>: move selection up
+        <down arrow>: move selection down
+        <left/right arrow>: switch between inventory/equipment
+        <0-9>: select an inventory item
+        <a-l>: select an equipment item
+        <esc>: exit (ncurses adds a 1s delay here)
     General:
       Q: quit the game
+      <enter>: dismiss the current status message
 
 Compile:
     Run: make
@@ -39,9 +96,12 @@ Compile:
 Flags:
     -s, --save: Saves the randomly-generated dungeon to the set path.
     -l, --load: Loads a dungeon from the set path and prints it.
-    -dp, --dungeon-path [path]: Overrides the default dungeon path, ~/.rlg327/dungeon.
-    -ip, --item-path [path]: Overrides the default item defs path, ~/.rlg327/object_defs.txt.
-    -mp, --monster-path [path]: Overrides the default monster defs path, ~/.rlg327/monster_defs.txt.
+    -dp, --dungeon-path [path]: Overrides the default dungeon path,
+                                ~/.rlg327/dungeon.
+    -ip, --item-path [path]: Overrides the default item defs path,
+                             ~/.rlg327/object_defs.txt.
+    -mp, --monster-path [path]: Overrides the default monster defs path,
+                                ~/.rlg327/monster_defs.txt.
     -n, --nummon [num]: Overrides the default randomized monster count.
                         Note that this will be used instead of the randomized
                         count in every dungeon generated by using staircases.

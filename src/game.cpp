@@ -370,7 +370,7 @@ void game_t::random_monsters() {
             throw dungeon_exception(__PRETTY_FUNCTION__, e, "no available space in dungeon for monster placement");
         }
         try {
-            turn_queue.insert(monst, monst->speed);
+            turn_queue.insert(monst, 1000 / monst->speed);
         } catch (dungeon_exception &e) {
             delete monst;
             throw dungeon_exception(__PRETTY_FUNCTION__, e, "couldn't insert new monster into turn queue");

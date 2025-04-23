@@ -278,11 +278,15 @@
          Added a message queue to allow multiple messages per turn (and easier use).
           This includes color formatting via string codes (&<num>, &b, &d, &r, &&).
          Applied item bonuses to the PC, which included implementing dodging.
-         Made the game redraw every 100ms (to make the color switching clearer).
+         Made the game redraw every 500ms (to make the color switching clearer).
           Messages disappear automatically after 2500ms.
          Added a hotkey, ENTER, to clear the active message in the queue.
-         Issues:
-            - random segfault (monster displacement near edge?)
-            - monster displacement way off
-            - boss kill might not work
-            - pc kill might not work
+4/23:
+    3p:  Fixed bugs with game not ending after PC/boss kill.
+         Fixed a bug (and possible crash) with the monster displacement logic.
+         Implemented monster look mode, which just opens the monster menu at the
+          given monster's index.
+         Added an alias 'e' (equipment) from the spec to the inventory menu,
+          which already shows all that anyway.
+         Fixed a long-standing bug with PC and character speed being incorrectly
+          implemented.

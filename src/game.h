@@ -49,6 +49,7 @@ typedef enum keybinds {
     KB_EQUIPMENT = 'e',
     KB_INSPECT_ITEM = 'I',
     KB_LOOK_MODE = 'L',
+    KB_LOOK_SELECT = 't',
     KB_NEXT_MESSAGE = 10 // KEY_ENTER doesn't work here (weird)
 } keybinds_t;
 
@@ -172,7 +173,7 @@ class game_t {
         /**
           * Displays the monster menu.
           */
-        void monster_menu();
+        void monster_menu(monster_t *initial_target);
         void inventory_menu();
 
         /**

@@ -183,7 +183,7 @@ void monster_t::take_turn(dungeon_t *dungeon, pc_t *pc, binary_heap_t<character_
     int i, j, x1, y1, dam, r;
     uint32_t** map;
     cell_t* next_cell;
-    bool can_move, picked;
+    bool can_move;
 
     // Slightly inefficient but I prefer the readability since this algorithm is a bit more complex.
     // 1: Determine if the monster is allowed to go to the PC.
@@ -334,30 +334,28 @@ void monster_t::take_turn(dungeon_t *dungeon, pc_t *pc, binary_heap_t<character_
                 }
                 // For monsters, we move them out of the way (or, if unavailable, swap).
                 else {
-                    picked = 0;
-                    for (x1 = next.x - 1; x1 <= next.x + 1; x1++) {
+                    for (x1 = (int) next.x - 1; x1 <= (int) next.x + 1; x1++) {
                         if (x1 < 0 || x1 >= dungeon->width) continue;
-                        for (y1 = next.y - 1; y1 <= next.y + 1; y1++) {
+                        for (y1 = (int) next.y - 1; y1 <= (int) next.y + 1; y1++) {
                             if (y1 < 0 || y1 >= dungeon->height) continue;
+                            if (x1 == next.x && y1 == next.y) continue;
                             // Only available if ROOM/HALL and no character.
                             if (
                                 (dungeon->cells[x1][y1].type == CELL_TYPE_ROOM ||
                                 dungeon->cells[x1][y1].type == CELL_TYPE_HALL) &&
                                 !character_map[x1][y1]
                             ) {
-                                picked = 1;
-                                break;
+                                goto found;
                             }
                         }
                     }
-                    if (!picked) {
-                        // No location was found, so we swap.
-                        character_map[next.x][next.y]->move_to((coordinates_t) {x, y}, character_map);
-                    }
-                    else {
-                        // Move the monster to its displaced cell
-                        character_map[next.x][next.y]->move_to((coordinates_t) {(uint8_t) x1, (uint8_t) y1}, character_map);
-                    }
+                    // No location was found, so we swap.
+                    character_map[next.x][next.y]->move_to((coordinates_t) {x, y}, character_map);
+                    goto end;
+                    found:
+                    // Move the monster to its displaced cell
+                    character_map[next.x][next.y]->move_to((coordinates_t) {(uint8_t) x1, (uint8_t) y1}, character_map);
+                    end:
                     move_to(next, character_map);
                 }
             } else {
@@ -461,12 +459,9 @@ character_type monster_t::type() {
 int pc_t::speed_bonus() {
     int i;
     int sp = speed;
-    // Adding to speed makes us go slower, and we have a default of 10 speed.
-    // Items have speed bonuses up to 50. I'm dividing the numbers by 10
-    // and subtracting in an attempt to balance this.
     for (i = 0; i < ARRAY_SIZE(equipment); i++) {
         if (equipment[i]) {
-            sp -= equipment[i]->speed_bonus / 10;
+            sp += equipment[i]->speed_bonus / 10;
         }
     };
     // A speed of 0 means nothing else can move.

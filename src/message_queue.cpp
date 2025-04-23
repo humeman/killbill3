@@ -95,7 +95,7 @@ void message_queue_t::emit(int y, bool sticky) {
     if (disp_i >= WIDTH - 6) {
         // Cut off
         attrset(COLOR_PAIR(COLORS_TEXT) | A_DIM);
-        mvprintw(y, WIDTH - 6, "...");
+        mvprintw(y, WIDTH - 6, "... ");
     }
 
     // If there's more to print, we can show that too
