@@ -1,4 +1,7 @@
 # ASSIGNMENT BINARIES
+killbill3: build/dungeon.o build/pathfinding.o build/character.o build/game.o build/game_loop.o build/parser.o build/item.o build/message_queue.o build/killbill3.o
+	g++ $$(libsixel-config --cflags) build/dungeon.o build/pathfinding.o build/character.o build/game.o build/game_loop.o build/parser.o build/item.o build/message_queue.o build/killbill3.o -o killbill3 -lm  $$(libsixel-config --libs)
+
 assignment1_09: build/dungeon.o build/pathfinding.o build/character.o build/game.o build/game_loop.o build/parser.o build/item.o build/message_queue.o build/assignment1_09.o
 	g++ build/dungeon.o build/pathfinding.o build/character.o build/game.o build/game_loop.o build/parser.o build/item.o build/message_queue.o build/assignment1_09.o -o assignment1_09 -lm -lncurses
 
@@ -55,6 +58,10 @@ build/assignment1_08.o: src/assignments/1_08.cpp src/macros.h src/random.h src/a
 build/assignment1_09.o: src/assignments/1_09.cpp src/macros.h src/random.h src/ascii.h src/heap.h
 	@ mkdir -p build
 	g++ src/assignments/1_09.cpp -o build/assignment1_09.o -Wall -Werror -c -g
+
+build/killbill3.o: src/assignments/killbill3.cpp src/macros.h src/random.h src/ascii.h src/heap.h
+	@ mkdir -p build
+	g++ src/assignments/killbill3.cpp -o build/killbill3.o -Wall -Werror -c -g
 
 build/game.o: src/game.cpp src/game.h src/macros.h src/random.h src/ascii.h src/heap.h
 	@ mkdir -p build
