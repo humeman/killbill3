@@ -1,4 +1,3 @@
-#include <ncurses.h>
 #include <cstring>
 #include <cstdlib>
 
@@ -10,6 +9,7 @@
 #include "ascii.h"
 #include "message_queue.h"
 #include "pathfinding.h"
+#include "logger.h"
 
 parser_definition_t MONSTER_PARSE_RULES[] {
     {.name = "NAME", .offset = offsetof(monster_definition_t, name), .type = PARSE_TYPE_STRING, .required = true},
@@ -19,7 +19,11 @@ parser_definition_t MONSTER_PARSE_RULES[] {
     {.name = "ABIL", .offset = offsetof(monster_definition_t, abilities), .type = PARSE_TYPE_MONSTER_ATTRIBUTES, .required = true},
     {.name = "HP", .offset = offsetof(monster_definition_t, hp), .type = PARSE_TYPE_DICE, .required = true},
     {.name = "DAM", .offset = offsetof(monster_definition_t, damage), .type = PARSE_TYPE_DICE, .required = true},
-    {.name = "SYMB", .offset = offsetof(monster_definition_t, symbol), .type = PARSE_TYPE_CHAR, .required = true},
+    {.name = "TEXTURE_N", .offset = offsetof(monster_definition_t, floor_texture_n), .type = PARSE_TYPE_STRING, .required = true},
+    {.name = "TEXTURE_E", .offset = offsetof(monster_definition_t, floor_texture_e), .type = PARSE_TYPE_STRING, .required = true},
+    {.name = "TEXTURE_W", .offset = offsetof(monster_definition_t, floor_texture_w), .type = PARSE_TYPE_STRING, .required = true},
+    {.name = "TEXTURE_S", .offset = offsetof(monster_definition_t, floor_texture_s), .type = PARSE_TYPE_STRING, .required = true},
+    {.name = "UI_TEXTURE", .offset = offsetof(monster_definition_t, ui_texture), .type = PARSE_TYPE_STRING, .required = true},
     {.name = "RRTY", .offset = offsetof(monster_definition_t, rarity), .type = PARSE_TYPE_RARITY, .required = true}
 };
 
@@ -37,7 +41,9 @@ parser_definition_t ITEM_PARSE_RULES[] {
     {.name = "ATTR", .offset = offsetof(item_definition_t, attributes), .type = PARSE_TYPE_DICE, .required = true},
     {.name = "VAL", .offset = offsetof(item_definition_t, value), .type = PARSE_TYPE_DICE, .required = true},
     {.name = "ART", .offset = offsetof(item_definition_t, artifact), .type = PARSE_TYPE_BOOL, .required = true},
-    {.name = "RRTY", .offset = offsetof(item_definition_t, rarity), .type = PARSE_TYPE_RARITY, .required = true}
+    {.name = "RRTY", .offset = offsetof(item_definition_t, rarity), .type = PARSE_TYPE_RARITY, .required = true},
+    {.name = "TEXTURE", .offset = offsetof(item_definition_t, floor_texture), .type = PARSE_TYPE_STRING, .required = true},
+    {.name = "UI_TEXTURE", .offset = offsetof(item_definition_t, ui_texture), .type = PARSE_TYPE_STRING, .required = true}
 };
 
 char CHARACTERS_BY_CELL_TYPE[CELL_TYPES] = {
@@ -63,27 +69,27 @@ int COLORS_BY_CELL_TYPE[CELL_TYPES] = {
 };
 
 std::string ITEM_TYPE_STRINGS[ITEM_TYPE_UNKNOWN + 1] = {
-    [ITEM_TYPE_WEAPON] = "weapon",
-    [ITEM_TYPE_OFFHAND] = "offhand",
-    [ITEM_TYPE_RANGED] = "ranged",
-    [ITEM_TYPE_ARMOR] = "armor",
-    [ITEM_TYPE_HELMET] = "helmet",
-    [ITEM_TYPE_CLOAK] = "cloak",
-    [ITEM_TYPE_GLOVES] = "gloves",
-    [ITEM_TYPE_BOOTS] = "boots",
-    [ITEM_TYPE_AMULET] = "amulet",
-    [ITEM_TYPE_LIGHT] = "light",
-    [ITEM_TYPE_RING] = "ring",
-    [ITEM_TYPE_SCROLL] = "scroll",
-    [ITEM_TYPE_BOOK] = "book",
-    [ITEM_TYPE_FLASK] = "flask",
-    [ITEM_TYPE_GOLD] = "gold",
-    [ITEM_TYPE_AMMUNITION] = "ammunition",
-    [ITEM_TYPE_FOOD] = "food",
-    [ITEM_TYPE_WAND] = "wand",
-    [ITEM_TYPE_CONTAINER] = "container",
-    [ITEM_TYPE_STACK] = "stack",
-    [ITEM_TYPE_UNKNOWN] = "a mysterious object"
+    "weapon",
+    "offhand",
+    "ranged",
+    "armor",
+    "helmet",
+    "cloak",
+    "gloves",
+    "boots",
+    "amulet",
+    "light",
+    "ring",
+    "scroll",
+    "book",
+    "flask",
+    "gold",
+    "ammunition",
+    "food",
+    "wand",
+    "container",
+    "stack",
+    "a mysterious object"
 };
 
 game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
@@ -154,8 +160,8 @@ game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
         for (j = 0; j < height; j++) seen_map[i][j] = ' ';
     }
 
-    monst_parser = new parser_t<monster_definition_t>(MONSTER_PARSE_RULES, sizeof (MONSTER_PARSE_RULES) / sizeof (MONSTER_PARSE_RULES[0]), "RLG327 MONSTER DESCRIPTION 1", "MONSTER", true);
-    item_parser = new parser_t<item_definition_t>(ITEM_PARSE_RULES, sizeof (ITEM_PARSE_RULES) / sizeof (ITEM_PARSE_RULES[0]), "RLG327 OBJECT DESCRIPTION 1", "OBJECT", true);
+    monst_parser = new parser_t<monster_definition_t>(MONSTER_PARSE_RULES, sizeof (MONSTER_PARSE_RULES) / sizeof (MONSTER_PARSE_RULES[0]), "KILL BILL 3 ENEMY DESCRIPTION 1", "ENEMY", true);
+    item_parser = new parser_t<item_definition_t>(ITEM_PARSE_RULES, sizeof (ITEM_PARSE_RULES) / sizeof (ITEM_PARSE_RULES[0]), "KILL BILL 3 ITEM DESCRIPTION 1", "ITEM", true);
 
     return;
 
@@ -188,7 +194,7 @@ game_t::~game_t() {
             character = turn_queue.remove();
          } catch (std::exception &e) {
             // Nothing we can do here :shrug:
-            fprintf(stderr, "err: catastrophe: failed to remove from heap while destroying game");
+            logger_t::error(__FILE__, "catastrophe: failed to remove from heap while destroying game");
         }
         if (character == &pc) continue;
         destroy_character(character_map, character);
@@ -212,22 +218,22 @@ game_t::~game_t() {
     free(seen_map);
     delete dungeon;
 
-    for (monster_definition_t *monst : monster_defs) {
-        delete monst->speed;
-        delete monst->damage;
-        delete monst->hp;
-        delete monst;
+    for (const auto &e : monster_defs) {
+        delete e.second->speed;
+        delete e.second->damage;
+        delete e.second->hp;
+        delete e.second;
     }
-    for (item_definition_t *item : item_defs) {
-        delete item->hit_bonus;
-        delete item->damage_bonus;
-        delete item->dodge_bonus;
-        delete item->defense_bonus;
-        delete item->weight;
-        delete item->speed_bonus;
-        delete item->attributes;
-        delete item->value;
-        delete item;
+    for (const auto &e : item_defs) {
+        delete e.second->hit_bonus;
+        delete e.second->damage_bonus;
+        delete e.second->dodge_bonus;
+        delete e.second->defense_bonus;
+        delete e.second->weight;
+        delete e.second->speed_bonus;
+        delete e.second->attributes;
+        delete e.second->value;
+        delete e.second;
     }
     delete monst_parser;
     delete item_parser;
@@ -335,25 +341,31 @@ void game_t::random_monsters() {
     character_t *ch;
     int i, j;
     bool allowed;
+    std::vector<std::string> monster_names;
+    for (const auto &e : monster_defs) {
+        monster_names.push_back(e.first);
+    }
+    std::string mid;
     for (i = 0; i < count; i++) {
         attempts = 0;
         while (attempts++ < MAX_GENERATION_ATTEMPTS) {
             monster_i = rand() % monster_defs.size();
-            if (monster_defs[monster_i]->abilities & MONSTER_ATTRIBUTE_UNIQUE) {
-                if (monster_defs[monster_i]->unique_slain) continue; // If we've already killed this type of unique monster
+            mid = monster_names[monster_i];
+            if (monster_defs[mid]->abilities & MONSTER_ATTRIBUTE_UNIQUE) {
+                if (monster_defs[mid]->unique_slain) continue; // If we've already killed this type of unique monster
                 // Or, if there's already one in the dungeon.
                 allowed = true;
                 for (j = 0; j < turn_queue.size(); j++) {
                     ch = turn_queue.at(i);
                     if (ch == &pc) continue;
-                    if (&(((monster_t *) ch)->definition) == &(monster_defs[monster_i])) {
+                    if (&(((monster_t *) ch)->definition) == &(monster_defs[mid])) {
                         allowed = false;
                         break;
                     }
                 }
                 if (!allowed) continue;
             }
-            if (rand() % 100 >= monster_defs[monster_i]->rarity) continue;
+            if (rand() % 100 >= monster_defs[mid]->rarity) continue;
 
             break;
         }
@@ -361,7 +373,7 @@ void game_t::random_monsters() {
             throw dungeon_exception(__PRETTY_FUNCTION__, "no available monster definitions to use after " STRING(MAX_GENERATION_ATTEMPTS) "rolls (all unique or really unlucky)");
 
         // Now we can make a monster from this definition.
-        monst = new monster_t(monster_defs[monster_i]);
+        monst = new monster_t(monster_defs[mid]);
         // Pick a location...
         try {
             loc = random_location_no_kill(dungeon, character_map);
@@ -389,12 +401,18 @@ void game_t::random_items() {
     coordinates_t loc;
     int item_i, attempts;
     item_t *item;
+    std::vector<std::string> item_names;
+    for (const auto &e : item_defs) {
+        item_names.push_back(e.first);
+    }
+    std::string iid;
     for (int i = 0; i < count; i++) {
         attempts = 0;
         while (attempts++ < MAX_GENERATION_ATTEMPTS) {
             item_i = rand() % item_defs.size();
-            if (item_defs[item_i]->artifact && item_defs[item_i]->artifact_created) continue;
-            if (rand() % 100 >= item_defs[item_i]->rarity) continue;
+            iid = item_names[item_i];
+            if (item_defs[iid]->artifact && item_defs[iid]->artifact_created) continue;
+            if (rand() % 100 >= item_defs[iid]->rarity) continue;
 
             break;
         }
@@ -402,7 +420,7 @@ void game_t::random_items() {
             throw dungeon_exception(__PRETTY_FUNCTION__, "no available item definitions to use after " STRING(MAX_GENERATION_ATTEMPTS) "rolls (all unique or really unlucky)");
 
         // Now we can make a monster from this definition.
-        item = new item_t(item_defs[item_i]);
+        item = new item_t(item_defs[iid]);
         // Pick a location...
         try {
             loc = dungeon->random_location();

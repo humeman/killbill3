@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <vector>
+#include <map>
 #include <iostream>
 
 #include "character.h"
@@ -29,7 +30,6 @@ typedef enum {
 void write_to_string(void *item, std::string line, std::ifstream &input);
 void write_to_long_string(void *item, std::string line, std::ifstream &input, int &line_i);
 void write_to_int(void *item, std::string line, std::ifstream &input);
-void write_to_rarity(void *item, std::string line, std::ifstream &input);
 void write_to_dice(void *item, std::string line, std::ifstream &input);
 void write_to_char(void *item, std::string line, std::ifstream &input);
 void write_to_monster_attributes(void *item, std::string line, std::ifstream &input);
@@ -54,6 +54,7 @@ class parser_t {
         int definition_count;
         std::string header;
         std::string begin_header;
+        std::string current_id;
         bool skip_failures;
 
     public:
@@ -72,13 +73,14 @@ class parser_t {
           *
           * Params:
           * - stream: The file stream to read
-          * - results: The vector of resulting pointers to allocated objects
+          * - results: The map of resulting pointers to allocated objects
           */
-        void parse(std::vector<T*> &results, std::ifstream &stream) {
+        void parse(std::map<std::string, T*> &results, std::ifstream &stream) {
             // This implementation will just read line-by-line, writing into the struct's variables as it goes.
-            std::string line, keyword, err;
+            std::string line, keyword, err, part;
             T *cur = NULL;
             int i;
+            unsigned long j;
             int line_i = 0;
             bool is_set[definition_count];
             parser_definition_t *target;
@@ -118,13 +120,30 @@ class parser_t {
                     if (cur == NULL) {
                         // This line must be a BEGIN directive.
                         // This is where we'll allocate our new objects.
-                        if (keyword != "BEGIN" || line != begin_header) {
-                            err = "expected BEGIN " + begin_header + ", got " + keyword + " " + line;
+                        if (keyword != "BEGIN") {
+                            err = "expected BEGIN, got " + keyword + " " + line;
                             goto err;
                         }
 
-                        cur = new T;
+                        // Check the type and get the ID
+                        j = line.find(' ');
+                        if (j == std::string::npos) {
+                            err = "expected BEGIN " + begin_header + " <id>, got " + line;
+                            goto err;
+                        }
 
+                        part = line.substr(0, j);
+                        if (part != begin_header) {
+                            err = "expected BEGIN " + begin_header + " <id>, got " + part;
+                            goto err;
+                        }
+                        part = line.substr(j + 1);
+                        if (results.count(part) > 0) {
+                            err = "duplicate ID " + part;
+                            goto err;
+                        }
+                        current_id = part;
+                        cur = new T;
                         for (i = 0; i < definition_count; i++) is_set[i] = false;
                         continue;
                     }
@@ -138,7 +157,7 @@ class parser_t {
                             }
                         }
                         // We can now toss it on the result list and move on to the next one.
-                        results.push_back(cur);
+                        results[current_id] = cur;
                         cur = NULL;
                         continue;
                     }
@@ -188,12 +207,12 @@ class parser_t {
                         throw dungeon_exception(__PRETTY_FUNCTION__, "expected END");
                 }
             } catch (dungeon_exception &e) {
-                for (T *t : results) // neat
-                    delete t;
+                for (const auto &t : results) // neat
+                    delete t.second;
                 throw dungeon_exception(__PRETTY_FUNCTION__, e, "while parsing file at line " + std::to_string(line_i));
             } catch (std::exception &e) {
-                for (T *t : results)
-                    delete t;
+                for (const auto &t : results)
+                    delete t.second;
                 throw dungeon_exception(__PRETTY_FUNCTION__, "while parsing file at line " + std::to_string(line_i) + ": " + e.what());
             }
         }

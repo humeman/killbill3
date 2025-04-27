@@ -1,12 +1,12 @@
 #ifndef GAME_H
 #define GAME_H
 
-#include <ncurses.h>
-
 #include "dungeon.h"
 #include "character.h"
 #include "parser.h"
 #include "item.h"
+#include <ncpp/NotCurses.hh>
+#include <notcurses/nckeys.h>
 
 typedef enum keybinds {
     KB_UP_LEFT_0 = '7',
@@ -31,11 +31,11 @@ typedef enum keybinds {
     KB_REST_1 = ' ',
     KB_REST_2 = '.',
     KB_MONSTERS = 'm',
-    KB_SCROLL_UP = KEY_UP,
-    KB_SCROLL_DOWN = KEY_DOWN,
-    KB_SCROLL_LEFT = KEY_LEFT,
-    KB_SCROLL_RIGHT = KEY_RIGHT,
-    KB_ESCAPE = 27, // can't find a constant for this???
+    KB_SCROLL_UP = NCKEY_UP,
+    KB_SCROLL_DOWN = NCKEY_DOWN,
+    KB_SCROLL_LEFT = NCKEY_LEFT,
+    KB_SCROLL_RIGHT = NCKEY_RIGHT,
+    KB_ESCAPE = NCKEY_ESC,
     KB_QUIT = 'Q',
     KB_TOGGLE_FOG = 'f',
     KB_TELEPORT = 'g',
@@ -50,7 +50,7 @@ typedef enum keybinds {
     KB_INSPECT_ITEM = 'I',
     KB_LOOK_MODE = 'L',
     KB_LOOK_SELECT = 't',
-    KB_NEXT_MESSAGE = 10 // KEY_ENTER doesn't work here (weird)
+    KB_NEXT_MESSAGE = NCKEY_ENTER
 } keybinds_t;
 
 extern char CHARACTERS_BY_CELL_TYPE[CELL_TYPES];
@@ -74,15 +74,27 @@ class game_t {
         int debug;
         parser_t<monster_definition_t> *monst_parser;
         parser_t<item_definition_t> *item_parser;
-        std::vector<monster_definition_t *> monster_defs;
-        std::vector<item_definition_t *> item_defs;
+        std::map<std::string, monster_definition_t *> monster_defs;
+        std::map<std::string, item_definition_t *> item_defs;
 
+        ncpp::NotCurses *nc = nullptr;
+        ncpp::Plane *top_plane;
+        ncpp::Plane *bottom_plane;
+        std::vector<ncpp::Plane *> cell_planes;
+        std::vector<ncpp::Plane *> health_planes;
+        std::vector<ncpp::Plane *> item_planes;
+        std::vector<std::string> cell_cache;
+
+        unsigned int term_x, term_y, cells_x, cells_y, xoff;
 
     public:
         dungeon_t *dungeon;
 
         game_t(int debug, uint8_t width, uint8_t height, int max_rooms);
         ~game_t();
+
+        void create_nc();
+        void end_nc();
 
         /**
          * Reads a monster definition file into this game.
@@ -219,6 +231,8 @@ class game_t {
         void render_inventory_box(std::string title, std::string labels, std::string input_tip, int x0, int y0);
         void render_inventory_item(item_t *item, int i, bool selected, int x0, int y0);
         void render_inventory_details(item_t *item, int y0);
+
+        void render_frame(bool complete_redraw);
 };
 
 #endif

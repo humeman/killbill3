@@ -4,7 +4,6 @@
 #include <cinttypes>
 #include <cstdint>
 #include <string>
-#include <ncurses.h>
 #include "dungeon.h"
 #include "random.h"
 #include "item.h"
@@ -36,6 +35,11 @@ class monster_definition_t {
         char symbol;
         int rarity;
         bool unique_slain = false;
+        std::string floor_texture_n;
+        std::string floor_texture_e;
+        std::string floor_texture_w;
+        std::string floor_texture_s;
+        std::string ui_texture;
 };
 
 void verify_monster_definition(monster_definition_t *def);

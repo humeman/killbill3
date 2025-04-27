@@ -2,13 +2,12 @@
 #include <cstdlib>
 #include <ctime>
 #include <cstring>
-#include <term.h>
-#include <sixel/sixel.h>
 #include "../dungeon.h"
 #include "../macros.h"
 #include "../game.h"
 #include "../macros.h"
-
+#include "../resource_manager.h"
+#include "../logger.h"
 
 typedef struct {
     bool read;
@@ -24,25 +23,6 @@ typedef struct {
 int prepare_args(int argc, char* argv[], game_args_t &args);
 
 int main(int argc, char* argv[]) {
-    char buf[256];
-    int n;
-
-    // Send the terminal identification sequence
-    fwrite("\x1b[c", 3, stdout);
-
-    // Read the response
-    n = read(STDIN_FILENO, buf, sizeof(buf) - 1);
-    if (n <= 0) {
-        return 0; // Error or no response
-    }
-    buf[n] = '\0';
-
-    // Check for SIXEL support
-    if (strstr(buf, "4;") != NULL) {
-        return 1; // SIXEL supported
-    } else {
-        return 0; // SIXEL not supported
-    }
     srand(time(NULL));
 
     game_args_t args = {.read = false, .write = false, .debug = false, .nummon = -1, .numitems = -1};
@@ -70,12 +50,15 @@ int main(int argc, char* argv[]) {
         printf("debug: wrote hardness map to dungeon.pgm\n");
     }
 
+    
     game.init_monster_defs(args.monster_path.c_str());
     game.init_item_defs(args.item_path.c_str());
-
+    
     game.random_monsters();
     game.random_items();
 
+    game.create_nc();
+    resource_manager_t::get()->load("assets/textures");
     game.run();
 
     return 0;
@@ -90,13 +73,9 @@ int prepare_args(int argc, char* argv[], game_args_t &args) {
     int nummon_next = false, numitems_next = false;
     long temp;
     char *err;
-    char *home = getenv("HOME");
-    args.dungeon_path += home;
-    args.dungeon_path += DEFAULT_DUNGEON_PATH;
-    args.monster_path += home;
-    args.monster_path += DEFAULT_MONSTER_PATH;
-    args.item_path += home;
-    args.item_path += DEFAULT_ITEM_PATH;
+    args.dungeon_path = DEFAULT_DUNGEON_PATH;
+    args.monster_path = DEFAULT_MONSTER_PATH;
+    args.item_path = DEFAULT_ITEM_PATH;
     for (i = 1; i < argc; i++) {
         if (d_path_next) {
             args.dungeon_path = argv[i];

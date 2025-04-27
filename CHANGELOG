@@ -290,3 +290,18 @@
           which already shows all that anyway.
          Fixed a long-standing bug with PC and character speed being incorrectly
           implemented.
+
+-- ASSIGNMENT 2 --
+4/26:
+    11a: Began experimenting with sixel libraries. Settled on notcurses.
+         Ripped out ncurses, new game_loop.cpp.
+4/27:
+    11a: Implemented a global logger. Notcurses blows up if we try to print while
+          it's rendering, so this holds all messages in a queue until it exits
+          and reprints them. Also adds log levels.
+         Implemented a resource manager. It scans all of the textures in assets
+          and loads exactly one Visual for rendering. Keeps memory to a minimum,
+          since we don't have to load them multiple times.
+         Created the new main game loop. Added textures, migrated everything
+          that used ncurses, and made the game/healthbar/inventory render with
+          sixel images. Lots of missing features still.

@@ -47,6 +47,8 @@ class item_definition_t {
         bool artifact;
         bool artifact_created = false;
         int rarity;
+        std::string floor_texture;
+        std::string ui_texture;
 };
 
 class item_t {

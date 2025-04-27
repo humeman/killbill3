@@ -185,7 +185,7 @@ void game_t::run_internal() {
         }
 
         // Print the status message at the top (approx. centered to 80 chars)
-        message_queue_t::get()->emit(0, true);
+        message_queue_t::get()->emit(nullptr, true);
 
         // And health/inventory at the bottom
         move(HEIGHT - 2, 0);

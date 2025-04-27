@@ -1,8 +1,8 @@
 #include "message_queue.h"
 #include "macros.h"
 
-#include <ncurses.h>
 
+message_queue_t *message_queue_t::instance = nullptr;
 
 std::string escape_col(std::string inp) {
     unsigned long n = 0;
@@ -13,7 +13,7 @@ std::string escape_col(std::string inp) {
     return inp;
 }
 
-void message_queue_t::emit(int y, bool sticky) {
+void message_queue_t::emit(ncpp::Plane &plane, bool sticky) {
     if (messages.empty()) return;
     std::string message = messages.front();
     if (!sticky)
@@ -51,19 +51,19 @@ void message_queue_t::emit(int y, bool sticky) {
     }
 
     // We know the length now -- find where on the screen that is.
-    int x0 = (WIDTH - count) / 2;
+    int x0 = (plane.get_dim_x() - count) / 2;
     if (x0 < 0) x0 = 0; // Overflow
+    plane.cursor_move(plane.get_y(), x0);
 
-    move(y, x0);
-    attrset(COLOR_PAIR(COLORS_TEXT));
+    NC_RESET(plane);
     int disp_i = 0;
     active = false;
-    for (i = 0; (c = message[i]) && disp_i < WIDTH - 3; i++) {
+    for (i = 0; (c = message[i]) && disp_i < (int) (plane.get_dim_x()) - 3; i++) {
         if (c == '&') {
             if (active) {
                 active = false;
                 disp_i++;
-                addch('&');
+                plane.putc(c);
             } else {
                 // Activate the color code symbol, but don't count yet.
                 active = true;
@@ -71,15 +71,16 @@ void message_queue_t::emit(int y, bool sticky) {
         }
         else if (active) {
             active = false;
+
             // Find out what color code this is.
             if (c == 'b') {
-                attron(A_BOLD);
+                plane.styles_on(ncpp::CellStyle::Bold);
             } else if (c == 'd') {
-                attron(A_DIM);
+                NC_APPLY_DIM(plane);
             } else if (c == 'r') {
-                attrset(COLOR_PAIR(COLORS_TEXT));
+                NC_RESET(plane);
             } else if (c >= '0' && c <= '7') {
-                attrset(COLOR_PAIR(COLORS_FLOOR_ANY + (c - '0')));
+                NC_APPLY_COLOR_BY_NUM(plane, c - '0', RGB_COLOR_BLACK);
             } else {
                 std::string err = "invalid color format specifier '";
                 err += c;
@@ -89,19 +90,23 @@ void message_queue_t::emit(int y, bool sticky) {
         }
         else {
             disp_i++;
-            addch(c);
+            plane.putc(c);
         }
     }
-    if (disp_i >= WIDTH - 6) {
+    if (disp_i >= (int) (plane.get_dim_x()) - 6) {
         // Cut off
-        attrset(COLOR_PAIR(COLORS_TEXT) | A_DIM);
-        mvprintw(y, WIDTH - 6, "... ");
+        NC_APPLY_COLOR(plane, RGB_COLOR_WHITE, RGB_COLOR_BLACK);
+        NC_APPLY_DIM(plane);
+        plane.cursor_move(plane.get_y(), plane.get_dim_x() - 6);
+        plane.putstr("... ");
     }
 
     // If there's more to print, we can show that too
     if (!messages.empty() && !sticky) {
-        attrset(COLOR_PAIR(COLORS_TEXT) | A_DIM);
-        mvprintw(y, WIDTH - 2, "->");
+        NC_APPLY_COLOR(plane, RGB_COLOR_WHITE, RGB_COLOR_BLACK);
+        NC_APPLY_DIM(plane);
+        plane.cursor_move(plane.get_y(), plane.get_dim_x() - 2);
+        plane.putstr("->");
     }
 }
 

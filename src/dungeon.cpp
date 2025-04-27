@@ -4,6 +4,7 @@
 #include "dungeon.h"
 #include "macros.h"
 #include <string.h>
+#include "logger.h"
 
 #define STONE_SEED_COUNT 10
 #define GAUSSIAN_CONVOLUTION_COUNT 2
@@ -473,7 +474,7 @@ void dungeon_t::fill_from_file(FILE *f, int debug, coordinates_t *pc_coords) {
     size = fread(header, sizeof (*header), header_size, f);
     if (size != strlen(FILE_HEADER)) throw dungeon_exception(__PRETTY_FUNCTION__, "the specified file is not an RLG327 file (file ended too early)");
     header[header_size] = 0; // ensures null byte to terminate
-    if (debug) printf("debug: file header = %s\n", header);
+    logger_t::debug(__FILE__, "file header: " + std::string(header));
     if (strcmp(FILE_HEADER, header)) throw dungeon_exception(__PRETTY_FUNCTION__, "the specified file is not an RLG327 file (header mismatch)");
 
     READ_UINT32(version, "version", f, debug);
@@ -511,7 +512,7 @@ void dungeon_t::fill_from_file(FILE *f, int debug, coordinates_t *pc_coords) {
     if (fseek(f, FILE_ROOM_COUNT_OFFSET + sizeof (room_count), SEEK_SET)) throw dungeon_exception(__PRETTY_FUNCTION__, "unexpected error while reading file (could not seek past room count)");
 
     for (i = 0; i < room_count; i++) {
-        if (debug) printf("debug: reading room %d\n", i);
+        logger_t::debug(__FILE__, "reading room " + std::to_string(i));
         READ_UINT8(x0, "room x0", f, debug);
         READ_UINT8(y0, "room y0", f, debug);
         READ_UINT8(width, "room width", f, debug);
@@ -529,7 +530,7 @@ void dungeon_t::fill_from_file(FILE *f, int debug, coordinates_t *pc_coords) {
 
     READ_UINT16(up_staircase_count, "up staircase count", f, debug);
     for (i = 0; i < up_staircase_count; i++) {
-        if (debug) printf("debug: reading up staircase %d\n", i);
+        logger_t::debug(__FILE__, "reading up staircase " + std::to_string(i));
         READ_UINT8(x, "up staircase x", f, debug);
         READ_UINT8(y, "up staircase y", f, debug);
 
@@ -537,7 +538,7 @@ void dungeon_t::fill_from_file(FILE *f, int debug, coordinates_t *pc_coords) {
     }
     READ_UINT16(down_staircase_count, "down staircase count", f, debug);
     for (i = 0; i < down_staircase_count; i++) {
-        if (debug) printf("debug: reading down staircase %d\n", i);
+        logger_t::debug(__FILE__, "reading down staircase " + std::to_string(i));
         READ_UINT8(x, "down staircase x", f, debug);
         READ_UINT8(y, "down staircase y", f, debug);
         cells[x][y].type = CELL_TYPE_DOWN_STAIRCASE;
@@ -557,7 +558,7 @@ void dungeon_t::save_to_file(FILE *f, int debug, coordinates_t *pc_coords) {
     size_t size = fwrite(header, sizeof (*header), header_size, f);
 
     if (size != (size_t) header_size) throw dungeon_exception(__PRETTY_FUNCTION__, "could not write to file");
-    if (debug) printf("debug: header = %s, wrote %ld bytes\n", header, sizeof (*header) * header_size);
+    logger_t::debug(__FILE__, "header = " + std::string(header) + ", wrote " + std::to_string(sizeof (*header) * header_size) + " bytes");
 
     version = FILE_VERSION;
     WRITE_UINT32(version, "version", f, debug);
@@ -605,7 +606,7 @@ void dungeon_t::save_to_file(FILE *f, int debug, coordinates_t *pc_coords) {
     WRITE_UINT16(room_count, "room count", f, debug);
     int i;
     for (i = 0; i < room_count; i++) {
-        if (debug) printf("debug: writing room %d\n", i);
+        logger_t::debug(__FILE__, "writing room " + std::to_string(i));
         WRITE_UINT8((rooms[i].x0), "room x0", f, debug);
         WRITE_UINT8((rooms[i].y0), "room y0", f, debug);
         width = rooms[i].x1 - rooms[i].x0 + 1;
@@ -616,13 +617,13 @@ void dungeon_t::save_to_file(FILE *f, int debug, coordinates_t *pc_coords) {
 
     WRITE_UINT16(up_count, "up staircase count", f, debug);
     for (i = 0; i < up_count; i++) {
-        if (debug) printf("debug: writing up staircase %d\n", i);
+        logger_t::debug(__FILE__, "writing up staircase " + std::to_string(i));
         WRITE_UINT8((up[i].x), "up staircase x", f, debug);
         WRITE_UINT8((up[i].y), "up staircase y", f, debug);
     }
     WRITE_UINT16(down_count, "down staircase count", f, debug);
     for (i = 0; i < down_count; i++) {
-        if (debug) printf("debug: writing down staircase %d\n", i);
+        logger_t::debug(__FILE__, "writing down staircase " + std::to_string(i));
         WRITE_UINT8((down[i].x), "down staircase x", f, debug);
         WRITE_UINT8((down[i].y), "down staircase y", f, debug);
     }

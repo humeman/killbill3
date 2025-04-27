@@ -21,7 +21,7 @@ typedef enum {
 } game_result_t;
 
 #define CELL_TYPES 8
-typedef enum {
+typedef enum { // if modified, sync with CELL_TYPES_TO_FLOOR_TEXTURES, game_loop.cpp
     CELL_TYPE_STONE,
     CELL_TYPE_ROOM,
     CELL_TYPE_HALL,

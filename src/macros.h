@@ -49,9 +49,9 @@
 #define FLAG_COLOR_WHITE 0x40 // 6
 #define FLAG_COLOR_BLACK 0x80 // 7
 
-#define DEFAULT_DUNGEON_PATH "/.rlg327/dungeon"
-#define DEFAULT_MONSTER_PATH "/.rlg327/monster_desc.txt"
-#define DEFAULT_ITEM_PATH "/.rlg327/object_desc.txt"
+#define DEFAULT_DUNGEON_PATH "assets/dungeon"
+#define DEFAULT_MONSTER_PATH "assets/enemies.txt"
+#define DEFAULT_ITEM_PATH "assets/items.txt"
 
 // The spec for generating items and monsters involves redrawing if the randomly chosen
 // monster/item is invalid. This specifies a number of attempts beyond which it is considered
@@ -60,6 +60,41 @@
 #define MAX_GENERATION_ATTEMPTS 500
 
 #define STRING(x) #x
+
+typedef enum color_codes {
+    RGB_COLOR_RED = 0xFF0000,
+    RGB_COLOR_GREEN = 0x00FF00,
+    RGB_COLOR_YELLOW = 0xFFFF00,
+    RGB_COLOR_BLUE = 0x0000FF,
+    RGB_COLOR_MAGENTA = 0xFF00FF,
+    RGB_COLOR_CYAN = 0x00FFFF,
+    RGB_COLOR_WHITE = 0xFFFFFF,
+    RGB_COLOR_BLACK = 0x00
+} color_codes_t;
+
+#define NC_APPLY_COLOR(plane, color_code, bg) { \
+    (plane).set_fg_rgb8(((color_code) >> 16) & 0xFF, ((color_code) >> 8) & 0xFF, (color_code) & 0xFF); \
+    if (bg >= 0) (plane).set_bg_rgb8(((bg) >> 16) & 0xFF, ((bg) >> 8) & 0xFF, ((bg) & 0xFF)); }
+
+#define NC_APPLY_DIM(plane) { \
+    unsigned int r, g, b; \
+    plane.get_fg_rgb8(&r, &g, &b); \
+    NC_APPLY_COLOR((plane), (b / 2) | (g / 2) << 8 | (r / 2) << 16, -1); }
+
+#define NC_APPLY_COLOR_BY_NUM(plane, num, bg) { \
+    switch (num) { \
+        case 0: NC_APPLY_COLOR(plane, RGB_COLOR_RED, bg); break; \
+        case 1: NC_APPLY_COLOR(plane, RGB_COLOR_GREEN, bg); break; \
+        case 2: NC_APPLY_COLOR(plane, RGB_COLOR_YELLOW, bg); break; \
+        case 3: NC_APPLY_COLOR(plane, RGB_COLOR_BLACK, bg); break; \
+        case 4: NC_APPLY_COLOR(plane, RGB_COLOR_MAGENTA, bg); break; \
+        case 5: NC_APPLY_COLOR(plane, RGB_COLOR_CYAN, bg); break; \
+        case 6: NC_APPLY_COLOR(plane, bg == RGB_COLOR_WHITE ? RGB_COLOR_BLACK : RGB_COLOR_WHITE, bg); break; \
+        case 7: NC_APPLY_COLOR(plane, bg == RGB_COLOR_BLACK ? RGB_COLOR_WHITE : RGB_COLOR_BLACK, bg); break; } }
+
+#define NC_RESET(plane) { \
+    NC_APPLY_COLOR(plane, RGB_COLOR_WHITE, RGB_COLOR_BLACK); \
+    (plane).styles_off(ncpp::CellStyle::Bold); }
 
 typedef enum colors {
     COLORS_FLOOR = 1,
@@ -101,12 +136,6 @@ class dungeon_exception : public std::exception {
         }
 };
 
-
-#define RETURN_ERROR(message, ...) { \
-    fprintf(stderr, "err: " message "\n", ##__VA_ARGS__); \
-    return 1; \
-}
-
 #define PRINT_PADDED(message, width) { \
     int padding = (width - strlen(message)) / 2 - 1; \
     for (int i = 0; i < padding; i++) printf("="); \
@@ -130,40 +159,40 @@ class dungeon_exception : public std::exception {
     size_t size = fread(&var, sizeof (var), 1, f); \
     if (size != 1) throw dungeon_exception(__PRETTY_FUNCTION__, "the specified file is not a valid RLG327 file (file ended too early)"); \
     var = be32toh(var); \
-    if (debug) printf("debug: %s = %u\n", description, var); }
+    logger_t::debug(__FILE__, std::string(description) + " = " + std::to_string(var)); }
 
 // Reads a uint16 from f into the variable specified in 'var'.
 #define READ_UINT16(var, description, f, debug) { \
     size_t size = fread(&var, sizeof (var), 1, f); \
     if (size != 1) throw dungeon_exception(__PRETTY_FUNCTION__, "the specified file is not a valid RLG327 file (file ended too early)"); \
     var = be16toh(var); \
-    if (debug) printf("debug: %s = %u\n", description, var); }
+    logger_t::debug(__FILE__, std::string(description) + " = " + std::to_string(var)); }
 
 // Reads a uint8 from f into the variable specified in 'var'.
 #define READ_UINT8(var, description, f, debug) { \
     size_t size = fread(&var, sizeof (var), 1, f); \
     if (size != 1) throw dungeon_exception(__PRETTY_FUNCTION__, "the specified file is not a valid RLG327 file (file ended too early)"); \
-    if (debug) printf("debug: %s = %u\n", description, var); }
+    logger_t::debug(__FILE__, std::string(description) + " = " + std::to_string(var)); }
 
 // Writes the uint32 variable 'var' into f.
 #define WRITE_UINT32(var, description, f, debug) { \
     uint32_t be = htobe32(var); \
     size_t size = fwrite(&be, sizeof (uint32_t), 1, f); \
     if (size != 1) throw dungeon_exception(__PRETTY_FUNCTION__, "could not write to file"); \
-    if (debug) printf("debug: %s = %u, wrote %ld bytes\n", description, var, sizeof (var)); }
+    logger_t::debug(__FILE__, std::string(description) + " = " + std::to_string(var) + ", wrote " + std::to_string(sizeof (var)) + " bytes"); }
 
 // Writes the uint16 variable 'var' into f.
 #define WRITE_UINT16(var, description, f, debug) { \
     uint16_t be = htobe16(var); \
     size_t size = fwrite(&be, sizeof (uint16_t), 1, f); \
     if (size != 1) throw dungeon_exception(__PRETTY_FUNCTION__, "could not write to file"); \
-    if (debug) printf("debug: %s = %u, wrote %ld bytes\n", description, var, sizeof (var)); }
+    logger_t::debug(__FILE__, std::string(description) + " = " + std::to_string(var) + ", wrote " + std::to_string(sizeof (var)) + " bytes"); }
 
 // Writes the uint8 variable 'var' into f.
 #define WRITE_UINT8(var, description, f, debug) { \
     size_t size = fwrite(&var, sizeof (uint8_t), 1, f); \
     if (size != 1) throw dungeon_exception(__PRETTY_FUNCTION__, "could not write to file"); \
-    if (debug) printf("debug: %s = %u, wrote %ld bytes\n", description, var, sizeof (var)); }
+    logger_t::debug(__FILE__, std::string(description) + " = " + std::to_string(var) + ", wrote " + std::to_string(sizeof (var)) + " bytes"); }
 
 #define APPEND_MONST_ATTRS(attrs, str) { \
     if (attrs & MONSTER_ATTRIBUTE_BOSS) str += "*BOSS* "; \
@@ -175,5 +204,7 @@ class dungeon_exception : public std::exception {
     if (attrs & MONSTER_ATTRIBUTE_PICKUP) str += "pickup "; \
     if (attrs & MONSTER_ATTRIBUTE_DESTROY) str += "destroy "; \
     if (attrs & MONSTER_ATTRIBUTE_UNIQUE) str += "unique "; }
+
+#define PC_TEXTURE "characters_pc"
 
 #endif

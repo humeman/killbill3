@@ -1,0 +1,22 @@
+KILL BILL 3 ITEM DESCRIPTION 1
+
+BEGIN ITEM keyboard
+NAME a Dell(tm) keyboard
+TYPE WEAPON
+COLOR BLACK
+WEIGHT 1+0d1
+HIT 0+0d1
+DAM 2+0d1
+ATTR 0+0d1
+VAL 9+1d6
+DODGE 10+0d1
+DEF 0+0d1
+SPEED 0+0d1
+DESC
+Avoid. Deny. Defend.
+.
+RRTY 90
+ART FALSE
+TEXTURE items_keyboard
+UI_TEXTURE items_keyboard_ui
+END
