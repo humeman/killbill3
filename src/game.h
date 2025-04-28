@@ -62,6 +62,7 @@ class game_t {
         ncpp::NotCurses *nc = nullptr;
         ncpp::Plane *top_plane;
         ncpp::Plane *bottom_plane;
+        ncpp::Plane *overlay_plane;
         std::vector<ncpp::Plane *> cell_planes;
         std::vector<ncpp::Plane *> health_planes;
         std::vector<ncpp::Plane *> item_planes;

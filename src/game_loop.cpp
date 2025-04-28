@@ -155,6 +155,10 @@ void game_t::run() {
             cell_cache.push_back("");
         }
 
+        overlay_plane = new ncpp::Plane(term_y, term_x, 0, 0);
+        NC_RESET(*overlay_plane);
+        NC_HIDE(*overlay_plane);
+
         run_internal();
     } catch (dungeon_exception &e) {
         ex = new dungeon_exception(__PRETTY_FUNCTION__, e, "game loop failed");
@@ -196,8 +200,32 @@ void game_t::run_internal() {
     render_frame(true);
     while (true) {
         render_frame(false);
-
         nc->get(true, &inp);
+
+        if (result != GAME_RESULT_RUNNING) {
+            // Print our beautiful images
+            if (result == GAME_RESULT_LOSE) {
+                NC_APPLY_COLOR((*overlay_plane), RGB_COLOR_WHITE, RGB_COLOR_BSOD)
+                overlay_plane->styles_set(ncpp::CellStyle::Bold);
+                overlay_plane->printf(10, 2, "Your PC ran into a problem and needs to restart. We're");
+                overlay_plane->printf(11, 2, "just collecting some error info, and then we'll restart for");
+                overlay_plane->printf(12, 2, "you.");
+                overlay_plane->printf(14, 2, "5%% complete");
+                NC_UNHIDE((*overlay_plane));
+            }
+            else {
+                NC_APPLY_COLOR((*overlay_plane), RGB_COLOR_WHITE, RGB_COLOR_BSOD)
+                overlay_plane->styles_set(ncpp::CellStyle::Bold);
+                overlay_plane->printf(10, 2, "Your PC ran into a problem and needs to restart. We're");
+                overlay_plane->printf(11, 2, "just collecting some error info, and then we'll restart for");
+                overlay_plane->printf(12, 2, "you.");
+                overlay_plane->printf(14, 2, "5%% complete");
+                NC_UNHIDE((*overlay_plane));
+            }
+            nc->get(true, &inp);
+            return;
+        }
+
         next_turn_ready = false;
         if (controls.count(inp.id) != 0) {
             auto ctrl = controls.at(inp.id);

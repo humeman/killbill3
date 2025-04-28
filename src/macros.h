@@ -69,7 +69,8 @@ typedef enum color_codes {
     RGB_COLOR_MAGENTA = 0xFF00FF,
     RGB_COLOR_CYAN = 0x00FFFF,
     RGB_COLOR_WHITE = 0xFFFFFF,
-    RGB_COLOR_BLACK = 0x00
+    RGB_COLOR_BLACK = 0x00,
+    RGB_COLOR_BSOD = 0x0033bb
 } color_codes_t;
 
 #define NC_APPLY_COLOR(plane, color_code, bg) { \
@@ -95,6 +96,14 @@ typedef enum color_codes {
 #define NC_RESET(plane) { \
     NC_APPLY_COLOR(plane, RGB_COLOR_WHITE, RGB_COLOR_BLACK); \
     (plane).styles_off(ncpp::CellStyle::Bold); }
+
+#define NC_HIDE(plane) { \
+    (plane).set_fg_alpha(0); \
+    (plane).set_bg_alpha(0); }
+
+#define NC_UNHIDE(plane) { \
+    (plane).set_fg_alpha(255); \
+    (plane).set_bg_alpha(255); }
 
 typedef enum colors {
     COLORS_FLOOR = 1,
