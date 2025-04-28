@@ -1,5 +1,5 @@
 # Kill Bill 3
-The long-awaited third installment of hit AAA video game series, Kill Bill (tm).
+The long-awaited third installment of hit AAA video game series, Kill Bill (tm) (please don't sue me).
 
 In the time since Kill Bill 2 was released, I've gotten *really* bored of GUI applications. They make me use my mouse and use awful, ugly custom graphics. Terrible!
 

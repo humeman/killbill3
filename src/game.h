@@ -167,10 +167,8 @@ class game_t {
         /**
           * Takes the turns of everything in the turn queue until the PC's turn (or
           *  until it dies).
-          *
-          * Returns: Game result denoting the current state
           */
-        game_result_t run_until_pc();
+        void run_until_pc();
 
         /**
           * Displays the monster menu.

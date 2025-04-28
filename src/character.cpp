@@ -181,12 +181,14 @@ uint8_t monster_t::current_color() {
     throw dungeon_exception(__PRETTY_FUNCTION__, "did not find target color (was it modified?)");
 }
 
+int VALID_MOVES[][2] = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}};
+
 void monster_t::take_turn(dungeon_t *dungeon, pc_t *pc, binary_heap_t<character_t *> &turn_queue, character_t ***character_map, item_t ***item_map, uint32_t **pathfinding_tunnel, uint32_t **pathfinding_no_tunnel, uint32_t priority, game_result_t &result) {
     // Find out which direction this monster wants to go.
     // - Telepathic: Directly to the PC
     // - Intelligent: Towards the last seen location
     // - None: Only towards the PC if there's LOS
-    uint8_t min, x_offset, y_offset, target_x, target_y;
+    uint8_t min, x_offset, target_x, target_y;
     coordinates_t next;
     int i, j, x1, y1, dam, r;
     uint32_t** map;
@@ -232,17 +234,18 @@ void monster_t::take_turn(dungeon_t *dungeon, pc_t *pc, binary_heap_t<character_
 
             // Pick the best direction
             min = UINT8_MAX;
-            for (x1 = x - 1; x1 <= x + 1; x1++) {
-                for (y1 = y - 1; y1 <= y + 1; y1++) {
-                    if (x1 == x && y1 == y) continue;
-                    if (x1 < 0 || x1 >= dungeon->width || y1 < 0 || y1 >= dungeon->height) continue;
-                    if (map[x1][y1] == UINT32_MAX) continue;
-                    // Find the minimum while preferring non-stone cells.
-                    if (map[x1][y1] < min || (map[x1][y1] == min && dungeon->cells[x1][y1].type != CELL_TYPE_STONE)) {
-                        min = map[x1][y1];
-                        next.x = x1;
-                        next.y = y1;
-                    }
+            for (int *move : VALID_MOVES) {
+                x1 = x + move[0];
+                y1 = y + move[1];
+                if (x1 < 0 || x1 >= dungeon->width) continue;
+                if (y1 < 0 || y1 >= dungeon->height) continue;
+                if (x1 == x && y1 == y) continue;
+                if (map[x1][y1] == UINT32_MAX) continue;
+                // Find the minimum while preferring non-stone cells.
+                if (map[x1][y1] < min || (map[x1][y1] == min && dungeon->cells[x1][y1].type != CELL_TYPE_STONE)) {
+                    min = map[x1][y1];
+                    next.x = x1;
+                    next.y = y1;
                 }
             }
 
@@ -266,24 +269,21 @@ void monster_t::take_turn(dungeon_t *dungeon, pc_t *pc, binary_heap_t<character_
     if ((attributes & MONSTER_ATTRIBUTE_ERRATIC) && rand() % 2 == 1) {
         // Pick a random available cell around the monster.
         x_offset = rand();
-        y_offset = rand();
         can_move = 0;
-        for (i = 0; i < 3; i++) {
-            x1 = (int) x - 1 + (i + (int) x_offset) % 3;
+        j = ARRAY_SIZE(VALID_MOVES);
+        for (i = 0; i < j; i++) {
+            x1 = x + VALID_MOVES[(x_offset + i) % j][0];
+            y1 = y + VALID_MOVES[(x_offset + i) % j][1];
             if (x1 < 0 || x1 >= dungeon->width) continue;
-            for (j = 0; j < 3; j++) {
-                y1 = (int) y - 1 + (j + (int) y_offset) % 3;
-                if (y1 < 0 || y1 >= dungeon->height) continue;
-                if (x1 == x && y1 == y) continue;
-                if (dungeon->cells[x1][y1].attributes & CELL_ATTRIBUTE_IMMUTABLE) continue;
-                if (dungeon->cells[x1][y1].type == CELL_TYPE_STONE && !(attributes & (MONSTER_ATTRIBUTE_TUNNELING | MONSTER_ATTRIBUTE_GHOST))) continue;
-                // This cell is open
-                next.x = x1;
-                next.y = y1;
-                can_move = 1;
-                break;
-            }
-            if (can_move) break;
+            if (y1 < 0 || y1 >= dungeon->height) continue;
+            if (x1 == x && y1 == y) continue;
+            if (dungeon->cells[x1][y1].attributes & CELL_ATTRIBUTE_IMMUTABLE) continue;
+            if (dungeon->cells[x1][y1].type == CELL_TYPE_STONE && !(attributes & (MONSTER_ATTRIBUTE_TUNNELING | MONSTER_ATTRIBUTE_GHOST))) continue;
+            // This cell is open
+            next.x = x1;
+            next.y = y1;
+            can_move = 1;
+            break;
         }
     }
 
