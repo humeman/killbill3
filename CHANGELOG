@@ -302,6 +302,8 @@
          Implemented a resource manager. It scans all of the textures in assets
           and loads exactly one Visual for rendering. Keeps memory to a minimum,
           since we don't have to load them multiple times.
-         Created the new main game loop. Added textures, migrated everything
+    5p:  Created the new main game loop. Added textures, migrated everything
           that used ncurses, and made the game/healthbar/inventory render with
           sixel images. Lots of missing features still.
+    8p:  Added controls back in (as a function map this time), and the PC moves again.
+         Added directional movement (PC/monsters turn in the direction they move).

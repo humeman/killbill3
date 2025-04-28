@@ -44,6 +44,13 @@ class monster_definition_t {
 
 void verify_monster_definition(monster_definition_t *def);
 
+typedef enum {
+    DIRECTION_NORTH,
+    DIRECTION_EAST,
+    DIRECTION_SOUTH,
+    DIRECTION_WEST
+} direction_t;
+
 /**
  * The base class (abstract) for a dungeon character.
  */
@@ -51,8 +58,9 @@ class character_t {
     protected:
         item_t *item = NULL;
         int item_count = 0;
-
+        
     public:
+        direction_t direction = DIRECTION_NORTH;
         char display;
         uint8_t x;
         uint8_t y;

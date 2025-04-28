@@ -19,7 +19,6 @@
 #define CELL_CACHE_HEARTS_AT(this, i) this->cell_cache[this->cells_x * this->cells_y + i]
 #define CELL_CACHE_ITEMS_AT(this, i) this->cell_cache[this->cells_x * this->cells_y + HEARTS + i]
 #define DRAW_TO_PLANE(plane, texture_name) { \
-    (plane)->erase(); \
     ncvisual_options vopts{}; \
     vopts.flags |= NCVISUAL_OPTION_NOINTERPOLATE; \
     vopts.scaling = NCSCALE_STRETCH; \
@@ -135,11 +134,24 @@ void game_t::run() {
             NC_RESET(*plane);
             health_planes.push_back(plane);
         }
+        logger_t::debug(__FILE__, "create item planes");
+        item_planes.clear();
+        unsigned long item_count = ARRAY_SIZE(pc.equipment) + MAX_CARRY_SLOTS;
+        item_planes.reserve(item_count * sizeof (ncpp::Plane *));
+        // 2 cols wide, 1 row high.
+        // 2 col gap for indicators.
+        xoff = (bottom_plane->get_dim_x() - 4 * item_count) / 2;
+
+        for (unsigned int x = 0; x < item_count; x++) {
+            plane = new ncpp::Plane(1, 2, bottom_plane->get_y() + 2, x * 4 + xoff);
+            NC_RESET(*plane);
+            item_planes.push_back(plane);
+        }
 
         logger_t::debug(__FILE__, "create cell cache");
         cell_cache.clear();
         cell_cache.reserve((cells_x * cells_y + HEARTS) * sizeof (std::string *));
-        for (unsigned int x = 0; x < (cells_x * cells_y + HEARTS); x++) {
+        for (unsigned int x = 0; x < (cells_x * cells_y + HEARTS + item_count); x++) {
             cell_cache.push_back("");
         }
 
@@ -179,15 +191,26 @@ void game_t::run() {
 }
 
 void game_t::run_internal() {
+    ncinput inp;
     message_queue_t::get()->add("--- &0&bKILL BILL 3&r ---");
     render_frame(true);
+    while (true) {
+        nc->get(true, &inp);
+        
+        if (controls.count(inp.id) != 0) {
+            auto ctrl = controls.at(inp.id);
+            (this->*ctrl)();
+        }
+        if (game_exit) return;
+        
+        render_frame(false);
+    }
     ncinput ni;
     nc->get(true, &ni);
 }
 
 void game_t::render_frame(bool complete_redraw) {
     // Status message.
-    logger_t::debug(__FILE__, "top plane");
     top_plane->erase();
     message_queue_t::get()->emit(*top_plane, false);
 
@@ -229,11 +252,24 @@ void game_t::render_frame(bool complete_redraw) {
                 // Characters get first priority.
                 if (character_map[x][y]) {
                     if (character_map[x][y]->type() == CHARACTER_TYPE_PC) {
-                        new_texture = PC_TEXTURE "_n";
+                        new_texture = std::string(PC_TEXTURE) + "_" + "nesw"[pc.direction];
                     }
                     else if (character_map[x][y]->type() == CHARACTER_TYPE_MONSTER) {
                         monst = (monster_t *) character_map[x][y];
-                        new_texture = monst->definition->floor_texture_n;
+                        switch (monst->direction) {
+                            case DIRECTION_NORTH:
+                                new_texture = monst->definition->floor_texture_n;
+                                break;
+                            case DIRECTION_EAST:
+                                new_texture = monst->definition->floor_texture_e;
+                                break;
+                            case DIRECTION_SOUTH:
+                                new_texture = monst->definition->floor_texture_s;
+                                break;
+                            case DIRECTION_WEST:
+                                new_texture = monst->definition->floor_texture_w;
+                                break;
+                        }
                     }
                 }
                 // Then items.
@@ -276,7 +312,29 @@ void game_t::render_frame(bool complete_redraw) {
             DRAW_TO_PLANE(health_planes[i], "ui_heart_dead");
         }
     }
-    
-    logger_t::debug(__FILE__, "render");
+
+    // The inventory.
+    std::string item_texture;
+    NC_APPLY_COLOR(*bottom_plane, RGB_COLOR_WHITE, RGB_COLOR_BLACK);
+    NC_APPLY_DIM((*bottom_plane));
+    for (i = 0; i < MAX_CARRY_SLOTS; i++) {
+        item_texture = i < pc.inventory_size() ? pc.inventory_at(i)->definition->ui_texture : "items_empty";
+
+        if (CELL_CACHE_ITEMS_AT(this, i) != item_texture) {
+            CELL_CACHE_ITEMS_AT(this, i) = item_texture;
+            DRAW_TO_PLANE(item_planes[i], item_texture);
+        }
+        bottom_plane->putc(2, item_planes[i]->get_x() - 1, i == 9 ? '0' : '1' + i);
+    }
+    for (i = 0; i < ARRAY_SIZE(pc.equipment); i++) {
+        item_texture = pc.equipment[i] ? pc.equipment[i]->definition->ui_texture : "items_empty";
+
+        if (CELL_CACHE_ITEMS_AT(this, MAX_CARRY_SLOTS + i) != item_texture) {
+            CELL_CACHE_ITEMS_AT(this, MAX_CARRY_SLOTS + i) = item_texture;
+            DRAW_TO_PLANE(item_planes[MAX_CARRY_SLOTS + i], item_texture);
+        }
+        bottom_plane->putc(2, item_planes[MAX_CARRY_SLOTS + i]->get_x() - 1, 'a' + i);
+    }
+
     nc->render();
 }

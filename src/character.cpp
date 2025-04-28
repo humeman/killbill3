@@ -43,8 +43,16 @@ void character_t::move_to(coordinates_t to, character_t ***character_map) {
         character_map[x][y] = NULL;
     }
     character_map[to.x][to.y] = this;
+    // Find which direction we went.
+    // If we move more than 1 cell at a time, this won't work well, and that's fine.
+    if (to.x > x) direction = DIRECTION_EAST;
+    else if (to.x < x) direction = DIRECTION_WEST;
+    else if (to.y < y) direction = DIRECTION_NORTH;
+    else if (to.y > y) direction = DIRECTION_SOUTH;
+    
     x = to.x;
     y = to.y;
+    
     location_initialized = true;
 }
 

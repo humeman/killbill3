@@ -8,50 +8,32 @@
 #include <ncpp/NotCurses.hh>
 #include <notcurses/nckeys.h>
 
-typedef enum keybinds {
-    KB_UP_LEFT_0 = '7',
-    KB_UP_LEFT_1 = 'y',
-    KB_UP_0 = '8',
-    KB_UP_1 = 'k',
-    KB_UP_RIGHT_0 = '9',
-    KB_UP_RIGHT_1 = 'u',
-    KB_RIGHT_0 = '6',
-    KB_RIGHT_1 = 'l',
-    KB_DOWN_RIGHT_0 = '3',
-    KB_DOWN_RIGHT_1 = 'n',
-    KB_DOWN_0 = '2',
-    KB_DOWN_1 = 'j',
-    KB_DOWN_LEFT_0 = '1',
-    KB_DOWN_LEFT_1 = 'b',
-    KB_LEFT_0 = '4',
-    KB_LEFT_1 = 'h',
-    KB_DOWN_STAIRS = '>',
-    KB_UP_STAIRS = '<',
-    KB_REST_0 = '5',
-    KB_REST_1 = ' ',
-    KB_REST_2 = '.',
-    KB_MONSTERS = 'm',
-    KB_SCROLL_UP = NCKEY_UP,
-    KB_SCROLL_DOWN = NCKEY_DOWN,
-    KB_SCROLL_LEFT = NCKEY_LEFT,
-    KB_SCROLL_RIGHT = NCKEY_RIGHT,
-    KB_ESCAPE = NCKEY_ESC,
-    KB_QUIT = 'Q',
-    KB_TOGGLE_FOG = 'f',
-    KB_TELEPORT = 'g',
-    KB_TELEPORT_RANDOM = 'r',
-    KB_PICKUP = ',',
-    KB_EQUIP = 'w',
-    KB_UNEQUIP = 't',
-    KB_DROP = 'd',
-    KB_EXPUNGE = 'x',
-    KB_INVENTORY = 'i',
-    KB_EQUIPMENT = 'e',
-    KB_INSPECT_ITEM = 'I',
-    KB_LOOK_MODE = 'L',
-    KB_LOOK_SELECT = 't',
-    KB_NEXT_MESSAGE = NCKEY_ENTER
-} keybinds_t;
+// typedef enum keybinds {
+//     KB_N = 'w',
+//     KB_E = 'd',
+//     KB_S = 's',
+//     KB_W = 'a',
+//     KB_INTERACT = ' ',
+//     KB_REST = ' ',
+//     KB_MONSTERS = 'm',
+//     KB_SCROLL_UP = NCKEY_UP,
+//     KB_SCROLL_DOWN = NCKEY_DOWN,
+//     KB_SCROLL_LEFT = NCKEY_LEFT,
+//     KB_SCROLL_RIGHT = NCKEY_RIGHT,
+//     KB_ESCAPE = NCKEY_ESC,
+//     KB_QUIT = 'Q',
+//     KB_TOGGLE_FOG = 'f',
+//     KB_TELEPORT = 'g',
+//     KB_TELEPORT_RANDOM = 'r',
+//     KB_EQUIP = 'e',
+//     KB_UNEQUIP = 'u',
+//     KB_DROP = 'q',
+//     KB_EXPUNGE = 'x',
+//     KB_INVENTORY = 'i',
+//     KB_LOOK_MODE = 'L',
+//     KB_LOOK_SELECT = 't',
+//     KB_NEXT_MESSAGE = NCKEY_ENTER
+// } keybinds_t;
 
 extern char CHARACTERS_BY_CELL_TYPE[CELL_TYPES];
 extern int COLORS_BY_CELL_TYPE[CELL_TYPES];
@@ -86,6 +68,14 @@ class game_t {
         std::vector<std::string> cell_cache;
 
         unsigned int term_x, term_y, cells_x, cells_y, xoff;
+
+        std::map<uint32_t, void (game_t::*)()> controls;
+        bool next_turn_ready = false;
+        bool teleport_mode = false;
+        bool look_mode = false;
+        bool game_exit = false;
+        coordinates_t pointer;
+        game_result_t result = GAME_RESULT_RUNNING;
 
     public:
         dungeon_t *dungeon;
@@ -200,7 +190,7 @@ class game_t {
          * - x_offset: Number to add to the X coordinate
          * - y_offset: Number to add to the Y coordinate
          */
-        void try_move(game_result_t &result, int x_offset, int y_offset);
+        void try_move(int x_offset, int y_offset);
 
         /**
          * Changes the value of some coordinates, clamping each value to the
@@ -217,7 +207,7 @@ class game_t {
          * Forces the PC to move to some new coordinates, regardless of if
          *  they represent a possible PC location.
          */
-        void force_move(game_result_t &result, coordinates_t dest);
+        void force_move(coordinates_t dest);
 
         /**
          * Regenerates the dungeon, placing the PC on the first instance of
@@ -233,6 +223,15 @@ class game_t {
         void render_inventory_details(item_t *item, int y0);
 
         void render_frame(bool complete_redraw);
+        void init_controls();
+
+        // Controls
+        void ctrl_move_n();
+        void ctrl_move_e();
+        void ctrl_move_w();
+        void ctrl_move_s();
+        void ctrl_quit();
+
 };
 
 #endif

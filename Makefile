@@ -1,5 +1,5 @@
 # ASSIGNMENT BINARIES
-killbill3: build/dungeon.o build/pathfinding.o build/character.o build/game.o build/game_loop.o build/parser.o build/item.o build/message_queue.o build/logger.o build/resource_manager.o build/killbill3.o
+killbill3: build/dungeon.o build/pathfinding.o build/character.o build/game.o build/game_loop.o build/game_controls.o build/parser.o build/item.o build/message_queue.o build/logger.o build/resource_manager.o build/killbill3.o
 	g++ -std=c++17 \
 		build/dungeon.o \
 		build/pathfinding.o \
@@ -12,6 +12,7 @@ killbill3: build/dungeon.o build/pathfinding.o build/character.o build/game.o bu
 		build/logger.o \
 		build/resource_manager.o \
 		build/killbill3.o \
+		build/game_controls.o \
 		-o killbill3 \
 		-lm -lnotcurses-core -lnotcurses -lnotcurses++
 
@@ -27,6 +28,10 @@ build/game.o: src/game.cpp src/game.h src/macros.h src/random.h src/ascii.h src/
 build/game_loop.o: src/game_loop.cpp src/game.h src/macros.h src/random.h src/ascii.h src/heap.h
 	@ mkdir -p build
 	g++ -std=c++17 src/game_loop.cpp -o build/game_loop.o -Wall -Werror -c -g
+
+build/game_controls.o: src/game_controls.cpp src/game.h src/macros.h src/random.h src/ascii.h src/heap.h
+	@ mkdir -p build
+	g++ -std=c++17 src/game_controls.cpp -o build/game_controls.o -Wall -Werror -c -g
 
 build/dungeon.o: src/dungeon.cpp src/dungeon.h src/macros.h src/random.h src/ascii.h src/heap.h
 	@ mkdir -p build
@@ -62,7 +67,7 @@ build/resource_manager.o: src/resource_manager.cpp src/resource_manager.h src/ma
 
 # PHONY TARGETS
 clean:
-	rm -f assignment1_* *.o *.tar.gz *.pgm; \
+	rm -f assignment1_* *.o *.tar.gz *.pgm killbill3; \
 	rm -rf build
 
 # This target creates a tarball ready to submit to Canvas for a particular assignment.

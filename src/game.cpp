@@ -163,6 +163,8 @@ game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
     monst_parser = new parser_t<monster_definition_t>(MONSTER_PARSE_RULES, sizeof (MONSTER_PARSE_RULES) / sizeof (MONSTER_PARSE_RULES[0]), "KILL BILL 3 ENEMY DESCRIPTION 1", "ENEMY", true);
     item_parser = new parser_t<item_definition_t>(ITEM_PARSE_RULES, sizeof (ITEM_PARSE_RULES) / sizeof (ITEM_PARSE_RULES[0]), "KILL BILL 3 ITEM DESCRIPTION 1", "ITEM", true);
 
+    init_controls();
+
     return;
 
     init_free_seen_map:
@@ -449,7 +451,19 @@ void game_t::update_fog_of_war() {
     }
 }
 
-void game_t::try_move(game_result_t &result, int x_offset, int y_offset) {
+
+void game_t::move_coords(coordinates_t &coords, int x_offset, int y_offset) {
+    int new_x = (int) coords.x + x_offset;
+    int new_y = (int) coords.y + y_offset;
+    if (new_x < 0) new_x = 0;
+    if (new_x >= dungeon->width) new_x = dungeon->width - 1;
+    if (new_y < 0) new_y = 0;
+    if (new_y >= dungeon->height) new_y = dungeon->height - 1;
+    coords.x = new_x;
+    coords.y = new_y;
+}
+
+void game_t::try_move(int x_offset, int y_offset) {
     int damage;
     monster_t *monst;
     if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
@@ -483,18 +497,7 @@ void game_t::try_move(game_result_t &result, int x_offset, int y_offset) {
     }
 }
 
-void game_t::move_coords(coordinates_t &coords, int x_offset, int y_offset) {
-    int new_x = (int) coords.x + x_offset;
-    int new_y = (int) coords.y + y_offset;
-    if (new_x < 0) new_x = 0;
-    if (new_x >= dungeon->width) new_x = dungeon->width - 1;
-    if (new_y < 0) new_y = 0;
-    if (new_y >= dungeon->height) new_y = dungeon->height - 1;
-    coords.x = new_x;
-    coords.y = new_y;
-}
-
-void game_t::force_move(game_result_t &result, coordinates_t dest) {
+void game_t::force_move(coordinates_t dest) {
     monster_t *monst;
     if (character_map[dest.x][dest.y] && character_map[dest.x][dest.y]->type() == CHARACTER_TYPE_MONSTER) {
         monst = (monster_t *) character_map[dest.x][dest.y];
