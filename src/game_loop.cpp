@@ -180,8 +180,8 @@ void game_t::run() {
         item_planes.pop_back();
         delete p;
     }
-    delete top_plane;
-    delete bottom_plane;
+    // Deleting the top or bottom plane blows up notcurses
+    // (it segfaults itself). Slight memory leak :)
     resource_manager_t::destroy();
     end_nc();
     if (ex) {
@@ -195,18 +195,68 @@ void game_t::run_internal() {
     message_queue_t::get()->add("--- &0&bKILL BILL 3&r ---");
     render_frame(true);
     while (true) {
+        render_frame(false);
+
         nc->get(true, &inp);
-        
+        next_turn_ready = false;
         if (controls.count(inp.id) != 0) {
             auto ctrl = controls.at(inp.id);
             (this->*ctrl)();
         }
         if (game_exit) return;
-        
-        render_frame(false);
+
+        if (result == GAME_RESULT_RUNNING && next_turn_ready) {
+            update_pathfinding(dungeon, pathfinding_no_tunnel, pathfinding_tunnel, &pc);
+            // Run the game until the PC's turn comes up again (or it dies)
+            run_until_pc();
+            //fog = false;
+        }
+        if (result != GAME_RESULT_RUNNING) {
+            //hide_fog_of_war = true;
+            message_queue_t::get()->clear();
+            message_queue_t::get()->add("&bGame over. Press any key to continue.");
+        }
     }
     ncinput ni;
     nc->get(true, &ni);
+}
+
+void game_t::run_until_pc() {
+    character_t *ch = NULL;
+    monster_t *monster;
+    uint32_t priority;
+
+    while (true) {
+        ch = NULL;
+        while (turn_queue.size() > 0 && ch == NULL) {
+            priority = turn_queue.top_priority();
+            ch = turn_queue.remove();
+            // The dead flag here avoids us having to remove from the heap at an arbitrary location.
+            // We just destroy it when it comes off the queue next.
+            if (ch->dead) {
+                if (ch != &pc) {
+                    destroy_character(character_map, ch);
+                    ch = NULL;
+                }
+            }
+        }
+
+        if (ch == NULL)
+            throw dungeon_exception(__PRETTY_FUNCTION__, "turn queue is empty");
+
+        // If this was the PC's turn, signal that back to the caller
+        if (ch == &pc) {
+            turn_queue.insert(&pc, priority + (1000 / pc.speed_bonus()));
+            result = GAME_RESULT_RUNNING;
+            return;
+        }
+
+        monster = (monster_t *) ch;
+        result = GAME_RESULT_RUNNING;
+        monster->take_turn(dungeon, &pc, turn_queue, character_map, item_map, pathfinding_tunnel, pathfinding_no_tunnel, priority, result);
+        if (pc.dead) result = GAME_RESULT_LOSE;
+        return;
+    }
 }
 
 void game_t::render_frame(bool complete_redraw) {
