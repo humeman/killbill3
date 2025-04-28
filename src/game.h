@@ -231,6 +231,7 @@ class game_t {
         void ctrl_move_w();
         void ctrl_move_s();
         void ctrl_quit();
+        void ctrl_grab_item();
 
 };
 
