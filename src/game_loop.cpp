@@ -13,6 +13,7 @@
 #include "message_queue.h"
 #include "resource_manager.h"
 #include "logger.h"
+#include <bits/this_thread_sleep.h>
 
 #define CELL_PLANE_AT(this, x, y) this->cell_planes[x * this->cells_y + y]
 #define CELL_CACHE_FLOOR_AT(this, x, y) this->cell_cache[x * this->cells_y + y]
@@ -98,13 +99,13 @@ void game_t::run() {
         NC_RESET(*bottom_plane);
 
         // Apply real RGBA black
-        NC_APPLY_COLOR(*(nc->get_stdplane()), RGB_COLOR_BLACK, 0x000001);
+        NC_APPLY_COLOR(*(nc->get_stdplane()), RGB_COLOR_BLACK, RGB_COLOR_BLACK);
         for (unsigned int x = 0; x < term_x; x++) {
             for (unsigned int y = 0; y < term_y; y++) {
                 nc->get_stdplane()->putc(y, x, ' ');
             }
         }
-        NC_APPLY_COLOR(*(bottom_plane), RGB_COLOR_BLACK, 0x000001);
+        NC_APPLY_COLOR(*(bottom_plane), RGB_COLOR_BLACK, RGB_COLOR_BLACK);
         bottom_plane->move(term_y - 4, 0);
         for (unsigned int x = bottom_plane->get_x(); x < bottom_plane->get_x() + bottom_plane->get_dim_x(); x++) {
             for (unsigned int y = bottom_plane->get_y(); y < bottom_plane->get_y() + bottom_plane->get_dim_y(); y++) {
@@ -157,7 +158,7 @@ void game_t::run() {
 
         overlay_plane = new ncpp::Plane(term_y, term_x, 0, 0);
         NC_RESET(*overlay_plane);
-        NC_HIDE(*overlay_plane);
+        overlay_plane->move_bottom();
 
         run_internal();
     } catch (dungeon_exception &e) {
@@ -196,7 +197,8 @@ void game_t::run() {
 
 void game_t::run_internal() {
     ncinput inp;
-    message_queue_t::get()->add("--- &0&bKILL BILL 3&r ---");
+    // message_queue_t::get()->add("--- &0&bKILL BILL 3&r ---");
+    unsigned int x, y;
     render_frame(true);
     while (true) {
         render_frame(false);
@@ -205,24 +207,40 @@ void game_t::run_internal() {
         if (result != GAME_RESULT_RUNNING) {
             // Print our beautiful images
             if (result == GAME_RESULT_LOSE) {
-                NC_APPLY_COLOR((*overlay_plane), RGB_COLOR_WHITE, RGB_COLOR_BSOD)
+                NC_APPLY_COLOR((*overlay_plane), RGB_COLOR_WHITE, RGB_COLOR_BSOD);
                 overlay_plane->styles_set(ncpp::CellStyle::Bold);
+                overlay_plane->move_top();
+                for (y = 0; y < term_y; y++) {
+                    for (x = 0; x < term_x; x++) {
+                        overlay_plane->putc(y, x, ' ');
+                    }
+                }
                 overlay_plane->printf(10, 2, "Your PC ran into a problem and needs to restart. We're");
                 overlay_plane->printf(11, 2, "just collecting some error info, and then we'll restart for");
                 overlay_plane->printf(12, 2, "you.");
-                overlay_plane->printf(14, 2, "5%% complete");
-                NC_UNHIDE((*overlay_plane));
             }
             else {
                 NC_APPLY_COLOR((*overlay_plane), RGB_COLOR_WHITE, RGB_COLOR_BSOD)
                 overlay_plane->styles_set(ncpp::CellStyle::Bold);
+                overlay_plane->move_top();
+                for (y = 0; y < term_y; y++) {
+                    for (x = 0; x < term_x; x++) {
+                        overlay_plane->putc(y, x, ' ');
+                    }
+                }
                 overlay_plane->printf(10, 2, "Your PC ran into a problem and needs to restart. We're");
                 overlay_plane->printf(11, 2, "just collecting some error info, and then we'll restart for");
                 overlay_plane->printf(12, 2, "you.");
-                overlay_plane->printf(14, 2, "5%% complete");
-                NC_UNHIDE((*overlay_plane));
             }
-            nc->get(true, &inp);
+            std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+            x = 0;
+            while (x <= 100) {
+                x += rand() % 31;
+                overlay_plane->printf(14, 2, "%d%% complete", x > 100 ? 100 : x);
+                nc->render();
+                std::this_thread::sleep_for(std::chrono::milliseconds(500 + rand() % 1501));
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(2000));
             return;
         }
 
@@ -282,6 +300,7 @@ void game_t::run_until_pc() {
         monster = (monster_t *) ch;
         result = GAME_RESULT_RUNNING;
         monster->take_turn(dungeon, &pc, turn_queue, character_map, item_map, pathfinding_tunnel, pathfinding_no_tunnel, priority, result);
+        message_queue_t::get()->add("pc health " + std::to_string(pc.hp));
         if (pc.dead) result = GAME_RESULT_LOSE;
         return;
     }
@@ -376,7 +395,8 @@ void game_t::render_frame(bool complete_redraw) {
     // Find the percentage of health left
     float hp = (float) pc.hp / pc.base_hp;
     // We'll have 15 hearts rendered
-    int hearts_filled = (int) (hp * HEARTS);
+    int hearts_filled = (int) ((hp < 0 ? 0 : hp) * HEARTS);
+    if (hearts_filled == 0 && pc.hp > 0) hearts_filled = 1;
     int i;
     for (i = 0; i < hearts_filled; i++) {
         if (CELL_CACHE_HEARTS_AT(this, i) != "ui_heart") {
@@ -415,4 +435,167 @@ void game_t::render_frame(bool complete_redraw) {
     }
 
     nc->render();
+}
+
+#define INVENTORY_BOX_WIDTH 25
+
+void game_t::render_inventory_box(std::string title, std::string labels, std::string input_tip, int x0, int y0) {
+    int height = labels.length() + 2;
+    unsigned int i, x, y;
+    // Clear out the area.
+    NC_APPLY_COLOR(*overlay_plane, RGB_COLOR_BLACK, RGB_COLOR_WHITE);
+    for (y = y0; y < term_y; y++) {
+        for (x = x0; x < INVENTORY_BOX_WIDTH; x++) {
+            overlay_plane->putc(y, x, ' ');
+        }
+    }
+    // Title...
+    overlay_plane->styles_set(ncpp::CellStyle::Bold);
+    NC_PRINT_CENTERED_AT(overlay_plane, x0 + INVENTORY_BOX_WIDTH / 2, y0, "%s", title.c_str());
+    overlay_plane->styles_off(ncpp::CellStyle::Bold);
+    // Input tip...
+    NC_PRINT_CENTERED_AT(overlay_plane, x0 + INVENTORY_BOX_WIDTH / 2, y0 + height - 1, "%s", input_tip.c_str());
+    // And the labels.
+    for (i = 0; i < labels.length(); i++)
+        overlay_plane->printf(y0 + 1 + i, x0, "%c", labels[i]);
+}
+
+void game_t::render_inventory_item(item_t *item, int i, bool selected, int x0, int y0) {
+    NC_APPLY_COLOR_BY_NUM(*overlay_plane, item->current_color(), selected ? RGB_COLOR_BLACK : RGB_COLOR_WHITE);
+    // mvaddch(y0 + 1 + i, x0 + 2, item->regular_symbol());
+    // attroff(COLOR_PAIR(c) | A_BOLD);
+    // Now the item title
+    overlay_plane->printf(y0 + 1 + i, x0 + 4, "%s", item->definition->name.c_str());
+}
+
+void game_t::render_inventory_details(item_t *item, unsigned int x0, unsigned int y0, unsigned int width, unsigned int height) {
+    unsigned int i, x, y;
+    std::string desc;
+    // Draw out a box, taking up the whole width of the screen at y0.
+    // This determines how many lines of description we get until it cuts off.
+    NC_APPLY_COLOR(*overlay_plane, RGB_COLOR_BLACK, RGB_COLOR_WHITE);
+    for (y = y0; y < y0 + height; y++) {
+        for (x = x0; x < x0 + width; x++) {
+            overlay_plane->putc(y, x, ' ');
+        }
+    }
+
+    if (!item) return;
+
+    overlay_plane->styles_set(ncpp::CellStyle::Bold);
+    NC_PRINT_CENTERED_AT(overlay_plane, x0 + width / 2, y0, "%s", item->definition->name.c_str());
+    overlay_plane->styles_off(ncpp::CellStyle::Bold);
+    // Just printing out the whole string clears out the color on the remainder of the line when there's
+    // a newline character. It also doesn't let us protect against overflow, so unfortunately, this'll be
+    // by hand.
+    x = 0;
+    y = y0 + 1;
+    desc = item->definition->description;
+    for (i = 0; y < HEIGHT - 1 && desc[i]; i++) {
+        if (desc[i] == '\n') {
+            x = 0;
+            y++;
+            continue;
+        }
+        overlay_plane->putc(y, x++, desc[i]);
+    }
+    // The last line will be the dice.
+    NC_APPLY_DIM((*overlay_plane));
+    NC_PRINT_CENTERED_AT(overlay_plane, x0 + width / 2, y0 + height - 1, "%sdmg: %s, def: %s, speed: %s, dodge: %s",
+        item->definition->artifact ? "*ARTIFACT* " : "",
+        item->definition->damage_bonus->str().c_str(),
+        item->definition->defense_bonus->str().c_str(),
+        item->definition->speed_bonus->str().c_str(),
+        item->definition->dodge_bonus->str().c_str());
+}
+
+bool str_contains_char(std::string str, char ch) {
+    for (int i = 0; str[i]; i++) if (str[i] == ch) return true;
+    return false;
+}
+
+void game_t::inventory_menu() {
+    bool inventory = true;
+    int menu_i = -1;
+    int i, j, c;
+    char ch;
+    item_t *item;
+    int scroll_dir;
+    int inv_count = pc.inventory_size();
+    int equip_count = ARRAY_SIZE(pc.equipment);
+
+    while (true) {
+        render_inventory_box("INVENTORY", "1234567890  ", "", 1, 1);
+        for (i = 0; i < inv_count; i++)
+            render_inventory_item(pc.inventory_at(i), i, inventory && i == menu_i, 1, 1);
+        render_inventory_box("EQUIPMENT", "abcdefghijkl", "", 3 + INVENTORY_BOX_WIDTH, 1);
+        for (i = 0; i < equip_count; i++)
+            if (pc.equipment[i]) render_inventory_item(pc.equipment[i], i, !inventory && i == menu_i, 3 + INVENTORY_BOX_WIDTH, 1);
+        if (menu_i < 0) item = NULL;
+        else item = inventory ? pc.inventory_at(menu_i) : pc.equipment[menu_i];
+        render_inventory_details(item, 16);
+
+        attrset(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
+        PRINT_REPEATED(0, 0, WIDTH, ' ');
+        PRINTW_CENTERED_AT(WIDTH / 2, 0, "Enter an item, use the arrow keys, or press ESC.");
+        c = getch();
+        scroll_dir = 0;
+        switch (c) {
+            case KB_SCROLL_DOWN:
+                scroll_dir = 1;
+                break;
+            case KB_SCROLL_UP:
+                scroll_dir = -1;
+                break;
+            case KB_SCROLL_LEFT:
+            case KB_SCROLL_RIGHT:
+                inventory = !inventory;
+                menu_i = 0;
+                break;
+            case KB_ESCAPE:
+                return;
+            default:
+                ch = (char) c;
+                if (ch == c) {
+                    // If it's one of our slot keys, use those
+                    if (str_contains_char(INVENTORY_SLOT_CHARS, c)) {
+                        inventory = true;
+                        i = c == '0' ? 9 : c - '1';
+                        if (i >= inv_count) {
+                            break;
+                        }
+                    }
+                    else if (str_contains_char(EQUIP_SLOT_CHARS, c)) {
+                        inventory = false;
+                        i = c - 'a';
+                    }
+                    menu_i = i;
+                    break;
+                }
+                break;
+        }
+        if (scroll_dir != 0) {
+            if (inventory) {
+                menu_i += scroll_dir;
+                if (menu_i >= inv_count) menu_i = 0;
+                else if (menu_i < 0) menu_i = inv_count - 1;
+            }
+            else {
+                // Seek to the next item
+                i = menu_i;
+                item = NULL;
+                for (j = 0; j < equip_count && !item; j++) {
+                    i += scroll_dir;
+                    if (i < 0) i += equip_count;
+                    i %= equip_count;
+                    item = pc.equipment[i];
+                }
+                if (!item) menu_i = -1;
+                else menu_i = i;
+            }
+        }
+        if (inventory && menu_i >= inv_count) menu_i = -1;
+        else if (!inventory && menu_i >= equip_count) menu_i = -1;
+        attroff(COLOR_PAIR(COLORS_TEXT) | A_BOLD);
+    }
 }

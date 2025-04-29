@@ -219,7 +219,7 @@ class game_t {
 
         void render_inventory_box(std::string title, std::string labels, std::string input_tip, int x0, int y0);
         void render_inventory_item(item_t *item, int i, bool selected, int x0, int y0);
-        void render_inventory_details(item_t *item, int y0);
+        void render_inventory_details(item_t *item, unsigned int x0, unsigned int y0, unsigned int width, unsigned int height);
 
         void render_frame(bool complete_redraw);
         void init_controls();

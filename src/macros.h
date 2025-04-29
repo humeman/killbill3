@@ -97,13 +97,9 @@ typedef enum color_codes {
     NC_APPLY_COLOR(plane, RGB_COLOR_WHITE, RGB_COLOR_BLACK); \
     (plane).styles_off(ncpp::CellStyle::Bold); }
 
-#define NC_HIDE(plane) { \
-    (plane).set_fg_alpha(0); \
-    (plane).set_bg_alpha(0); }
-
-#define NC_UNHIDE(plane) { \
-    (plane).set_fg_alpha(255); \
-    (plane).set_bg_alpha(255); }
+#define NC_PRINT_CENTERED_AT(plane, x, y, msg, ...) { \
+    int len = snprintf(NULL, 0, msg, ##__VA_ARGS__); \
+    plane->printf(y, x - len / 2, msg, ##__VA_ARGS__); }
 
 typedef enum colors {
     COLORS_FLOOR = 1,
