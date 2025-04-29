@@ -307,3 +307,12 @@
           sixel images. Lots of missing features still.
     8p:  Added controls back in (as a function map this time), and the PC moves again.
          Added directional movement (PC/monsters turn in the direction they move).
+4/28:
+    11p: Implemented basic inventory rendering. Doesn't work quite yet.
+         Added inventory pickup.
+4/29:
+    1p:  Created a plane manager to create and cache all of the (now many) planes
+          we make for Notcurses rendering.
+         Implemented inventory menu fully. It now shows item pictures in front of
+          each item as well.
+          
