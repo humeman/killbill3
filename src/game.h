@@ -7,6 +7,7 @@
 #include "item.h"
 #include <ncpp/NotCurses.hh>
 #include <notcurses/nckeys.h>
+#include "plane_manager.h"
 
 // typedef enum keybinds {
 //     KB_N = 'w',
@@ -60,15 +61,9 @@ class game_t {
         std::map<std::string, item_definition_t *> item_defs;
 
         ncpp::NotCurses *nc = nullptr;
-        ncpp::Plane *top_plane;
-        ncpp::Plane *bottom_plane;
-        ncpp::Plane *overlay_plane;
-        std::vector<ncpp::Plane *> cell_planes;
-        std::vector<ncpp::Plane *> health_planes;
-        std::vector<ncpp::Plane *> item_planes;
-        std::vector<std::string> cell_cache;
-
-        unsigned int term_x, term_y, cells_x, cells_y, xoff;
+        plane_manager_t planes;
+        
+        unsigned int term_x, term_y, cells_x, cells_y;
 
         std::map<uint32_t, void (game_t::*)()> controls;
         bool next_turn_ready = false;
@@ -217,8 +212,8 @@ class game_t {
          */
         void fill_and_place_on(cell_type_t target_cell);
 
-        void render_inventory_box(std::string title, std::string labels, std::string input_tip, int x0, int y0);
-        void render_inventory_item(item_t *item, int i, bool selected, int x0, int y0);
+        void render_inventory_box(std::string title, std::string labels, std::string input_tip, unsigned int x0, unsigned int y0);
+        void render_inventory_item(item_t *item, int i, bool selected, unsigned int x0, unsigned int y0);
         void render_inventory_details(item_t *item, unsigned int x0, unsigned int y0, unsigned int width, unsigned int height);
 
         void render_frame(bool complete_redraw);
@@ -229,6 +224,7 @@ class game_t {
         void ctrl_move_e();
         void ctrl_move_w();
         void ctrl_move_s();
+        void ctrl_inventory();
         void ctrl_quit();
         void ctrl_grab_item();
 

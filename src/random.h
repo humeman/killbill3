@@ -3,10 +3,8 @@
 
 #include <ostream>
 class dice_t {
-    private:
-        int base, dice, sides;
-
     public:
+        int base, dice, sides;
         dice_t(int base, int dice, int sides) {
             this->base = base;
             this->dice = dice;

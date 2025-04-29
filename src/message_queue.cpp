@@ -58,6 +58,7 @@ void message_queue_t::emit(ncpp::Plane &plane, bool sticky) {
     NC_RESET(plane);
     int disp_i = 0;
     active = false;
+    int last_color = 7;
     for (i = 0; (c = message[i]) && disp_i < (int) (plane.get_dim_x()) - 3; i++) {
         if (c == '&') {
             if (active) {
@@ -76,11 +77,12 @@ void message_queue_t::emit(ncpp::Plane &plane, bool sticky) {
             if (c == 'b') {
                 plane.styles_on(ncpp::CellStyle::Bold);
             } else if (c == 'd') {
-                NC_APPLY_DIM(plane);
+                NC_APPLY_COLOR_BY_NUM_DIM(plane, last_color, RGB_COLOR_BLACK);
             } else if (c == 'r') {
                 NC_RESET(plane);
             } else if (c >= '0' && c <= '7') {
-                NC_APPLY_COLOR_BY_NUM(plane, c - '0', RGB_COLOR_BLACK);
+                last_color = c - '0';
+                NC_APPLY_COLOR_BY_NUM(plane, last_color, RGB_COLOR_BLACK);
             } else {
                 std::string err = "invalid color format specifier '";
                 err += c;
@@ -95,16 +97,14 @@ void message_queue_t::emit(ncpp::Plane &plane, bool sticky) {
     }
     if (disp_i >= (int) (plane.get_dim_x()) - 6) {
         // Cut off
-        NC_APPLY_COLOR(plane, RGB_COLOR_WHITE, RGB_COLOR_BLACK);
-        NC_APPLY_DIM(plane);
+        NC_APPLY_COLOR(plane, RGB_COLOR_WHITE_DIM, RGB_COLOR_BLACK);
         plane.cursor_move(plane.get_y(), plane.get_dim_x() - 6);
         plane.putstr("... ");
     }
 
     // If there's more to print, we can show that too
     if (!messages.empty() && !sticky) {
-        NC_APPLY_COLOR(plane, RGB_COLOR_WHITE, RGB_COLOR_BLACK);
-        NC_APPLY_DIM(plane);
+        NC_APPLY_COLOR(plane, RGB_COLOR_WHITE_DIM, RGB_COLOR_BLACK);
         plane.cursor_move(plane.get_y(), plane.get_dim_x() - 2);
         plane.putstr("->");
     }

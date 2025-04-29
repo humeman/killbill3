@@ -65,6 +65,10 @@ void game_t::ctrl_grab_item() {
     next_turn_ready = true;
 }
 
+void game_t::ctrl_inventory() {
+    inventory_menu();
+}
+
 void game_t::init_controls() {
     controls['w'] = &game_t::ctrl_move_n;
     controls['d'] = &game_t::ctrl_move_e;
@@ -72,4 +76,6 @@ void game_t::init_controls() {
     controls['a'] = &game_t::ctrl_move_w;
     controls['Q'] = &game_t::ctrl_quit;
     controls['f'] = &game_t::ctrl_grab_item;
+    controls['i'] = &game_t::ctrl_inventory;
+    controls['e'] = &game_t::ctrl_inventory;
 }

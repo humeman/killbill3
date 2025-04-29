@@ -1,18 +1,19 @@
 # ASSIGNMENT BINARIES
-killbill3: build/dungeon.o build/pathfinding.o build/character.o build/game.o build/game_loop.o build/game_controls.o build/parser.o build/item.o build/message_queue.o build/logger.o build/resource_manager.o build/killbill3.o
+killbill3: build/dungeon.o build/pathfinding.o build/character.o build/game.o build/game_loop.o build/game_controls.o build/parser.o build/item.o build/message_queue.o build/logger.o build/resource_manager.o build/plane_manager.o build/killbill3.o
 	g++ -std=c++17 \
 		build/dungeon.o \
 		build/pathfinding.o \
 		build/character.o \
 		build/game.o \
 		build/game_loop.o \
+		build/game_controls.o \
 		build/parser.o \
 		build/item.o \
 		build/message_queue.o \
 		build/logger.o \
 		build/resource_manager.o \
+		build/plane_manager.o \
 		build/killbill3.o \
-		build/game_controls.o \
 		-o killbill3 \
 		-lm -lnotcurses-core -lnotcurses -lnotcurses++
 
@@ -64,6 +65,10 @@ build/logger.o: src/logger.cpp src/logger.h src/macros.h
 build/resource_manager.o: src/resource_manager.cpp src/resource_manager.h src/macros.h src/random.h src/ascii.h src/heap.h
 	@ mkdir -p build
 	g++ -std=c++17 src/resource_manager.cpp -o build/resource_manager.o -Wall -Werror -c -g
+
+build/plane_manager.o: src/plane_manager.cpp src/plane_manager.h src/macros.h src/random.h src/ascii.h src/heap.h
+	@ mkdir -p build
+	g++ -std=c++17 src/plane_manager.cpp -o build/plane_manager.o -Wall -Werror -c -g
 
 # PHONY TARGETS
 clean:

@@ -61,7 +61,7 @@
 
 #define STRING(x) #x
 
-typedef enum color_codes {
+typedef enum {
     RGB_COLOR_RED = 0xFF0000,
     RGB_COLOR_GREEN = 0x00FF00,
     RGB_COLOR_YELLOW = 0xFFFF00,
@@ -70,17 +70,21 @@ typedef enum color_codes {
     RGB_COLOR_CYAN = 0x00FFFF,
     RGB_COLOR_WHITE = 0xFFFFFF,
     RGB_COLOR_BLACK = 0x00,
-    RGB_COLOR_BSOD = 0x0033bb
+    RGB_COLOR_BSOD = 0x0033bb,
+    RGB_COLOR_RED_DIM = 0x7F0000,
+    RGB_COLOR_GREEN_DIM = 0x007F00,
+    RGB_COLOR_YELLOW_DIM = 0x7F7F00,
+    RGB_COLOR_BLUE_DIM = 0x00007F,
+    RGB_COLOR_MAGENTA_DIM = 0x7F007F,
+    RGB_COLOR_CYAN_DIM = 0x007F7F,
+    RGB_COLOR_WHITE_DIM = 0x7F7F7F,
+    RGB_COLOR_BLACK_DIM = 0x707070,
+    RGB_COLOR_BSOD_DIM = 0x001A5D
 } color_codes_t;
 
 #define NC_APPLY_COLOR(plane, color_code, bg) { \
     (plane).set_fg_rgb8(((color_code) >> 16) & 0xFF, ((color_code) >> 8) & 0xFF, (color_code) & 0xFF); \
     if (bg >= 0) (plane).set_bg_rgb8(((bg) >> 16) & 0xFF, ((bg) >> 8) & 0xFF, ((bg) & 0xFF)); }
-
-#define NC_APPLY_DIM(plane) { \
-    unsigned int r, g, b; \
-    plane.get_fg_rgb8(&r, &g, &b); \
-    NC_APPLY_COLOR((plane), (b / 2) | (g / 2) << 8 | (r / 2) << 16, -1); }
 
 #define NC_APPLY_COLOR_BY_NUM(plane, num, bg) { \
     switch (num) { \
@@ -90,8 +94,19 @@ typedef enum color_codes {
         case 3: NC_APPLY_COLOR(plane, RGB_COLOR_BLACK, bg); break; \
         case 4: NC_APPLY_COLOR(plane, RGB_COLOR_MAGENTA, bg); break; \
         case 5: NC_APPLY_COLOR(plane, RGB_COLOR_CYAN, bg); break; \
-        case 6: NC_APPLY_COLOR(plane, bg == RGB_COLOR_WHITE ? RGB_COLOR_BLACK : RGB_COLOR_WHITE, bg); break; \
-        case 7: NC_APPLY_COLOR(plane, bg == RGB_COLOR_BLACK ? RGB_COLOR_WHITE : RGB_COLOR_BLACK, bg); break; } }
+        case 6: NC_APPLY_COLOR(plane, (bg == RGB_COLOR_WHITE ? RGB_COLOR_BLACK : RGB_COLOR_WHITE), bg); break; \
+        case 7: NC_APPLY_COLOR(plane, (bg == RGB_COLOR_BLACK ? RGB_COLOR_WHITE : RGB_COLOR_BLACK), bg); break; } }
+
+#define NC_APPLY_COLOR_BY_NUM_DIM(plane, num, bg) { \
+    switch (num) { \
+        case 0: NC_APPLY_COLOR(plane, RGB_COLOR_RED_DIM, bg); break; \
+        case 1: NC_APPLY_COLOR(plane, RGB_COLOR_GREEN_DIM, bg); break; \
+        case 2: NC_APPLY_COLOR(plane, RGB_COLOR_YELLOW_DIM, bg); break; \
+        case 3: NC_APPLY_COLOR(plane, RGB_COLOR_BLACK_DIM, bg); break; \
+        case 4: NC_APPLY_COLOR(plane, RGB_COLOR_MAGENTA_DIM, bg); break; \
+        case 5: NC_APPLY_COLOR(plane, RGB_COLOR_CYAN_DIM, bg); break; \
+        case 6: NC_APPLY_COLOR(plane, (bg == RGB_COLOR_WHITE_DIM ? RGB_COLOR_BLACK_DIM : RGB_COLOR_WHITE_DIM), bg); break; \
+        case 7: NC_APPLY_COLOR(plane, (bg == RGB_COLOR_BLACK_DIM ? RGB_COLOR_WHITE_DIM : RGB_COLOR_BLACK_DIM), bg); break; } }
 
 #define NC_RESET(plane) { \
     NC_APPLY_COLOR(plane, RGB_COLOR_WHITE, RGB_COLOR_BLACK); \
@@ -99,7 +114,7 @@ typedef enum color_codes {
 
 #define NC_PRINT_CENTERED_AT(plane, x, y, msg, ...) { \
     int len = snprintf(NULL, 0, msg, ##__VA_ARGS__); \
-    plane->printf(y, x - len / 2, msg, ##__VA_ARGS__); }
+    plane->printf(y, (x) - len / 2, msg, ##__VA_ARGS__); }
 
 typedef enum colors {
     COLORS_FLOOR = 1,
