@@ -122,3 +122,7 @@ void message_queue_t::clear() {
 void message_queue_t::add(std::string message) {
     messages.push_back(message);
 }
+
+bool message_queue_t::empty() {
+    return messages.empty();
+}

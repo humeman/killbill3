@@ -21,7 +21,7 @@
 #define CELL_CACHE_ITEMS_AT(this, i) this->cell_cache[this->cells_x * this->cells_y + HEARTS + i]
 #define DRAW_TO_PLANE(plane, texture_name) { \
     ncvisual_options vopts{}; \
-    vopts.flags |= NCVISUAL_OPTION_NOINTERPOLATE; \
+    vopts.flags |= NCVISUAL_OPTION_NOINTERPOLATE | NCVISUAL_OPTION_CHILDPLANE; \
     vopts.scaling = NCSCALE_STRETCH; \
     vopts.blitter = NCBLIT_PIXEL; \
     vopts.n = (plane)->to_ncplane(); \
@@ -432,14 +432,24 @@ void game_t::render_inventory_box(std::string title, std::string labels, std::st
 void game_t::render_inventory_item(item_t *item, int i, bool selected, unsigned int x0, unsigned int y0) {
     ncpp::Plane *plane = planes.get("inventory");
     // one of the most incredible macro expansions the world will ever see
-    NC_APPLY_COLOR_BY_NUM(*plane, item->current_color(), (selected ? RGB_COLOR_BLACK : RGB_COLOR_WHITE));
-    std::string plane_name = INVENTORY_NAME(x0 + 2, y0 + 1 + i);
+    NC_APPLY_COLOR_BY_NUM(*plane, item ? item->current_color() : RGB_COLOR_BLACK, (selected ? RGB_COLOR_BLACK : RGB_COLOR_WHITE));
+    std::string plane_name = INVENTORY_NAME(x0, y0 + i);
     ncpp::Plane *item_plane = planes.get(plane_name, plane, x0 + 2, y0 + 1 + i, 2, 1);
     item_plane->move_top();
-    if (planes.cache_set(plane_name, item->definition->ui_texture)) {
-        DRAW_TO_PLANE(item_plane, item->definition->ui_texture);
+    if (planes.cache_set(plane_name, item ? item->definition->ui_texture : "none")) {
+        if (item) {
+            DRAW_TO_PLANE(item_plane, item->definition->ui_texture);
+        }
+        else {
+            NC_APPLY_COLOR(*item_plane, RGB_COLOR_BLACK, RGB_COLOR_WHITE);
+            item_plane->erase();
+            item_plane->putstr(0, 0, "  ");
+        }
     }
-    plane->printf(y0 + 1 + i, x0 + 5, "%s", item->definition->name.c_str());
+    for (int i = 0; i < INVENTORY_BOX_WIDTH - 5; i++)
+        plane->putc(y0 + 1 + i, x0 + 5 + i, ' ');
+    if (item)
+        plane->printf(y0 + 1 + i, x0 + 5, "%s", item->definition->name.c_str());
 }
 
 void game_t::render_inventory_details(item_t *item, unsigned int x0, unsigned int y0, unsigned int width, unsigned int height) {
@@ -501,53 +511,161 @@ void move_back(ncpp::Plane *plane) {
 }
 
 void game_t::inventory_menu() {
-    bool inventory = true;
+    bool inventory = true, expunge_confirm = false;
     int menu_i = -1;
-    int i, j;
+    int i, j, swap_slot;
     ncinput inp;
     char ch;
-    item_t *item;
+    item_t *item, *target_item;
+    item_type_t type;
     int scroll_dir;
-    int inv_count = pc.inventory_size();
+    int inv_count;
     int equip_count = ARRAY_SIZE(pc.equipment);
     ncpp::Plane *plane = planes.get("inventory");
+    ncpp::Plane *top = planes.get("top");
 
     NC_APPLY_COLOR(*plane, RGB_COLOR_BLACK, RGB_COLOR_WHITE);
     plane->styles_set(ncpp::CellStyle::Bold);
     plane->erase();
     plane->move_top();
+    message_queue_t::get()->clear();
     while (true) {
+        top->erase();
+        if (message_queue_t::get()->empty()) {
+            message_queue_t::get()->add("-- &5&bINVENTORY&r --");
+        }
+        message_queue_t::get()->emit(*top, false);
+        inv_count = pc.inventory_size();
         render_inventory_box("INVENTORY", "1234567890  ", "", 0, 0);
         for (i = 0; i < inv_count; i++)
             render_inventory_item(pc.inventory_at(i), i, inventory && i == menu_i, 0, 0);
+        for (i = inv_count; i < MAX_CARRY_SLOTS; i++)
+            render_inventory_item(nullptr, i, false, 0, 0);
         render_inventory_box("EQUIPMENT", "abcdefghijkl", "", INVENTORY_BOX_WIDTH + 2, 0);
-        for (i = 0; i < equip_count; i++)
-            if (pc.equipment[i]) render_inventory_item(pc.equipment[i], i, !inventory && i == menu_i, INVENTORY_BOX_WIDTH + 0, 0);
+        for (i = 0; i < equip_count; i++) {
+            if (pc.equipment[i]) render_inventory_item(pc.equipment[i], i, !inventory && i == menu_i, INVENTORY_BOX_WIDTH + 2, 0);
+            else render_inventory_item(nullptr, i, false, INVENTORY_BOX_WIDTH + 2, 0);
+        }
         if (menu_i < 0) item = NULL;
         else item = inventory ? pc.inventory_at(menu_i) : pc.equipment[menu_i];
         render_inventory_details(item, 0, 15, INVENTORY_DETAILS_WIDTH, INVENTORY_DETAILS_HEIGHT);
         nc->render();
         scroll_dir = 0;
+        target_item = nullptr;
+        if (inventory) {
+            if (menu_i < pc.inventory_size() && menu_i >= 0)
+                target_item = pc.inventory_at(menu_i);
+        } else {
+            if (menu_i < ARRAY_SIZE(pc.equipment) && menu_i >= 0)
+                target_item = pc.equipment[menu_i];
+        }
         nc->get(true, &inp);
         switch (inp.id) {
             case NCKEY_DOWN:
                 scroll_dir = 1;
+                expunge_confirm = false;
                 break;
             case NCKEY_UP:
                 scroll_dir = -1;
+                expunge_confirm = false;
                 break;
             case NCKEY_LEFT:
             case NCKEY_RIGHT:
                 inventory = !inventory;
                 menu_i = 0;
+                expunge_confirm = false;
                 break;
             case 'i':
             case 'e':
             case NCKEY_ESC:
                 plane->move_bottom();
                 planes.for_each("inv_", move_back);
+                expunge_confirm = false;
                 return;
+            case NCKEY_ENTER:
+                expunge_confirm = false;
+                if (!target_item) break;
+                if (inventory) {
+                    type = target_item->definition->type;
+                    // Make sure it's equippable.
+                    if (type < ITEM_TYPE_WEAPON || type > ITEM_TYPE_RING) {
+                        message_queue_t::get()->clear();
+                        message_queue_t::get()->add("&0&bYou can't equip &" + std::to_string(
+                            target_item->current_color()) + escape_col(target_item->definition->name) + "&0&b!");
+                        break;
+                    }
+                    swap_slot = type;
+                    // Prefer the second ring slot if they're both full.
+                    if (pc.equipment[type] != NULL && type == ITEM_TYPE_RING) {
+                        swap_slot = type + 1;
+                    }
+                    // Remove that item from the inventory...
+                    target_item = pc.remove_from_inventory(menu_i);
+                    if (target_item->is_stacked()) throw dungeon_exception(__PRETTY_FUNCTION__, "invalid state: removed item is stacked");
+                    // If the swap slot is empty, just add the item there.
+                    if (pc.equipment[swap_slot] == NULL) {
+                        message_queue_t::get()->add("You equipped &" + std::to_string(
+                            target_item->current_color()) + escape_col(target_item->definition->name) + "&r.");
+                        pc.equipment[swap_slot] = target_item;
+                    } else {
+                        // Then we have to move that item out to the inventory.
+                        // This will reorder them, but it seems way more difficult than it's worth not to.
+                        message_queue_t::get()->add("You equipped &"
+                                + std::to_string(target_item->current_color())
+                                + escape_col(target_item->definition->name) + "&r, swapping out &"
+                                + std::to_string(pc.equipment[swap_slot]->current_color())
+                                + escape_col(pc.equipment[swap_slot]->definition->name) + "&r.");
+                        pc.add_to_inventory(pc.equipment[swap_slot]);
+                        pc.equipment[swap_slot] = target_item;
+                    }
+                } else {
+                    if (pc.inventory_size() >= 10) {
+                        message_queue_t::get()->clear();
+                        message_queue_t::get()->add("&0&bYou have no carry slots open!");
+                        break;
+                    }
+                    pc.add_to_inventory(target_item);
+                    pc.equipment[menu_i] = NULL;
+                    message_queue_t::get()->add("You unequipped &" + std::to_string(
+                        target_item->current_color()) + escape_col(target_item->definition->name) + "&r.");
+                }
+                break;
+            case NCKEY_BACKSPACE:
+                if (!target_item) break;
+                if (!expunge_confirm) {
+                    message_queue_t::get()->add("Press BACKSPACE again to expunge &" + std::to_string(
+                        target_item->current_color()) + escape_col(target_item->definition->name) + "&r.");
+                    expunge_confirm = true;
+                    break;
+                }
+                if (inventory) {
+                    pc.remove_from_inventory(menu_i);
+                } else {
+                    pc.equipment[menu_i] = nullptr;
+                }
+                message_queue_t::get()->add("You expunged &" + std::to_string(
+                    target_item->current_color()) + escape_col(target_item->definition->name) + "&r.");
+                delete target_item;
+                expunge_confirm = false;
+                break;
+            case NCKEY_SPACE:
+                expunge_confirm = false;
+                if (!target_item) break;
+                if (inventory) {
+                    pc.remove_from_inventory(menu_i);
+                } else {
+                    pc.equipment[menu_i] = nullptr;
+                }
+                if (item_map[pc.x][pc.y]) {
+                    item_map[pc.x][pc.y]->add_to_stack(target_item);
+                } else {
+                    item_map[pc.x][pc.y] = target_item;
+                }
+                message_queue_t::get()->add("You dropped &" + std::to_string(
+                    target_item->current_color()) + escape_col(target_item->definition->name) + "&r.");
+                break;
             default:
+                expunge_confirm = false;
                 ch = (char) inp.id;
                 if ((unsigned int) ch == inp.id) {
                     // If it's one of our slot keys, use those

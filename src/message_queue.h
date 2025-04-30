@@ -40,6 +40,7 @@ class message_queue_t {
         void drop();
         void clear();
         void add(std::string message);
+        bool empty();
 };
 
 #endif
