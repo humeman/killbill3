@@ -70,26 +70,14 @@ int COLORS_BY_CELL_TYPE[CELL_TYPES] = {
 
 std::string ITEM_TYPE_STRINGS[ITEM_TYPE_UNKNOWN + 1] = {
     "weapon",
-    "offhand",
-    "ranged",
-    "armor",
-    "helmet",
-    "cloak",
-    "gloves",
-    "boots",
-    "amulet",
-    "light",
-    "ring",
-    "scroll",
-    "book",
-    "flask",
-    "gold",
-    "ammunition",
-    "food",
-    "wand",
-    "container",
+    "hat",
+    "shirt",
+    "pants",
+    "shoes",
+    "glasses",
+    "pocket",
     "stack",
-    "a mysterious object"
+    "mysterious object"
 };
 
 game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
@@ -147,19 +135,6 @@ game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
         for (j = 0; j < height; j++) item_map[i][j] = NULL;
     }
 
-    seen_map = (char **) malloc(width * sizeof (char*));
-    if (seen_map == NULL) {
-        goto init_free_all_item_map;
-    }
-    for (i = 0; i < width; i++) {
-        seen_map[i] = (char *) malloc(height * sizeof (char));
-        if (seen_map[i] == NULL) {
-            for (j = 0; j < i; j++) free(seen_map[j]);
-            goto init_free_seen_map;
-        }
-        for (j = 0; j < height; j++) seen_map[i][j] = ' ';
-    }
-
     monst_parser = new parser_t<monster_definition_t>(MONSTER_PARSE_RULES, sizeof (MONSTER_PARSE_RULES) / sizeof (MONSTER_PARSE_RULES[0]), "KILL BILL 3 ENEMY DESCRIPTION 1", "ENEMY", true);
     item_parser = new parser_t<item_definition_t>(ITEM_PARSE_RULES, sizeof (ITEM_PARSE_RULES) / sizeof (ITEM_PARSE_RULES[0]), "KILL BILL 3 ITEM DESCRIPTION 1", "ITEM", true);
 
@@ -167,16 +142,12 @@ game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
 
     return;
 
-    init_free_seen_map:
-    free(seen_map);
+    init_free_item_map:
+    free(item_map);
     init_free_all_character_map:
     for (j = 0; j < width; j++) free(character_map[j]);
     init_free_character_map:
     free(character_map);
-    init_free_all_item_map:
-    for (j = 0; j < width; j++) free(item_map[j]);
-    init_free_item_map:
-    free(item_map);
     init_free_all_pathfinding_tunnel:
     for (j = 0; j < width; j++) free(pathfinding_tunnel[j]);
     init_free_pathfinding_tunnel:
@@ -216,8 +187,6 @@ game_t::~game_t() {
     free(pathfinding_tunnel);
     for (i = 0; i < dungeon->width; i++) free(pathfinding_no_tunnel[i]);
     free(pathfinding_no_tunnel);
-    for (i = 0; i < dungeon->width; i++) free(seen_map[i]);
-    free(seen_map);
     delete dungeon;
 
     for (const auto &e : monster_defs) {
@@ -438,20 +407,6 @@ void game_t::random_items() {
     }
 }
 
-void game_t::update_fog_of_war() {
-    if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
-    int x, y;
-    for (x = pc.x - FOG_OF_WAR_DISTANCE; x <= pc.x + FOG_OF_WAR_DISTANCE; x++) {
-        if (x < 0 || x >= dungeon->width) continue;
-        for (y = pc.y - FOG_OF_WAR_DISTANCE; y <= pc.y + FOG_OF_WAR_DISTANCE; y++) {
-            if (y < 0 || y >= dungeon->height) continue;
-            if (item_map[x][y]) seen_map[x][y] = item_map[x][y]->current_symbol();
-            else seen_map[x][y] = CHARACTERS_BY_CELL_TYPE[dungeon->cells[x][y].type];
-        }
-    }
-}
-
-
 void game_t::move_coords(coordinates_t &coords, int x_offset, int y_offset) {
     int new_x = (int) coords.x + x_offset;
     int new_y = (int) coords.y + y_offset;
@@ -493,7 +448,6 @@ void game_t::try_move(int x_offset, int y_offset) {
         } else {
             pc.move_to((coordinates_t) {(uint8_t) new_x, (uint8_t) new_y}, character_map);
         }
-        update_fog_of_war();
     }
 }
 
@@ -510,7 +464,6 @@ void game_t::force_move(coordinates_t dest) {
         monst->die(result, character_map, item_map);
     }
     pc.move_to(dest, character_map);
-    update_fog_of_war();
 }
 
 void game_t::fill_and_place_on(cell_type_t target_cell) {
@@ -549,10 +502,4 @@ void game_t::fill_and_place_on(cell_type_t target_cell) {
     turn_queue.insert(&pc, 0);
     random_monsters();
     random_items();
-    for (x = 0; x < dungeon->width; x++) {
-        for (y = 0; y < dungeon->height; y++) {
-            seen_map[x][y] = ' ';
-        }
-    }
-    update_fog_of_war();
 }

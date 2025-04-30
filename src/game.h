@@ -48,7 +48,6 @@ class game_t {
         binary_heap_t<character_t *> turn_queue;
         uint32_t **pathfinding_no_tunnel;
         uint32_t **pathfinding_tunnel;
-        char **seen_map;
         character_t ***character_map;
         item_t ***item_map;
         bool is_initialized = false;
@@ -70,6 +69,8 @@ class game_t {
         bool teleport_mode = false;
         bool look_mode = false;
         bool game_exit = false;
+        bool needs_redraw = false;
+        bool seethrough = false;
         coordinates_t pointer;
         game_result_t result = GAME_RESULT_RUNNING;
 
@@ -171,11 +172,7 @@ class game_t {
           */
         void monster_menu(monster_t *initial_target);
         void inventory_menu();
-
-        /**
-         * Updates the PC's fog of war map with what it currently sees.
-         */
-        void update_fog_of_war();
+        void cheater_menu();
 
         /**
          * Tries to move the PC to a new location.
@@ -214,7 +211,8 @@ class game_t {
 
         void render_inventory_box(std::string title, std::string labels, std::string input_tip, unsigned int x0, unsigned int y0);
         void render_inventory_item(item_t *item, int i, bool selected, unsigned int x0, unsigned int y0);
-        void render_inventory_details(item_t *item, unsigned int x0, unsigned int y0, unsigned int width, unsigned int height);
+        void render_inventory_details(ncpp::Plane *plane, item_t *item, unsigned int x0, unsigned int y0, unsigned int width, unsigned int height);
+        void render_monster_details(ncpp::Plane *plane, monster_t *monst, unsigned int x0, unsigned int y0, unsigned int width, unsigned int height);
 
         void render_frame(bool complete_redraw);
         void init_controls();
@@ -227,6 +225,9 @@ class game_t {
         void ctrl_inventory();
         void ctrl_quit();
         void ctrl_grab_item();
+        void ctrl_cheater();
+        void ctrl_ptr_confirm();
+        void ctrl_esc();
 
 };
 

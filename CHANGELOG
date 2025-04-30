@@ -306,6 +306,7 @@
           that used ncurses, and made the game/healthbar/inventory render with
           sixel images. Lots of missing features still.
     8p:  Added controls back in (as a function map this time), and the PC moves again.
+          Simplified the controls down to a few keys and WASD.
          Added directional movement (PC/monsters turn in the direction they move).
 4/28:
     11p: Implemented basic inventory rendering. Doesn't work quite yet.
@@ -315,4 +316,16 @@
           we make for Notcurses rendering.
          Implemented inventory menu fully. It now shows item pictures in front of
           each item as well.
-          
+4/30:
+    10a: Implemented all of the inventory controls (drop, expunge, equip, unequip).
+          Instead of the old hotkeys, this is all done through the inventory menu
+          interactively (menu=e, equip=ENTER, drop=SPACE, expunge=BACKSPACE).
+         Implemented fog of war again (kind of) -- it now just shows all of the
+          cells that the PC has line-of-sight to.
+         Changed up item types to fit the game's style, got rid of some ones that
+          I won't use. Also dropped down the number of equipment slots with this.
+         Implemented the cheat menu (`), which includes seethrough mode (shows all
+          terrain, even if behind a wall), teleport mode, and look mode.
+          Look mode is the new and improved version of the monster menu -- it lets
+          the user move all around the map with a pointer, and hovering over any
+          item or monster gives a description at the bottom of the screen.

@@ -4,10 +4,10 @@ BEGIN ENEMY employee_a
 NAME Michaelsoft Employee
 COLOR RED
 DESC
-A loyal servant of Bill and the wonderful, neverending, inerrant 
-Michealsoft, Inc.
+A loyal servant of Bill and the wonderful, neverending, 
+inerrant Michealsoft, Inc.
 .
-SPEED 7+1d4
+SPEED 15+1d4
 DAM 10+1d4
 HP 12+2d6
 ABIL SMART
@@ -23,11 +23,12 @@ BEGIN ENEMY bill
 NAME Bill
 COLOR YELLOW
 DESC
-He's gone and done it again -- he was revived a second time since his defeat 
-in Kill Bill 2. We're not sure if he's real, AI, robot, or something in 
-between. But he's returned with a vengeance, more determined than ever to 
-put an end to the worthless scum that would dare challenge Michaelsoft's 
-goal of world technological domination.
+He's gone and done it again -- he was revived a second time
+since his defeat in Kill Bill 2. We're not sure if he's
+real, AI, robot, or something in between. But he's returned
+with a vengeance, more determined than ever to put an end
+to the worthless scum that would dare challenge
+Michaelsoft's goal of world technological domination.
 .
 ABIL UNIQ ERRATIC DESTROY TUNNEL BOSS
 SPEED 80+0d1
@@ -45,14 +46,15 @@ BEGIN ENEMY robot
 NAME Security Robot
 COLOR BLACK
 DESC
-We think this is where all the Copilot training data went. This is a new, 
-even more violent breed of security robot specially built by Bill's loyal 
-employees. They immediately sense the thoughts of those who reject 
-Michaelsoft's wonderful ideals, putting a swift end to them.
+We think this is where all the Copilot training data went.
+This is a new, even more violent breed of security robot
+specially built by Bill's loyal employees. They immediately
+sense the thoughts of those who reject Michaelsoft's
+wonderful ideals, putting a swift end to them.
 .
-ABIL PICKUP TELE UNIQ
+ABIL DESTROY TELE UNIQ TUNNEL
 SPEED 25+0d1
-HP 20000+0d1
+HP 50+0d1
 DAM 0+1d4
 RRTY 20
 TEXTURE_N characters_robot_n

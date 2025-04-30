@@ -48,8 +48,8 @@ void convert(void *item, std::string line, std::ifstream &input, parse_type_t ty
 }
 
 void write_to_string(void *item, std::string line, std::ifstream &input) {
-    if (line.length() > 77)
-        throw dungeon_exception(__PRETTY_FUNCTION__, "line is too long (max 77, got " + std::to_string(line.length()) + ")");
+    if (line.length() > 60)
+        throw dungeon_exception(__PRETTY_FUNCTION__, "line is too long (max 60, got " + std::to_string(line.length()) + ")");
     std::string *str = (std::string *) item;
     *str += line;
 }
@@ -197,24 +197,12 @@ void write_to_color(void *item, std::string line, std::ifstream &input) {
 void write_to_item_type(void *item, std::string line, std::ifstream &input) {
     item_type_t *type = (item_type_t *) item;
     if (line == "WEAPON") *type = ITEM_TYPE_WEAPON;
-    else if (line == "OFFHAND") *type = ITEM_TYPE_OFFHAND;
-    else if (line == "RANGED") *type = ITEM_TYPE_RANGED;
-    else if (line == "ARMOR") *type = ITEM_TYPE_ARMOR;
-    else if (line == "HELMET") *type = ITEM_TYPE_HELMET;
-    else if (line == "CLOAK") *type = ITEM_TYPE_CLOAK;
-    else if (line == "GLOVES") *type = ITEM_TYPE_GLOVES;
-    else if (line == "BOOTS") *type = ITEM_TYPE_BOOTS;
-    else if (line == "RING") *type = ITEM_TYPE_RING;
-    else if (line == "AMULET") *type = ITEM_TYPE_AMULET;
-    else if (line == "LIGHT") *type = ITEM_TYPE_LIGHT;
-    else if (line == "SCROLL") *type = ITEM_TYPE_SCROLL;
-    else if (line == "BOOK") *type = ITEM_TYPE_BOOK;
-    else if (line == "FLASK") *type = ITEM_TYPE_FLASK;
-    else if (line == "GOLD") *type = ITEM_TYPE_GOLD;
-    else if (line == "AMMUNITION") *type = ITEM_TYPE_AMMUNITION;
-    else if (line == "FOOD") *type = ITEM_TYPE_FOOD;
-    else if (line == "WAND") *type = ITEM_TYPE_WAND;
-    else if (line == "CONTAINER") *type = ITEM_TYPE_CONTAINER;
+    else if (line == "HAT") *type = ITEM_TYPE_HAT;
+    else if (line == "SHIRT") *type = ITEM_TYPE_SHIRT;
+    else if (line == "PANTS") *type = ITEM_TYPE_PANTS;
+    else if (line == "SHOES") *type = ITEM_TYPE_SHOES;
+    else if (line == "GLASSES") *type = ITEM_TYPE_GLASSES;
+    else if (line == "POCKET") *type = ITEM_TYPE_POCKET;
     else throw dungeon_exception(__PRETTY_FUNCTION__, "unrecognized item type " + line);
 }
 

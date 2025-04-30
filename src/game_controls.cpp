@@ -69,6 +69,31 @@ void game_t::ctrl_inventory() {
     inventory_menu();
 }
 
+void game_t::ctrl_cheater() {
+    cheater_menu();
+}
+
+void game_t::ctrl_ptr_confirm() {
+    if (teleport_mode) {
+        force_move(pointer);
+        next_turn_ready = true;
+        teleport_mode = false;
+    }
+    else if (look_mode) {
+        look_mode = false;
+    }
+}
+
+void game_t::ctrl_esc() {
+    if (teleport_mode) {
+        teleport_mode = false;
+    }
+    else if (look_mode) {
+        planes.get("look")->move_bottom();
+        look_mode = false;
+    }
+}
+
 void game_t::init_controls() {
     controls['w'] = &game_t::ctrl_move_n;
     controls['d'] = &game_t::ctrl_move_e;
@@ -78,4 +103,7 @@ void game_t::init_controls() {
     controls['f'] = &game_t::ctrl_grab_item;
     controls['i'] = &game_t::ctrl_inventory;
     controls['e'] = &game_t::ctrl_inventory;
+    controls['`'] = &game_t::ctrl_cheater;
+    controls[NCKEY_ENTER] = &game_t::ctrl_ptr_confirm;
+    controls[NCKEY_ESC] = &game_t::ctrl_esc;
 }

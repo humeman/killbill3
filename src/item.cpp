@@ -2,30 +2,6 @@
 #include "random.h"
 #include "macros.h"
 
-char ITEM_TYPES[] = {
-    [ITEM_TYPE_WEAPON] = '|',
-    [ITEM_TYPE_OFFHAND] = ')',
-    [ITEM_TYPE_RANGED] = '}',
-    [ITEM_TYPE_ARMOR] = '[',
-    [ITEM_TYPE_HELMET] = ']',
-    [ITEM_TYPE_CLOAK] = '(',
-    [ITEM_TYPE_GLOVES] = '{',
-    [ITEM_TYPE_BOOTS] = '\\',
-    [ITEM_TYPE_AMULET] = '"',
-    [ITEM_TYPE_LIGHT] = '_',
-    [ITEM_TYPE_RING] = '=',
-    [ITEM_TYPE_SCROLL] = '~',
-    [ITEM_TYPE_BOOK] = '?',
-    [ITEM_TYPE_FLASK] = '!',
-    [ITEM_TYPE_GOLD] = '$',
-    [ITEM_TYPE_AMMUNITION] = '/',
-    [ITEM_TYPE_FOOD] = ',',
-    [ITEM_TYPE_WAND] = '-',
-    [ITEM_TYPE_CONTAINER] = '%',
-    [ITEM_TYPE_STACK] = '&',
-    [ITEM_TYPE_UNKNOWN] = '*'
-};
-
 item_t::item_t(item_definition_t *definition) {
     if (definition->artifact) {
         if (definition->artifact_created)
@@ -106,17 +82,4 @@ item_t *item_t::next_in_stack() {
 
 bool item_t::is_stacked() {
     return next != NULL;
-}
-
-char item_t::current_symbol() {
-    if (next != NULL) return ITEM_TYPES[ITEM_TYPE_STACK];
-    else if (definition->type >= 0 && definition->type <= sizeof (ITEM_TYPES) / sizeof (ITEM_TYPES[0]) - 3)
-        return ITEM_TYPES[definition->type];
-    else return ITEM_TYPES[ITEM_TYPE_UNKNOWN];
-}
-
-char item_t::regular_symbol() {
-    if (definition->type >= 0 && definition->type <= sizeof (ITEM_TYPES) / sizeof (ITEM_TYPES[0]) - 3)
-        return ITEM_TYPES[definition->type];
-    else return ITEM_TYPES[ITEM_TYPE_UNKNOWN];
 }

@@ -21,7 +21,7 @@
 #define CELL_CACHE_ITEMS_AT(this, i) this->cell_cache[this->cells_x * this->cells_y + HEARTS + i]
 #define DRAW_TO_PLANE(plane, texture_name) { \
     ncvisual_options vopts{}; \
-    vopts.flags |= NCVISUAL_OPTION_NOINTERPOLATE | NCVISUAL_OPTION_CHILDPLANE; \
+    vopts.flags |= NCVISUAL_OPTION_NOINTERPOLATE | NCVISUAL_OPTION_BLEND; \
     vopts.scaling = NCSCALE_STRETCH; \
     vopts.blitter = NCBLIT_PIXEL; \
     vopts.n = (plane)->to_ncplane(); \
@@ -46,8 +46,10 @@ const std::string CELL_TYPES_TO_FLOOR_TEXTURES[] = {
 #define HEARTS 15
 
 #define INVENTORY_BOX_WIDTH 29
-#define INVENTORY_DETAILS_WIDTH 60
-#define INVENTORY_DETAILS_HEIGHT 10
+#define DETAILS_WIDTH 60
+#define DETAILS_HEIGHT 12
+#define CHEATER_MENU_WIDTH 40
+#define CHEATER_MENU_HEIGHT 10
 
 void game_t::create_nc() {
     logger_t::get()->off();
@@ -136,8 +138,20 @@ void game_t::run() {
 
         plane = planes.get("inventory", 
             (term_x - 2 * INVENTORY_BOX_WIDTH - 1) / 2, 
-            (term_y - 16 - INVENTORY_DETAILS_HEIGHT) / 2, 
-            INVENTORY_DETAILS_WIDTH, 15 + INVENTORY_DETAILS_HEIGHT);
+            (term_y - 16 - DETAILS_HEIGHT) / 2, 
+            DETAILS_WIDTH, 13 + DETAILS_HEIGHT);
+        plane->move_bottom();
+
+        plane = planes.get("look", 
+            (term_x - DETAILS_WIDTH) / 2, 
+            term_y - 6 - DETAILS_HEIGHT, 
+            DETAILS_WIDTH, DETAILS_HEIGHT);
+        plane->move_bottom();
+
+        plane = planes.get("cheater", 
+            (term_x - CHEATER_MENU_WIDTH) / 2, 
+            (term_y - CHEATER_MENU_HEIGHT) / 2, 
+            CHEATER_MENU_WIDTH, CHEATER_MENU_HEIGHT);
         plane->move_bottom();
 
         run_internal();
@@ -160,7 +174,7 @@ void game_t::run() {
 
 void game_t::run_internal() {
     ncinput inp;
-    // message_queue_t::get()->add("--- &0&bKILL BILL 3&r ---");
+    message_queue_t::get()->add("--- &0&bKILL BILL 3&r ---");
     unsigned int x, y;
     render_frame(true);
     while (true) {
@@ -184,15 +198,15 @@ void game_t::run_internal() {
                 bsod_plane->printf(12, 2, "you.");
             }
             else {
-                NC_APPLY_COLOR((*bsod_plane), RGB_COLOR_WHITE, RGB_COLOR_BSOD)
+                NC_APPLY_COLOR((*bsod_plane), RGB_COLOR_WHITE, RGB_COLOR_GSOD)
                 for (y = 0; y < term_y; y++) {
                     for (x = 0; x < term_x; x++) {
                         bsod_plane->putc(y, x, ' ');
                     }
                 }
-                bsod_plane->printf(10, 2, "Your PC ran into a problem and needs to restart. We're");
-                bsod_plane->printf(11, 2, "just collecting some error info, and then we'll restart for");
-                bsod_plane->printf(12, 2, "you.");
+                bsod_plane->printf(10, 2, "Your PC didn't run into a problem and doesn't need to");
+                bsod_plane->printf(11, 2, "restart. We aren't collecting any error info, but you'll");
+                bsod_plane->printf(12, 2, "have to sit through this loading bar anyway.");
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(2000));
             x = 0;
@@ -217,10 +231,9 @@ void game_t::run_internal() {
             update_pathfinding(dungeon, pathfinding_no_tunnel, pathfinding_tunnel, &pc);
             // Run the game until the PC's turn comes up again (or it dies)
             run_until_pc();
-            //fog = false;
         }
         if (result != GAME_RESULT_RUNNING) {
-            //hide_fog_of_war = true;
+            seethrough = true;
             message_queue_t::get()->clear();
             message_queue_t::get()->add("&bGame over. Press any key to continue.");
         }
@@ -271,6 +284,14 @@ void game_t::render_frame(bool complete_redraw) {
     // Status message.
     ncpp::Plane *top_plane = planes.get("top");
     top_plane->erase();
+    if (teleport_mode) {
+        if (message_queue_t::get()->empty())
+            message_queue_t::get()->add("-- &4&bTELEPORT MODE&r --");
+    }
+    else if (look_mode) {
+        if (message_queue_t::get()->empty())
+            message_queue_t::get()->add("-- &3&bLOOK MODE&r --");
+    }
     message_queue_t::get()->emit(*top_plane, false);
 
     // Dungeon.
@@ -293,6 +314,11 @@ void game_t::render_frame(bool complete_redraw) {
     // We're centering the camera around the PC.
     int dungeon_x0 = pc.x - cells_x / 2;
     int dungeon_y0 = pc.y - cells_y / 2;
+
+    if (teleport_mode || look_mode) {
+        dungeon_x0 = pointer.x - cells_x / 2;
+        dungeon_y0 = pointer.y - cells_y / 2;
+    }
     
     // Unsurprisingly, drawing entire pictures to the terminal is really slow.
     // To mitigate this, we'll only draw any changed cells from frame-to-frame.
@@ -310,8 +336,15 @@ void game_t::render_frame(bool complete_redraw) {
             }
             else {
                 // Find out what we're drawing here.
+                // Only draw what the PC can see.
+                if ((teleport_mode || look_mode) && pointer.x == x && pointer.y == y) {
+                    new_texture = "characters_pointer";
+                }
+                else if (!teleport_mode && !look_mode && !seethrough && !pc.has_los(dungeon, (coordinates_t) {(unsigned char) x, (unsigned char) y})) {
+                    new_texture = CELL_TYPES_TO_FLOOR_TEXTURES[CELL_TYPE_STONE];
+                }
                 // Characters get first priority.
-                if (character_map[x][y]) {
+                else if (character_map[x][y]) {
                     if (character_map[x][y]->type() == CHARACTER_TYPE_PC) {
                         new_texture = std::string(PC_TEXTURE) + "_" + "nesw"[pc.direction];
                     }
@@ -401,7 +434,21 @@ void game_t::render_frame(bool complete_redraw) {
         if (planes.cache_set(plane_name, item_texture)) {
             DRAW_TO_PLANE(plane, item_texture);
         }
-        bottom_plane->putc(2, plane->get_x() - 1, 'a' + i);
+        bottom_plane->putc(2, plane->get_x() - 1, "asdfghjk"[i]);
+    }
+
+    if (look_mode) {
+        plane = planes.get("look");
+        if (character_map[pointer.x][pointer.y] && character_map[pointer.x][pointer.y]->type() == CHARACTER_TYPE_MONSTER) {
+            plane->move_top();
+            render_monster_details(plane, (monster_t *) character_map[pointer.x][pointer.y], 0, 0, DETAILS_WIDTH, DETAILS_HEIGHT);
+        }
+        else if (item_map[pointer.x][pointer.y]) {
+            plane->move_top();
+            render_inventory_details(plane, item_map[pointer.x][pointer.y], 0, 0, DETAILS_WIDTH, DETAILS_HEIGHT);
+        } else {
+            plane->move_bottom();
+        }
     }
 
     nc->render();
@@ -446,14 +493,11 @@ void game_t::render_inventory_item(item_t *item, int i, bool selected, unsigned 
             item_plane->putstr(0, 0, "  ");
         }
     }
-    for (int i = 0; i < INVENTORY_BOX_WIDTH - 5; i++)
-        plane->putc(y0 + 1 + i, x0 + 5 + i, ' ');
     if (item)
         plane->printf(y0 + 1 + i, x0 + 5, "%s", item->definition->name.c_str());
 }
 
-void game_t::render_inventory_details(item_t *item, unsigned int x0, unsigned int y0, unsigned int width, unsigned int height) {
-    ncpp::Plane *plane = planes.get("inventory");
+void game_t::render_inventory_details(ncpp::Plane *plane, item_t *item, unsigned int x0, unsigned int y0, unsigned int width, unsigned int height) {
     unsigned int i, x, y;
     std::string desc;
     // Draw out a box, taking up the whole width of the screen at y0.
@@ -476,7 +520,7 @@ void game_t::render_inventory_details(item_t *item, unsigned int x0, unsigned in
     x = 0;
     y = y0 + 1;
     desc = item->definition->description;
-    for (i = 0; y < HEIGHT - 1 && desc[i]; i++) {
+    for (i = 0; y < height - 2 && desc[i]; i++) {
         if (desc[i] == '\n') {
             x = 0;
             y++;
@@ -498,6 +542,52 @@ void game_t::render_inventory_details(item_t *item, unsigned int x0, unsigned in
     c = item->definition->dodge_bonus;
     if (c->base != 0 || c->dice != 0) res += "dodge: " + c->str() + " "; 
     if (res[res.length() - 1] == ' ') res = res.substr(0, res.length() - 1);
+    NC_PRINT_CENTERED_AT(plane, x0 + width / 2, y0 + height - 1, "%s", res.c_str());
+}
+
+void game_t::render_monster_details(ncpp::Plane *plane, monster_t *monst, unsigned int x0, unsigned int y0, unsigned int width, unsigned int height) {
+    unsigned int i, x, y;
+    std::string desc;
+    // Draw out a box, taking up the whole width of the screen at y0.
+    // This determines how many lines of description we get until it cuts off.
+    NC_APPLY_COLOR(*plane, RGB_COLOR_BLACK, RGB_COLOR_WHITE);
+    for (y = y0; y < y0 + height; y++) {
+        for (x = x0; x < x0 + width; x++) {
+            plane->putc(y, x, ' ');
+        }
+    }
+
+    if (!monst) return;
+
+    plane->styles_set(ncpp::CellStyle::Bold);
+    NC_PRINT_CENTERED_AT(plane, x0 + width / 2, y0, "%s", monst->definition->name.c_str());
+    plane->styles_off(ncpp::CellStyle::Bold);
+    // Just printing out the whole string clears out the color on the remainder of the line when there's
+    // a newline character. It also doesn't let us protect against overflow, so unfortunately, this'll be
+    // by hand.
+    x = 0;
+    y = y0 + 1;
+    desc = monst->definition->description;
+    for (i = 0; y < height - 2 && desc[i]; i++) {
+        if (desc[i] == '\n') {
+            x = 0;
+            y++;
+            continue;
+        }
+        plane->putc(y, x++, desc[i]);
+    }
+    // The last line will be the dice.
+    NC_APPLY_COLOR(*plane, RGB_COLOR_BLACK_DIM, RGB_COLOR_WHITE);
+    std::string res = "";
+    if (monst->definition->abilities & MONSTER_ATTRIBUTE_BOSS) res += "*BOSS* ";
+    if (monst->definition->abilities & MONSTER_ATTRIBUTE_INTELLIGENT) res += "smart ";
+    if (monst->definition->abilities & MONSTER_ATTRIBUTE_GHOST) res += "ghost ";
+    if (monst->definition->abilities & MONSTER_ATTRIBUTE_ERRATIC) res += "erratic ";
+    if (monst->definition->abilities & MONSTER_ATTRIBUTE_TELEPATHIC) res += "telepathic ";
+    if (monst->definition->abilities & MONSTER_ATTRIBUTE_TUNNELING) res += "tunneling ";
+    // don't care too much about the others
+    res += "dmg: " + monst->definition->damage->str() + " "; 
+    res += "hp: " + std::to_string(monst->hp) + " "; 
     NC_PRINT_CENTERED_AT(plane, x0 + width / 2, y0 + height - 1, "%s", res.c_str());
 }
 
@@ -531,24 +621,44 @@ void game_t::inventory_menu() {
     message_queue_t::get()->clear();
     while (true) {
         top->erase();
+        plane->erase();
         if (message_queue_t::get()->empty()) {
             message_queue_t::get()->add("-- &5&bINVENTORY&r --");
         }
         message_queue_t::get()->emit(*top, false);
         inv_count = pc.inventory_size();
-        render_inventory_box("INVENTORY", "1234567890  ", "", 0, 0);
+        // Check if the selected item is out of bounds.
+        // If it is, we'll move to the next available item.
+        if (inventory && (menu_i >= inv_count || menu_i < 0)) {
+            if (inv_count > 0) {
+                if (menu_i < 0) menu_i = 0;
+                else menu_i = inv_count - 1;
+            }
+            else menu_i = -1;
+        }
+        else if (!inventory && (menu_i >= equip_count || menu_i < 0)) {
+            if (menu_i < 0) scroll_dir = 0;
+            else scroll_dir = 1;
+            for (i = 0; i < equip_count; i++) {
+                if (pc.equipment[i]) {
+                    if (scroll_dir) menu_i = i;
+                    else if (menu_i < 0) menu_i = i;
+                }
+            }
+        }
+        render_inventory_box("INVENTORY", "1234567890", inventory ? "^^^" : "", 0, 0);
         for (i = 0; i < inv_count; i++)
             render_inventory_item(pc.inventory_at(i), i, inventory && i == menu_i, 0, 0);
         for (i = inv_count; i < MAX_CARRY_SLOTS; i++)
             render_inventory_item(nullptr, i, false, 0, 0);
-        render_inventory_box("EQUIPMENT", "abcdefghijkl", "", INVENTORY_BOX_WIDTH + 2, 0);
+        render_inventory_box("EQUIPMENT", "asdfghjk  ", !inventory ? "^^^" : "", INVENTORY_BOX_WIDTH + 2, 0);
         for (i = 0; i < equip_count; i++) {
             if (pc.equipment[i]) render_inventory_item(pc.equipment[i], i, !inventory && i == menu_i, INVENTORY_BOX_WIDTH + 2, 0);
             else render_inventory_item(nullptr, i, false, INVENTORY_BOX_WIDTH + 2, 0);
         }
         if (menu_i < 0) item = NULL;
         else item = inventory ? pc.inventory_at(menu_i) : pc.equipment[menu_i];
-        render_inventory_details(item, 0, 15, INVENTORY_DETAILS_WIDTH, INVENTORY_DETAILS_HEIGHT);
+        render_inventory_details(plane, item, 0, 13, DETAILS_WIDTH, DETAILS_HEIGHT);
         nc->render();
         scroll_dir = 0;
         target_item = nullptr;
@@ -588,7 +698,7 @@ void game_t::inventory_menu() {
                 if (inventory) {
                     type = target_item->definition->type;
                     // Make sure it's equippable.
-                    if (type < ITEM_TYPE_WEAPON || type > ITEM_TYPE_RING) {
+                    if (type < ITEM_TYPE_WEAPON || type > ITEM_TYPE_POCKET) {
                         message_queue_t::get()->clear();
                         message_queue_t::get()->add("&0&bYou can't equip &" + std::to_string(
                             target_item->current_color()) + escape_col(target_item->definition->name) + "&0&b!");
@@ -596,7 +706,7 @@ void game_t::inventory_menu() {
                     }
                     swap_slot = type;
                     // Prefer the second ring slot if they're both full.
-                    if (pc.equipment[type] != NULL && type == ITEM_TYPE_RING) {
+                    if (pc.equipment[type] != NULL && type == ITEM_TYPE_POCKET) {
                         swap_slot = type + 1;
                     }
                     // Remove that item from the inventory...
@@ -606,7 +716,6 @@ void game_t::inventory_menu() {
                     if (pc.equipment[swap_slot] == NULL) {
                         message_queue_t::get()->add("You equipped &" + std::to_string(
                             target_item->current_color()) + escape_col(target_item->definition->name) + "&r.");
-                        pc.equipment[swap_slot] = target_item;
                     } else {
                         // Then we have to move that item out to the inventory.
                         // This will reorder them, but it seems way more difficult than it's worth not to.
@@ -616,8 +725,10 @@ void game_t::inventory_menu() {
                                 + std::to_string(pc.equipment[swap_slot]->current_color())
                                 + escape_col(pc.equipment[swap_slot]->definition->name) + "&r.");
                         pc.add_to_inventory(pc.equipment[swap_slot]);
-                        pc.equipment[swap_slot] = target_item;
                     }
+                    pc.equipment[swap_slot] = target_item;
+                    inventory = false;
+                    menu_i = swap_slot;
                 } else {
                     if (pc.inventory_size() >= 10) {
                         message_queue_t::get()->clear();
@@ -628,6 +739,8 @@ void game_t::inventory_menu() {
                     pc.equipment[menu_i] = NULL;
                     message_queue_t::get()->add("You unequipped &" + std::to_string(
                         target_item->current_color()) + escape_col(target_item->definition->name) + "&r.");
+                    inventory = true;
+                    menu_i = pc.inventory_size() - 1;
                 }
                 break;
             case NCKEY_BACKSPACE:
@@ -705,7 +818,86 @@ void game_t::inventory_menu() {
                 else menu_i = i;
             }
         }
-        if (inventory && menu_i >= inv_count) menu_i = -1;
-        else if (!inventory && menu_i >= equip_count) menu_i = -1;
+    }
+}
+
+#define CHEATER_OPT_PRINT(plane, opt, i, menu_i) { \
+    if (menu_i == i) NC_APPLY_COLOR(*plane, RGB_COLOR_WHITE, RGB_COLOR_BLACK) \
+    else NC_APPLY_COLOR(*plane, RGB_COLOR_BLACK, RGB_COLOR_WHITE); \
+    plane->printf(1 + i, 0, opt); }
+
+void game_t::cheater_menu() {
+    int menu_i = 0;
+    ncinput inp;
+    int options = 3;
+    unsigned int x, y;
+    ncpp::Plane *plane = planes.get("cheater");
+    ncpp::Plane *top = planes.get("top");
+
+    plane->erase();
+    plane->move_top();
+    message_queue_t::get()->clear();
+    while (true) {
+        top->erase();
+        plane->erase();
+        message_queue_t::get()->emit(*top, false);
+
+        NC_APPLY_COLOR(*plane, RGB_COLOR_BLACK, RGB_COLOR_WHITE);
+        for (x = 0; x < CHEATER_MENU_WIDTH; x++) {
+            for (y = 0; y < CHEATER_MENU_HEIGHT; y++) {
+                plane->putc(y, x, ' ');
+            }
+        }
+
+        plane->styles_set(ncpp::CellStyle::Bold);
+        plane->printf(0, ncpp::NCAlign::Center, "CHEATS");
+        plane->styles_off(ncpp::CellStyle::Bold);
+
+        CHEATER_OPT_PRINT(plane, "seethrough", 0, menu_i);
+        if (seethrough) NC_APPLY_COLOR(*plane, RGB_COLOR_GREEN, RGB_COLOR_WHITE)
+        else NC_APPLY_COLOR(*plane, RGB_COLOR_RED, RGB_COLOR_WHITE);
+        plane->printf(1, ncpp::NCAlign::Right, seethrough ? "on" : "off");
+        CHEATER_OPT_PRINT(plane, "teleport", 1, menu_i);
+        NC_APPLY_COLOR(*plane, RGB_COLOR_BLACK_DIM, RGB_COLOR_WHITE);
+        plane->printf(2, ncpp::NCAlign::Right, "->");
+        CHEATER_OPT_PRINT(plane, "look", 2, menu_i);
+        NC_APPLY_COLOR(*plane, RGB_COLOR_BLACK_DIM, RGB_COLOR_WHITE);
+        plane->printf(3, ncpp::NCAlign::Right, "->");
+
+        nc->render();
+        nc->get(true, &inp);
+        switch (inp.id) {
+            case NCKEY_DOWN:
+                menu_i++;
+                if (menu_i >= options) menu_i = 0;
+                break;
+            case NCKEY_UP:
+                menu_i--;
+                if (menu_i < 0) menu_i = options - 1;
+                break;
+            case '`':
+            case NCKEY_ESC:
+                plane->move_bottom();
+                return;
+            case NCKEY_ENTER:
+                switch (menu_i) {
+                    case 0:
+                        seethrough = !seethrough;
+                        break;
+                    case 1:
+                        teleport_mode = true;
+                        pointer.x = pc.x;
+                        pointer.y = pc.y;
+                        plane->move_bottom();
+                        return;
+                    case 2:
+                        look_mode = true;
+                        pointer.x = pc.x;
+                        pointer.y = pc.y;
+                        plane->move_bottom();
+                        return;
+                }
+                break;
+        }
     }
 }

@@ -115,22 +115,18 @@ class character_t {
 
 typedef enum {
     PC_SLOT_WEAPON,
-    PC_SLOT_OFFHAND,
-    PC_SLOT_RANGED,
-    PC_SLOT_ARMOR,
-    PC_SLOT_HELMET,
-    PC_SLOT_CLOAK,
-    PC_SLOT_GLOVES,
-    PC_SLOT_BOOTS,
-    PC_SLOT_AMULET,
-    PC_SLOT_LIGHT,
-    PC_SLOT_RING_0,
-    PC_SLOT_RING_1 // Must be the last one for counting
+    PC_SLOT_HAT,
+    PC_SLOT_SHIRT,
+    PC_SLOT_PANTS,
+    PC_SLOT_SHOES,
+    PC_SLOT_GLASSES,
+    PC_SLOT_POCKET_0,
+    PC_SLOT_POCKET_1 // Must be the last one for counting
 } pc_slot_t;
 
 class pc_t : public character_t {
     public:
-        item_t *equipment[12];
+        item_t *equipment[PC_SLOT_POCKET_1 + 1];
         dice_t base_damage = dice_t(0, 1, 4);
 
         pc_t();
