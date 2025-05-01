@@ -6,6 +6,7 @@
 
 #include <fstream>
 #include <cstring>
+#include <sstream>
 
 void convert(void *item, std::string line, std::ifstream &input, parse_type_t type, int &line_i) {
     if (type != PARSE_TYPE_LONG_STRING)
@@ -43,6 +44,12 @@ void convert(void *item, std::string line, std::ifstream &input, parse_type_t ty
             break;
         case PARSE_TYPE_BOOL:
             write_to_bool(item, line, input);
+            break;
+        case PARSE_TYPE_TUPLE:
+            write_to_tuple(item, line, input);
+            break;
+        case PARSE_TYPE_VECTOR_STRINGS:
+            write_to_vector_strings(item, line, input, line_i);
             break;
     }
 }
@@ -221,4 +228,28 @@ void trim(std::string &string) {
     string.erase(0, i);
     for (i = string.length() - 1; i >= 0 && (string[i] == ' ' || string[i] == '\t'); i--);
     string.erase(i + 1);
+}
+
+void write_to_vector_strings(void *item, std::string line, std::ifstream &input, int &line_i) {
+    std::string res;
+    write_to_long_string(&res, line, input, line_i);
+    std::vector<std::string> *vec = (std::vector<std::string> *) item;
+    std::string temp;
+    std::istringstream stream(res);
+    while (std::getline(stream, temp)) {
+        vec->push_back(temp);
+    }
+}
+
+void write_to_tuple(void *item, std::string line, std::ifstream &input) {
+    unsigned int x, y;
+    int i = line.find(' ');
+    if (i == std::string::npos)
+        throw dungeon_exception(__PRETTY_FUNCTION__, "coordinate pair definition must be formatted <x> <y>, got " + line);
+    x = std::stoi(line.substr(0, i));
+    y = std::stoi(line.substr(i + 1, line.length()));
+
+    tuple_t *d = (tuple_t *) item;
+    d->x = x;
+    d->y = y;
 }

@@ -24,7 +24,9 @@ typedef enum {
     PARSE_TYPE_MONSTER_ATTRIBUTES,
     PARSE_TYPE_COLOR,
     PARSE_TYPE_ITEM_TYPE,
-    PARSE_TYPE_BOOL
+    PARSE_TYPE_BOOL,
+    PARSE_TYPE_TUPLE,
+    PARSE_TYPE_VECTOR_STRINGS
 } parse_type_t;
 
 void write_to_string(void *item, std::string line, std::ifstream &input);
@@ -36,6 +38,8 @@ void write_to_monster_attributes(void *item, std::string line, std::ifstream &in
 void write_to_color(void *item, std::string line, std::ifstream &input);
 void write_to_item_type(void *item, std::string line, std::ifstream &input);
 void write_to_bool(void *item, std::string line, std::ifstream &input);
+void write_to_tuple(void *item, std::string line, std::ifstream &input);
+void write_to_vector_strings(void *item, std::string line, std::ifstream &input, int &line_i);
 void convert(void *item, std::string line, std::ifstream &input, parse_type_t type, int &line_i);
 
 void trim(std::string &string);

@@ -46,6 +46,19 @@ parser_definition_t ITEM_PARSE_RULES[] {
     {.name = "UI_TEXTURE", .offset = offsetof(item_definition_t, ui_texture), .type = PARSE_TYPE_STRING, .required = true}
 };
 
+parser_definition_t DUNGEON_OPTIONS_PARSE_RULES[] {
+    {.name = "NAME", .offset = offsetof(dungeon_options_t, name), .type = PARSE_TYPE_STRING, .required = true},
+    {.name = "NUMENEMIES", .offset = offsetof(dungeon_options_t, nummon), .type = PARSE_TYPE_TUPLE, .required = true},
+    {.name = "NUMITEMS", .offset = offsetof(dungeon_options_t, numitems), .type = PARSE_TYPE_TUPLE, .required = true},
+    {.name = "NUMROOMS", .offset = offsetof(dungeon_options_t, rooms), .type = PARSE_TYPE_TUPLE, .required = true},
+    {.name = "SIZE", .offset = offsetof(dungeon_options_t, size), .type = PARSE_TYPE_TUPLE, .required = true},
+    {.name = "UP", .offset = offsetof(dungeon_options_t, up_staircase), .type = PARSE_TYPE_STRING, .required = false},
+    {.name = "DOWN", .offset = offsetof(dungeon_options_t, down_staircase), .type = PARSE_TYPE_STRING, .required = false},
+    {.name = "ENEMIES", .offset = offsetof(dungeon_options_t, monsters), .type = PARSE_TYPE_VECTOR_STRINGS, .required = true},
+    {.name = "ITEMS", .offset = offsetof(dungeon_options_t, items), .type = PARSE_TYPE_VECTOR_STRINGS, .required = true},
+    {.name = "BOSS", .offset = offsetof(dungeon_options_t, down_staircase), .type = PARSE_TYPE_STRING, .required = false}
+};
+
 char CHARACTERS_BY_CELL_TYPE[CELL_TYPES] = {
     [CELL_TYPE_STONE] = ' ',
     [CELL_TYPE_ROOM] = '.',
@@ -137,6 +150,7 @@ game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
 
     monst_parser = new parser_t<monster_definition_t>(MONSTER_PARSE_RULES, sizeof (MONSTER_PARSE_RULES) / sizeof (MONSTER_PARSE_RULES[0]), "KILL BILL 3 ENEMY DESCRIPTION 1", "ENEMY", true);
     item_parser = new parser_t<item_definition_t>(ITEM_PARSE_RULES, sizeof (ITEM_PARSE_RULES) / sizeof (ITEM_PARSE_RULES[0]), "KILL BILL 3 ITEM DESCRIPTION 1", "ITEM", true);
+    map_parser = new parser_t<dungeon_options_t>(DUNGEON_OPTIONS_PARSE_RULES, sizeof (DUNGEON_OPTIONS_PARSE_RULES) / sizeof (DUNGEON_OPTIONS_PARSE_RULES[0]), "KILL BILL 3 MAP DESCRIPTION 1", "MAP", true);
 
     init_controls();
 
@@ -226,8 +240,22 @@ void game_t::init_item_defs(const char *path) {
     item_parser->parse(item_defs, file);
 }
 
+void game_t::init_maps(const char *path) {
+    for (const auto &entry : std::filesystem::directory_iterator(path)) {
+        if (entry.is_regular_file()) {
+            std::ifstream file(entry.path());
+            if (file.fail()) {
+                throw dungeon_exception(__PRETTY_FUNCTION__, "failed to open file: " + entry.path().string());
+            }
+            std::string filename = entry.path().filename().string();
+            std::string map_name = filename.substr(0, filename.find_last_of('.'));
+            map_parser->parse(map_defs[map_name], file);
+        }
+    }
+}
+
 void game_t::init_from_file(const char *path) {
-    coordinates_t pc_coords;
+    tuple_t pc_coords;
     FILE *f;
     f = fopen(path, "rb");
     if (f == NULL) {
@@ -256,7 +284,7 @@ void game_t::init_from_file(const char *path) {
 }
 
 void game_t::init_random() {
-    coordinates_t pc_coords;
+    tuple_t pc_coords;
     dungeon->fill(ROOM_MIN_COUNT, ROOM_COUNT_MAX_RANDOMNESS, ROOM_MIN_WIDTH, ROOM_MIN_HEIGHT, ROOM_MAX_RANDOMNESS, debug);
 
     pc_coords = dungeon->random_location();
@@ -277,7 +305,7 @@ void game_t::init_random() {
 void game_t::write_to_file(const char *path) {
     if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
     FILE *f;
-    coordinates_t pc_coords;
+    tuple_t pc_coords;
     f = fopen(path, "wb");
     if (f == NULL) throw dungeon_exception(__PRETTY_FUNCTION__, "couldn't open file for writing");
     pc_coords.x = pc.x;
@@ -306,7 +334,7 @@ void game_t::random_monsters() {
     // Pick how many we want to generate.
     int count = nummon < 0 ? (rand() % (RANDOM_MONSTERS_MAX - RANDOM_MONSTERS_MIN + 1)) + RANDOM_MONSTERS_MIN : nummon;
 
-    coordinates_t loc;
+    tuple_t loc;
     int monster_i, attempts;
     monster_t *monst;
     character_t *ch;
@@ -369,7 +397,7 @@ void game_t::random_items() {
     // Pick how many we want to generate.
     int count = numitems < 0 ? (rand() % (RANDOM_ITEMS_MAX - RANDOM_ITEMS_MIN + 1)) + RANDOM_ITEMS_MIN : numitems;
 
-    coordinates_t loc;
+    tuple_t loc;
     int item_i, attempts;
     item_t *item;
     std::vector<std::string> item_names;
@@ -407,7 +435,7 @@ void game_t::random_items() {
     }
 }
 
-void game_t::move_coords(coordinates_t &coords, int x_offset, int y_offset) {
+void game_t::move_coords(tuple_t &coords, int x_offset, int y_offset) {
     int new_x = (int) coords.x + x_offset;
     int new_y = (int) coords.y + y_offset;
     if (new_x < 0) new_x = 0;
@@ -446,12 +474,12 @@ void game_t::try_move(int x_offset, int y_offset) {
                 "&r for &b" + std::to_string(damage) + "&r"
                 + (monst->hp <= 0 ? ", killing it" : (" (" + std::to_string(monst->hp) + " left)")) + ".");
         } else {
-            pc.move_to((coordinates_t) {(uint8_t) new_x, (uint8_t) new_y}, character_map);
+            pc.move_to((tuple_t) {(uint8_t) new_x, (uint8_t) new_y}, character_map);
         }
     }
 }
 
-void game_t::force_move(coordinates_t dest) {
+void game_t::force_move(tuple_t dest) {
     monster_t *monst;
     if (character_map[dest.x][dest.y] && character_map[dest.x][dest.y]->type() == CHARACTER_TYPE_MONSTER) {
         monst = (monster_t *) character_map[dest.x][dest.y];
@@ -491,7 +519,7 @@ void game_t::fill_and_place_on(cell_type_t target_cell) {
     for (x = 0; x < dungeon->width; x++) {
         for (y = 0; y < dungeon->height; y++) {
             if (dungeon->cells[x][y].type == target_cell) {
-                pc.move_to((coordinates_t) {(uint8_t) x, (uint8_t) y}, character_map);
+                pc.move_to((tuple_t) {(uint8_t) x, (uint8_t) y}, character_map);
                 placed = 1;
                 break;
             }

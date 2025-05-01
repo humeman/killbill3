@@ -87,7 +87,7 @@ class character_t {
          * - to: Coordinates to move to
          * - character_map: Map of character pointers to update
          */
-        void move_to(coordinates_t to, character_t ***character_map);
+        void move_to(tuple_t to, character_t ***character_map);
         /**
          * Checks if this character has line-of-sight with a coordinate,
          *  defined by a direct straight line to the point that isn't
@@ -98,7 +98,7 @@ class character_t {
          * - to: Coordinates to check LOS to
          * Returns: True if has LOS
          */
-        bool has_los(dungeon_t *dungeon, coordinates_t to);
+        bool has_los(dungeon_t *dungeon, tuple_t to);
         /**
          * Gets the type of this character.
          *
@@ -162,7 +162,7 @@ class monster_t : public character_t {
          * Returns: Next coordinates to move to (if possible),
          *  otherwise the current coordinates
          */
-        coordinates_t next_xy(dungeon_t *dungeon, coordinates_t to);
+        tuple_t next_xy(dungeon_t *dungeon, tuple_t to);
         // A few too many parameters, but it'd be annoying to rework. Oh well.
         void take_turn(dungeon_t *dungeon, pc_t *pc, binary_heap_t<character_t *> &turn_queue, character_t ***character_map, item_t ***item_map, uint32_t **pathfinding_tunnel, uint32_t **pathfinding_no_tunnel, uint32_t priority, game_result_t &result);
         void die(game_result_t &result, character_t ***character_map, item_t ***item_map);
@@ -180,7 +180,7 @@ class monster_t : public character_t {
  * - dungeon
  * - character_map: Map of character pointers
  */
-coordinates_t random_location_no_kill(dungeon_t *dungeon, character_t ***character_map);
+tuple_t random_location_no_kill(dungeon_t *dungeon, character_t ***character_map);
 
 /**
  * Places a monster randomly into the character map and turn queue.

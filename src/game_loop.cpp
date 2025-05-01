@@ -340,7 +340,7 @@ void game_t::render_frame(bool complete_redraw) {
                 if ((teleport_mode || look_mode) && pointer.x == x && pointer.y == y) {
                     new_texture = "characters_pointer";
                 }
-                else if (!teleport_mode && !look_mode && !seethrough && !pc.has_los(dungeon, (coordinates_t) {(unsigned char) x, (unsigned char) y})) {
+                else if (!teleport_mode && !look_mode && !seethrough && !pc.has_los(dungeon, (tuple_t) {(unsigned char) x, (unsigned char) y})) {
                     new_texture = CELL_TYPES_TO_FLOOR_TEXTURES[CELL_TYPE_STONE];
                 }
                 // Characters get first priority.

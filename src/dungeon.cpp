@@ -11,7 +11,7 @@
 
 #define ENSURE_INITIALIZED if (!is_initalized) throw dungeon_exception(__PRETTY_FUNCTION__, "dungeon is not initialized")
 
-bool coordinates_t::operator==(const coordinates_t &o) const {
+bool tuple_t::operator==(const tuple_t &o) const {
     return this->x == o.x && this->y == o.y;
 }
 
@@ -430,20 +430,20 @@ void dungeon_t::place_staircases() {
     }
 }
 
-coordinates_t dungeon_t::place_in_room(room_t *room, cell_type_t material) {
-    coordinates_t coords = random_location_in_room(room);
+tuple_t dungeon_t::place_in_room(room_t *room, cell_type_t material) {
+    tuple_t coords = random_location_in_room(room);
     cells[coords.x][coords.y].type = material;
     cells[coords.x][coords.y].hardness = 0;
     return coords;
 }
 
-coordinates_t dungeon_t::random_location_in_room(room_t *room) {
+tuple_t dungeon_t::random_location_in_room(room_t *room) {
     uint8_t x_offset = rand();
     uint8_t y_offset = rand();
     uint8_t i, j, x, y;
     uint8_t room_width = room->x1 - room->x0;
     uint8_t room_height = room->y1 - room->y0;
-    coordinates_t coords;
+    tuple_t coords;
     for (i = 0; i < room_width; i++) {
         x = room->x0 + (x_offset + i) % room_width;
         for (j = 0; j < room_height; j++) {
@@ -472,7 +472,7 @@ coordinates_t dungeon_t::random_location_in_room(room_t *room) {
     throw dungeon_exception(__PRETTY_FUNCTION__, "couldn't find a location to place in");
 }
 
-coordinates_t dungeon_t::random_location() {
+tuple_t dungeon_t::random_location() {
     int room_offset = rand();
     int i;
     room_t *room;
@@ -486,7 +486,7 @@ coordinates_t dungeon_t::random_location() {
     throw dungeon_exception(__PRETTY_FUNCTION__, "no available space in dungeon");
 }
 
-void dungeon_t::fill_from_file(FILE *f, int debug, coordinates_t *pc_coords) {
+void dungeon_t::fill_from_file(FILE *f, int debug, tuple_t *pc_coords) {
     size_t size;
     uint32_t version, file_size;
     uint8_t hardness, x, y, x0, y0;
@@ -567,12 +567,12 @@ void dungeon_t::fill_from_file(FILE *f, int debug, coordinates_t *pc_coords) {
     is_initalized = true;
 }
 
-void dungeon_t::save_to_file(FILE *f, int debug, coordinates_t *pc_coords) {
+void dungeon_t::save_to_file(FILE *f, int debug, tuple_t *pc_coords) {
     ENSURE_INITIALIZED;
     uint32_t version, file_size;
     uint8_t width, height;
     int up_count, down_count, x, y;
-    coordinates_t *up, *down;
+    tuple_t *up, *down;
     char header[] = FILE_HEADER;
     int header_size = strlen(header);
     size_t size = fwrite(header, sizeof (*header), header_size, f);
@@ -594,18 +594,18 @@ void dungeon_t::save_to_file(FILE *f, int debug, coordinates_t *pc_coords) {
             if (cells[x][y].type == CELL_TYPE_UP_STAIRCASE) {
                 up_count++;
                 if (up == NULL)
-                    up = (coordinates_t *) malloc(sizeof (*up));
+                    up = (tuple_t *) malloc(sizeof (*up));
                 else
-                    up = (coordinates_t *) realloc(up, up_count * sizeof (*up));
+                    up = (tuple_t *) realloc(up, up_count * sizeof (*up));
                 up[up_count - 1].x = x;
                 up[up_count - 1].y = y;
             }
             else if (cells[x][y].type == CELL_TYPE_DOWN_STAIRCASE) {
                 down_count++;
                 if (down == NULL)
-                    down = (coordinates_t *) malloc(sizeof (*down));
+                    down = (tuple_t *) malloc(sizeof (*down));
                 else
-                    down = (coordinates_t *) realloc(down, down_count * sizeof (*down));
+                    down = (tuple_t *) realloc(down, down_count * sizeof (*down));
                 down[down_count - 1].x = x;
                 down[down_count - 1].y = y;
             }

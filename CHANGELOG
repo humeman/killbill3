@@ -149,7 +149,7 @@
           - Replacing the print error/return status code pattern with exceptions
              -> This also allowed me to make methods return their values rather than
                  updating values of pointers where possible. For example, getting a
-                 pair of coordinates will return coordinates_t rather than updating
+                 pair of coordinates will return tuple_t rather than updating
                  an X and Y pointer.
           - Got rid of the files.cpp/h methods and moved them into dungeon.cpp/h -- they
              made way more sense there to begin with.

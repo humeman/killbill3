@@ -12,8 +12,8 @@
  * returning 0 if equivalent and 1 otherwise.
  */
 bool compare_coords(void *a, void *b) {
-    coordinates_t *ca = (coordinates_t *) a;
-    coordinates_t *cb = (coordinates_t *) b;
+    tuple_t *ca = (tuple_t *) a;
+    tuple_t *cb = (tuple_t *) b;
     return !(ca->x == cb->x && ca->y == cb->y);
 }
 
@@ -30,15 +30,15 @@ void generate_pathfinding_map(dungeon_t *dungeon, uint32_t **grid, int allow_tun
     uint8_t x, y, x1, y1;
     uint8_t src_x, src_y;
     uint32_t distance;
-    coordinates_t coords;
+    tuple_t coords;
     int done[dungeon->width][dungeon->height];
-    binary_heap_t<coordinates_t> queue;
+    binary_heap_t<tuple_t> queue;
     src_x = pc->x;
     src_y = pc->y;
 
     // Set the source cell to distance 0, add to queue
     grid[src_x][src_y] = 0;
-    queue.insert((coordinates_t) {src_x, src_y}, 0);
+    queue.insert((tuple_t) {src_x, src_y}, 0);
 
     // Add every other cell with a distance of infinity
     for (x = 0; x < dungeon->width; x++) {
@@ -51,7 +51,7 @@ void generate_pathfinding_map(dungeon_t *dungeon, uint32_t **grid, int allow_tun
                     done[x][y] = 1; // to signal not to attempt any checks against this cell
             } else {
                 done[x][y] = 0;
-                queue.insert((coordinates_t) {x, y}, UINT32_MAX);
+                queue.insert((tuple_t) {x, y}, UINT32_MAX);
             }
         }
     }
@@ -77,7 +77,7 @@ void generate_pathfinding_map(dungeon_t *dungeon, uint32_t **grid, int allow_tun
                 distance = grid[x][y] + HARDNESS_OF(dungeon->cells[x][y].hardness);
                 if (distance < grid[x1][y1]) {
                     grid[x1][y1] = distance;
-                    queue.decrease_priority((coordinates_t) {x1, y1}, distance);
+                    queue.decrease_priority((tuple_t) {x1, y1}, distance);
                 }
             }
         }

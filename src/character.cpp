@@ -11,9 +11,9 @@
 
 #define MAX_ATTEMPTS 2 * DUNGEON_WIDTH * DUNGEON_HEIGHT
 
-coordinates_t random_location_no_kill(dungeon_t *dungeon, character_t ***character_map) {
+tuple_t random_location_no_kill(dungeon_t *dungeon, character_t ***character_map) {
     int i;
-    coordinates_t coords;
+    tuple_t coords;
     for (i = 0; i < MAX_ATTEMPTS; i++) {
         try {
             coords = dungeon->random_location();
@@ -38,7 +38,7 @@ int monster_t::damage(int amount, game_result_t &result, item_t ***item_map, cha
     return amount;
 }
 
-void character_t::move_to(coordinates_t to, character_t ***character_map) {
+void character_t::move_to(tuple_t to, character_t ***character_map) {
     if (location_initialized && character_map[x][y] == this) {
         character_map[x][y] = NULL;
     }
@@ -56,7 +56,7 @@ void character_t::move_to(coordinates_t to, character_t ***character_map) {
     location_initialized = true;
 }
 
-bool character_t::has_los(dungeon_t *dungeon, coordinates_t to) {
+bool character_t::has_los(dungeon_t *dungeon, tuple_t to) {
     uint8_t x0 = x;
     uint8_t y0 = y;
     uint8_t x1 = to.x;
@@ -104,7 +104,7 @@ bool character_t::has_los(dungeon_t *dungeon, coordinates_t to) {
     return true;
 }
 
-coordinates_t monster_t::next_xy(dungeon_t *dungeon, coordinates_t to) {
+tuple_t monster_t::next_xy(dungeon_t *dungeon, tuple_t to) {
     // Butchered version of has_los.
     uint8_t x0 = x;
     uint8_t y0 = y;
@@ -112,7 +112,7 @@ coordinates_t monster_t::next_xy(dungeon_t *dungeon, coordinates_t to) {
     uint8_t y1 = to.y;
     float m, b;
     int x_diff, y_diff, dir;
-    coordinates_t next;
+    tuple_t next;
     next.x = x0;
     next.y = y0;
     if (x0 == x1 && y0 == y1) return next;
@@ -189,7 +189,7 @@ void monster_t::take_turn(dungeon_t *dungeon, pc_t *pc, binary_heap_t<character_
     // - Intelligent: Towards the last seen location
     // - None: Only towards the PC if there's LOS
     uint8_t min, x_offset, target_x, target_y;
-    coordinates_t next;
+    tuple_t next;
     int i, j, x1, y1, dam, r;
     uint32_t** map;
     cell_t* next_cell;
@@ -205,7 +205,7 @@ void monster_t::take_turn(dungeon_t *dungeon, pc_t *pc, binary_heap_t<character_
         target_y = pc->y;
     }
     //    b: If it has line of sight, it can.
-    else if (has_los(dungeon, (coordinates_t) {pc->x, pc->y})) {
+    else if (has_los(dungeon, (tuple_t) {pc->x, pc->y})) {
         can_move = 1;
         target_x = pc->x;
         target_y = pc->y;
@@ -257,7 +257,7 @@ void monster_t::take_turn(dungeon_t *dungeon, pc_t *pc, binary_heap_t<character_
 
         // Otherwise, we'll go in a straight line.
         else {
-            next = next_xy(dungeon, (coordinates_t) {target_x, target_y});
+            next = next_xy(dungeon, (tuple_t) {target_x, target_y});
             // Can't if it's non-tunneling and going towards stone.
             if (!(attributes & (MONSTER_ATTRIBUTE_TUNNELING | MONSTER_ATTRIBUTE_GHOST)) && dungeon->cells[next.x][next.y].type == CELL_TYPE_STONE) {
                 can_move = 0;
@@ -358,11 +358,11 @@ void monster_t::take_turn(dungeon_t *dungeon, pc_t *pc, binary_heap_t<character_
                         }
                     }
                     // No location was found, so we swap.
-                    character_map[next.x][next.y]->move_to((coordinates_t) {x, y}, character_map);
+                    character_map[next.x][next.y]->move_to((tuple_t) {x, y}, character_map);
                     goto end;
                     found:
                     // Move the monster to its displaced cell
-                    character_map[next.x][next.y]->move_to((coordinates_t) {(uint8_t) x1, (uint8_t) y1}, character_map);
+                    character_map[next.x][next.y]->move_to((tuple_t) {(uint8_t) x1, (uint8_t) y1}, character_map);
                     end:
                     move_to(next, character_map);
                 }

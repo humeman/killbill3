@@ -40,6 +40,12 @@ extern char CHARACTERS_BY_CELL_TYPE[CELL_TYPES];
 extern int COLORS_BY_CELL_TYPE[CELL_TYPES];
 extern std::string ITEM_TYPE_STRINGS[ITEM_TYPE_UNKNOWN + 1];
 
+typedef enum {
+  GAME_RESULT_RUNNING = 0,
+  GAME_RESULT_WIN = 1,
+  GAME_RESULT_LOSE = 2
+} game_result_t;
+
 // To split up the dungeon from the game controls and such, this class
 // stores all of the critical info for the game.
 class game_t {
@@ -56,8 +62,10 @@ class game_t {
         int debug;
         parser_t<monster_definition_t> *monst_parser;
         parser_t<item_definition_t> *item_parser;
+        parser_t<dungeon_options_t> *map_parser;
         std::map<std::string, monster_definition_t *> monster_defs;
         std::map<std::string, item_definition_t *> item_defs;
+        std::map<std::string, std::map<std::string, dungeon_options_t *>> map_defs;
 
         ncpp::NotCurses *nc = nullptr;
         plane_manager_t planes;
@@ -71,7 +79,7 @@ class game_t {
         bool game_exit = false;
         bool needs_redraw = false;
         bool seethrough = false;
-        coordinates_t pointer;
+        tuple_t pointer;
         game_result_t result = GAME_RESULT_RUNNING;
 
     public:
@@ -98,6 +106,9 @@ class game_t {
          * - path: Path to the file
          */
         void init_item_defs(const char *path);
+
+        void init_maps(const char *path);
+
 
         /**
          * Initializes the game's dungeon from an RLG327 file.
@@ -192,13 +203,13 @@ class game_t {
          * - x_offset: Number to add to the X coordinate
          * - y_offset: Number to add to the Y coordinate
          */
-        void move_coords(coordinates_t &coords, int x_offset, int y_offset);
+        void move_coords(tuple_t &coords, int x_offset, int y_offset);
 
         /**
          * Forces the PC to move to some new coordinates, regardless of if
          *  they represent a possible PC location.
          */
-        void force_move(coordinates_t dest);
+        void force_move(tuple_t dest);
 
         /**
          * Regenerates the dungeon, placing the PC on the first instance of
