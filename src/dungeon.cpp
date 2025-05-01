@@ -15,18 +15,14 @@ bool coordinates_t::operator==(const coordinates_t &o) const {
     return this->x == o.x && this->y == o.y;
 }
 
-dungeon_t::dungeon_t(uint8_t width, uint8_t height, int max_rooms) {
+dungeon_t::dungeon_t(dungeon_options_t &options) {
     int i, j;
-    this->width = width;
-    this->height = height;
-    rooms = (room_t *) malloc(max_rooms * sizeof (room_t));
-    max_room_count = (uint16_t) max_rooms;
-    room_count = 0;
-    min_room_count = 0;
-    if (rooms == NULL) goto init_free;
+    this->width = options.width;
+    this->height = options.height;
+    this->options = &options;
     cells = (cell_t **) malloc(width * sizeof (cell_t *));
     if (cells == NULL) {
-        goto init_free_rooms;
+        goto init_free;
     }
     for (i = 0; i < width; i++) {
         cells[i] = (cell_t *) malloc(height * sizeof (cell_t));
@@ -50,8 +46,40 @@ dungeon_t::dungeon_t(uint8_t width, uint8_t height, int max_rooms) {
 
     init_free_cells:
     free(cells);
-    init_free_rooms:
-    free(rooms);
+    init_free:
+    throw dungeon_exception(__PRETTY_FUNCTION__, "failed to allocate dungeon");
+}
+
+dungeon_t::dungeon_t(uint8_t width, uint8_t height, int max_rooms) {
+    int i, j;
+    this->width = width;
+    this->height = height;
+    cells = (cell_t **) malloc(width * sizeof (cell_t *));
+    if (cells == NULL) {
+        goto  init_free;
+    }
+    for (i = 0; i < width; i++) {
+        cells[i] = (cell_t *) malloc(height * sizeof (cell_t));
+        if (cells[i] == NULL) {
+            for (j = 0; j < i; j++) free(cells[j]);
+            goto init_free_cells;
+        }
+    }
+
+    for (i = 0; i < width; i++) {
+        for (j = 0; j < height; j++) {
+            cells[i][j].type = CELL_TYPE_EMPTY;
+            cells[i][j].hardness = 0;
+            cells[i][j].attributes = 0;
+        }
+    }
+
+    is_initalized = false;
+
+    return;
+
+    init_free_cells:
+    free(cells);
     init_free:
     throw dungeon_exception(__PRETTY_FUNCTION__, "failed to allocate dungeon");
 }
@@ -62,7 +90,6 @@ dungeon_t::~dungeon_t() {
         free(cells[i]);
     }
     free(cells);
-    free(rooms);
 }
 
 void dungeon_t::write_pgm() {
@@ -79,11 +106,10 @@ void dungeon_t::write_pgm() {
     fclose(out);
 }
 
-void dungeon_t::fill(int min_rooms, int room_count_randomness_max, int room_min_width, int room_min_height, int room_size_randomness_max, int debug) {
+void dungeon_t::fill() {
+    if (!options) throw dungeon_exception(__PRETTY_FUNCTION__, "dungeon not created with dungeon options");
     fill_stone();
-    room_count = 0;
-    min_room_count = min_rooms;
-    create_rooms(min_rooms + (rand() % room_count_randomness_max), room_min_width, room_min_height, room_size_randomness_max);
+    create_rooms(options->rooms_min + (rand() % (options->rooms_max - options->rooms_min)), 5, 5, 10);
     connect_rooms();
     fill_outside();
     place_staircases();
@@ -211,35 +237,29 @@ void dungeon_t::create_rooms(int count, uint8_t min_width, uint8_t min_height, i
     int i;
     int room_width, room_height;
 
-    if (count > max_room_count) {
-        // Not sure what the conventions are here, but I want exceptions and hate sprintf :)
-        // https://stackoverflow.com/a/5591169
-        throw dungeon_exception(__PRETTY_FUNCTION__, "create_rooms caller wants " + std::to_string(count) + " rooms, but the max is " + std::to_string(max_room_count));
-    }
-
     for (i = 0; i < count; i++) {
         room_width = min_width + (rand() % size_randomness_max);
         room_height = min_height + (rand() % size_randomness_max);
 
         try {
-            create_room(rooms + i, room_width, room_height);
+            create_room(room_width, room_height);
         }
         catch (dungeon_exception &e) {
-            if (i < min_room_count)
+            if (i < options->rooms_min)
                 throw dungeon_exception(__PRETTY_FUNCTION__, e, "failed to create the minimum number of rooms (full?)");
         }
-
-        room_count++;
     }
 }
 
-void dungeon_t::create_room(room_t *room, uint8_t room_width, uint8_t room_height) {
+room_t dungeon_t::create_room(uint8_t room_width, uint8_t room_height) {
     int x_offset = rand();
     int y_offset = rand();
     uint8_t ix, iy;
     uint8_t x, y;
     int16_t jx, jy;
     int placed = 0;
+
+    room_t room;
 
     for (ix = 0; ix < width && !placed; ix++) {
         x = (ix + x_offset) % width;
@@ -261,10 +281,10 @@ void dungeon_t::create_room(room_t *room, uint8_t room_width, uint8_t room_heigh
 
             // Then, only place it if the area is open.
             if (placed) {
-                room->x0 = x;
-                room->y0 = y;
-                room->x1 = x + room_width - 1;
-                room->y1 = y + room_height - 1;
+                room.x0 = x;
+                room.y0 = y;
+                room.x1 = x + room_width - 1;
+                room.y1 = y + room_height - 1;
                 for (jx = x; jx < x + room_width; jx++) {
                     for (jy = y; jy < y + room_height; jy++) {
                         cells[jx][jy].type = CELL_TYPE_ROOM;
@@ -275,13 +295,14 @@ void dungeon_t::create_room(room_t *room, uint8_t room_width, uint8_t room_heigh
         }
     }
     if (!placed) throw dungeon_exception(__PRETTY_FUNCTION__, "no space available to place room");
+    return room;
 }
 
 void dungeon_t::connect_rooms() {
     // Each room will connect to its nearest room until every room is marked as visited.
     int i;
-    int visited[room_count];
-    for (i = 0; i < room_count; i++) visited[i] = 0;
+    int visited[rooms.size()];
+    for (i = 0; i < rooms.size(); i++) visited[i] = 0;
     visited[0] = 1;
     room_t *a;
     room_t *b;
@@ -292,9 +313,9 @@ void dungeon_t::connect_rooms() {
 
     while (!done) {
         // Pick the first un-visited room.
-        for (i = 1; i < room_count; i++)
+        for (i = 1; i < rooms.size(); i++)
             if (!visited[i]) {
-                a = rooms + i;
+                a = &rooms[i];
                 visited[i] = 1;
                 break;
             }
@@ -302,9 +323,9 @@ void dungeon_t::connect_rooms() {
         // Find the nearest visited room.
         b = NULL;
         max_distance = INFINITY;
-        for (i = 0; i < room_count; i++)
-            if (rooms + i != a && visited[i]) {
-                current = rooms + i;
+        for (i = 0; i < rooms.size(); i++)
+            if (&rooms[i] != a && visited[i]) {
+                current = &rooms[i];
                 // Find the center points of each room.
                 ax = (a->x0 + a->x1) / 2;
                 ay = (a->y0 + a->y1) / 2;
@@ -313,7 +334,7 @@ void dungeon_t::connect_rooms() {
                 distance = pow(ax - bx, 2) + pow(ay - by, 2);
 
                 if (distance < max_distance) {
-                    b = rooms + i;
+                    b = &rooms[i];
                     max_distance = distance;
                     visited[i] = 1;
                 }
@@ -331,7 +352,7 @@ void dungeon_t::connect_rooms() {
 
         connect_points(ax, ay, bx, by);
         done = 1;
-        for (i = 0; i < room_count; i++)
+        for (i = 0; i < rooms.size(); i++)
             if (!visited[i]) {
                 done = 0;
                 break;
@@ -394,15 +415,19 @@ void dungeon_t::connect_points(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1) {
 
 void dungeon_t::place_staircases() {
     room_t room;
-    if (room_count < 1) throw dungeon_exception(__PRETTY_FUNCTION__, "attempted to place but no rooms exist");
+    if (rooms.size() < 1) throw dungeon_exception(__PRETTY_FUNCTION__, "attempted to place but no rooms exist");
 
     // Pick a random location in a room for the up staircase.
-    room = rooms[rand() % room_count];
-    place_in_room(&room, CELL_TYPE_UP_STAIRCASE);
+    if (options->up_staircase) {
+        room = rooms[rand() % rooms.size()];
+        place_in_room(&room, CELL_TYPE_UP_STAIRCASE);
+    }
 
     // And again for down...
-    room = rooms[rand() % room_count];
-    place_in_room(&room, CELL_TYPE_DOWN_STAIRCASE);
+    if (options->down_staircase) {
+        room = rooms[rand() % rooms.size()];
+        place_in_room(&room, CELL_TYPE_DOWN_STAIRCASE);
+    }
 }
 
 coordinates_t dungeon_t::place_in_room(room_t *room, cell_type_t material) {
@@ -452,8 +477,8 @@ coordinates_t dungeon_t::random_location() {
     int i;
     room_t *room;
 
-    for (i = 0; i < room_count; i++) {
-        room = rooms + ((i + room_offset) % room_count);
+    for (i = 0; i < rooms.size(); i++) {
+        room = &rooms[(i + room_offset) % rooms.size()];
         try {
             return random_location_in_room(room);
         } catch (dungeon_exception &e) {}
@@ -490,16 +515,8 @@ void dungeon_t::fill_from_file(FILE *f, int debug, coordinates_t *pc_coords) {
     // but will work.
     if (fseek(f, FILE_ROOM_COUNT_OFFSET, SEEK_SET)) dungeon_exception(__PRETTY_FUNCTION__, "unexpected error while reading file (could not seek to room count)");
 
+    uint16_t room_count;
     READ_UINT16(room_count, "room count", f, debug);
-
-    // We may not have allocated enough rooms for this dungeon.
-    // If so, we'll realloc that.
-    if (max_room_count < room_count) {
-        temp = (room_t *) realloc(rooms, room_count * sizeof (room_t));
-        if (temp == NULL) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to realloc room array");
-        rooms = temp;
-    }
-    max_room_count = room_count;
 
     if (fseek(f, FILE_MATRIX_OFFSET, SEEK_SET)) throw dungeon_exception(__PRETTY_FUNCTION__, "unexpected error while reading file (could not seek to dungeon matrix)");
     for (y = 0; y < DUNGEON_HEIGHT; y++) {
@@ -518,14 +535,17 @@ void dungeon_t::fill_from_file(FILE *f, int debug, coordinates_t *pc_coords) {
         READ_UINT8(width, "room width", f, debug);
         READ_UINT8(height, "room height", f, debug);
 
-        rooms[i].x0 = x0;
-        rooms[i].y0 = y0;
-        rooms[i].x1 = x0 + width - 1;
-        rooms[i].y1 = y0 + height - 1;
+        room_t room;
+        room.x0 = x0;
+        room.y0 = y0;
+        room.x1 = x0 + width - 1;
+        room.y1 = y0 + height - 1;
 
-        for (x = rooms[i].x0; x <= rooms[i].x1; x++)
-            for (y = rooms[i].y0; y<= rooms[i].y1; y++)
+        for (x = room.x0; x <= room.x1; x++)
+            for (y = room.y0; y<= room.y1; y++)
                 cells[x][y].type = CELL_TYPE_ROOM;
+
+        rooms.push_back(room);
     }
 
     READ_UINT16(up_staircase_count, "up staircase count", f, debug);
@@ -591,7 +611,7 @@ void dungeon_t::save_to_file(FILE *f, int debug, coordinates_t *pc_coords) {
             }
         }
     }
-    file_size = 1708 + room_count * 4 + up_count * 2 + down_count * 2;
+    file_size = 1708 + rooms.size() * 4 + up_count * 2 + down_count * 2;
     WRITE_UINT32(file_size, "file size", f, debug);
 
     WRITE_UINT8(pc_coords->x, "pc x", f, debug);
@@ -603,9 +623,9 @@ void dungeon_t::save_to_file(FILE *f, int debug, coordinates_t *pc_coords) {
         }
     }
 
-    WRITE_UINT16(room_count, "room count", f, debug);
+    WRITE_UINT16(rooms.size(), "room count", f, debug);
     int i;
-    for (i = 0; i < room_count; i++) {
+    for (i = 0; i < rooms.size(); i++) {
         logger_t::debug(__FILE__, "writing room " + std::to_string(i));
         WRITE_UINT8((rooms[i].x0), "room x0", f, debug);
         WRITE_UINT8((rooms[i].y0), "room y0", f, debug);

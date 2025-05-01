@@ -23,18 +23,19 @@ BEGIN ENEMY bill
 NAME Bill
 COLOR YELLOW
 DESC
-He's gone and done it again -- he was revived a second time
-since his defeat in Kill Bill 2. We're not sure if he's
-real, AI, robot, or something in between. But he's returned
-with a vengeance, more determined than ever to put an end
-to the worthless scum that would dare challenge
-Michaelsoft's goal of world technological domination.
+He's gone and done it again -- he came back to life a
+second time since his defeat in Kill Bill 2. We're not
+sure if he's real, AI, robot, or something in between. But
+he's returned with a vengeance, more determined than ever
+to put an end to the worthless scum that would dare
+challenge Michaelsoft's goal of world technological 
+domination.
 .
 ABIL UNIQ ERRATIC DESTROY TUNNEL BOSS
 SPEED 80+0d1
 HP 500+0d1
 DAM 20+1d10
-RRTY 10
+RRTY 0
 TEXTURE_N characters_bill_n
 TEXTURE_E characters_bill_e
 TEXTURE_W characters_bill_w

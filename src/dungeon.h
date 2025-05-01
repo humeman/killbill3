@@ -12,6 +12,21 @@
 
 #include "heap.h"
 
+typedef struct {
+    bool up_staircase;
+    bool down_staircase;
+    unsigned int width;
+    unsigned int height;
+    unsigned int nummon_min;
+    unsigned int nummon_max;
+    unsigned int monster_min_rarity;
+    unsigned int numitems_min;
+    unsigned int numitems_max;
+    unsigned int item_min_rarity;
+    unsigned int rooms_min;
+    unsigned int rooms_max;
+    bool spawn_boss;
+} dungeon_options_t;
 
 // For lack of a better place, this will go here too.
 typedef enum {
@@ -38,7 +53,6 @@ class room_t {
         uint8_t y0;
         uint8_t x1;
         uint8_t y1;
-
 };
 
 class cell_t {
@@ -71,14 +85,12 @@ class coordinates_t {
 class dungeon_t {
     private:
         bool is_initalized;
+        dungeon_options_t *options = nullptr;
 
     public:
         uint8_t width;
         uint8_t height;
-        uint16_t room_count;
-        uint16_t min_room_count;
-        uint16_t max_room_count;
-        room_t *rooms;
+        std::vector<room_t> rooms;
         cell_t **cells;
 
         /**
@@ -91,6 +103,7 @@ class dungeon_t {
          * - max_rooms: Number of room objects to allocate
          */
         dungeon_t(uint8_t width, uint8_t height, int max_rooms);
+        dungeon_t(dungeon_options_t &options);
         ~dungeon_t();
 
         /**
@@ -101,17 +114,9 @@ class dungeon_t {
 
         /**
          * Fills a dungeon (2D array) with a randomly generated one.
-         *
-         * Parameters:
-         * - min_rooms: Minimum rooms to generate
-         * - room_count_randomness_max: Max number of extra rooms to be randomly added
-         * - room_min_width: Minimum room width.
-         * - room_min_height: Minimum room height.
-         * - room_size_randomness_max: The maximum number that can be randomly
-         *      added to either dimension of the room size.
-         * - debug: Enables debug logs/files if 1.
+         * Must have been created with the dungeon_options_t constructor.
          */
-        void fill(int min_rooms, int room_count_randomness_max, int room_min_width, int room_min_height, int room_size_randomness_max, int debug);
+        void fill();
 
         /**
          * Picks a random, unobstructred location in a room within a dungeon.
@@ -183,7 +188,7 @@ class dungeon_t {
          * - room_width: Width of the room
          * - room_height: Height of the room
          */
-        void create_room(room_t *room, uint8_t room_width, uint8_t room_height);
+        room_t create_room(uint8_t room_width, uint8_t room_height);
 
         /**
          * Connects every room in the dungeon.
