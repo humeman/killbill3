@@ -19,10 +19,10 @@ typedef enum {
     LOG_LEVEL_ERROR // last one for counting
 } log_level_t;
 
-class logger_t {
+class Logger {
     public:
-        static logger_t *get() {
-            static logger_t inst;
+        static Logger *get() {
+            static Logger inst;
             return &inst;
         }
 
@@ -48,11 +48,11 @@ class logger_t {
         unsigned long max_backlog = 1000;
         bool levels_enabled[LOG_LEVEL_ERROR + 1];
 
-        logger_t() {
+        Logger() {
             for (int i = 0; i <= LOG_LEVEL_ERROR; i++)
                 levels_enabled[i] = true;
         }
-        ~logger_t() {};
+        ~Logger() {};
 
     public:
         void log(log_level_t level, const char *location, std::string path);

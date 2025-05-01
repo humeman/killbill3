@@ -9,84 +9,100 @@
 #include <notcurses/nckeys.h>
 #include "plane_manager.h"
 
-// typedef enum keybinds {
-//     KB_N = 'w',
-//     KB_E = 'd',
-//     KB_S = 's',
-//     KB_W = 'a',
-//     KB_INTERACT = ' ',
-//     KB_REST = ' ',
-//     KB_MONSTERS = 'm',
-//     KB_SCROLL_UP = NCKEY_UP,
-//     KB_SCROLL_DOWN = NCKEY_DOWN,
-//     KB_SCROLL_LEFT = NCKEY_LEFT,
-//     KB_SCROLL_RIGHT = NCKEY_RIGHT,
-//     KB_ESCAPE = NCKEY_ESC,
-//     KB_QUIT = 'Q',
-//     KB_TOGGLE_FOG = 'f',
-//     KB_TELEPORT = 'g',
-//     KB_TELEPORT_RANDOM = 'r',
-//     KB_EQUIP = 'e',
-//     KB_UNEQUIP = 'u',
-//     KB_DROP = 'q',
-//     KB_EXPUNGE = 'x',
-//     KB_INVENTORY = 'i',
-//     KB_LOOK_MODE = 'L',
-//     KB_LOOK_SELECT = 't',
-//     KB_NEXT_MESSAGE = NCKEY_ENTER
-// } keybinds_t;
-
 extern char CHARACTERS_BY_CELL_TYPE[CELL_TYPES];
 extern int COLORS_BY_CELL_TYPE[CELL_TYPES];
 extern std::string ITEM_TYPE_STRINGS[ITEM_TYPE_UNKNOWN + 1];
 
-typedef enum {
-  GAME_RESULT_RUNNING = 0,
-  GAME_RESULT_WIN = 1,
-  GAME_RESULT_LOSE = 2
-} game_result_t;
+class DungeonFloor {
+  public:
+    Dungeon *dungeon;
+    Character ***character_map;
+    Item ***item_map;
+
+    DungeonFloor(Dungeon *dungeon) {
+      int i, j;
+      this->dungeon = dungeon;
+      character_map = (Character ***) malloc(dungeon->width * sizeof (Character**));
+      if (character_map == NULL) {
+          goto init_free;
+      }
+      for (i = 0; i < dungeon->width; i++) {
+          character_map[i] = (Character **) malloc(dungeon->height * sizeof (Character*));
+          if (character_map[i] == NULL) {
+              for (j = 0; j < i; j++) free(character_map[j]);
+              goto init_free_character_map;
+          }
+          for (j = 0; j < dungeon->height; j++) character_map[i][j] = NULL;
+      }
+
+      item_map = (Item ***) malloc(dungeon->width * sizeof (Item**));
+      if (item_map == NULL) {
+          goto init_free_all_character_map;
+      }
+      for (i = 0; i < dungeon->width; i++) {
+          item_map[i] = (Item **) malloc(dungeon->height * sizeof (Item*));
+          if (item_map[i] == NULL) {
+              for (j = 0; j < i; j++) free(item_map[j]);
+              goto init_free_item_map;
+          }
+          for (j = 0; j < dungeon->height; j++) item_map[i][j] = NULL;
+      }
+
+      return;
+      init_free_item_map:
+      free(item_map);
+      init_free_all_character_map:
+      for (j = 0; j < dungeon->width; j++) free(character_map[j]);
+      init_free_character_map:
+      free(character_map);
+      init_free:
+      throw dungeon_exception(__PRETTY_FUNCTION__, "memory allocation failed");
+    }
+};
 
 // To split up the dungeon from the game controls and such, this class
 // stores all of the critical info for the game.
-class game_t {
+class Game {
     private:
-        pc_t pc;
-        binary_heap_t<character_t *> turn_queue;
+        PC pc;
+        BinaryHeap<Character *> turn_queue;
         uint32_t **pathfinding_no_tunnel;
         uint32_t **pathfinding_tunnel;
-        character_t ***character_map;
-        item_t ***item_map;
+        Character ***character_map;
+        Item ***item_map;
         bool is_initialized = false;
         int nummon = -1;
         int numitems = -1;
         int debug;
-        parser_t<monster_definition_t> *monst_parser;
-        parser_t<item_definition_t> *item_parser;
-        parser_t<dungeon_options_t> *map_parser;
-        std::map<std::string, monster_definition_t *> monster_defs;
-        std::map<std::string, item_definition_t *> item_defs;
-        std::map<std::string, std::map<std::string, dungeon_options_t *>> map_defs;
+        Parser<MonsterDefinition> *monst_parser;
+        Parser<ItemDefinition> *item_parser;
+        Parser<DungeonOptions> *map_parser;
+        std::map<std::string, MonsterDefinition *> monster_defs;
+        std::map<std::string, ItemDefinition *> item_defs;
+        std::map<std::string, std::map<std::string, DungeonOptions *>> map_defs;
+        std::vector<DungeonFloor *> dungeons;
 
         ncpp::NotCurses *nc = nullptr;
-        plane_manager_t planes;
+        PlaneManager planes;
         
         unsigned int term_x, term_y, cells_x, cells_y;
 
-        std::map<uint32_t, void (game_t::*)()> controls;
+        std::map<uint32_t, void (Game::*)()> controls;
         bool next_turn_ready = false;
         bool teleport_mode = false;
         bool look_mode = false;
         bool game_exit = false;
         bool needs_redraw = false;
         bool seethrough = false;
-        tuple_t pointer;
+        IntPair pointer;
         game_result_t result = GAME_RESULT_RUNNING;
 
-    public:
-        dungeon_t *dungeon;
 
-        game_t(int debug, uint8_t width, uint8_t height, int max_rooms);
-        ~game_t();
+    public:
+        Dungeon *dungeon = nullptr;
+
+        Game(int debug, uint8_t width, uint8_t height, int max_rooms);
+        ~Game();
 
         void create_nc();
         void end_nc();
@@ -118,10 +134,7 @@ class game_t {
          */
         void init_from_file(const char *path);
 
-        /**
-         * Initializes the game with a random dungeon.
-         */
-        void init_random();
+        void init_from_map(std::string map_name);
 
         /**
          * Adds randomized monsters, the count is the value of nummon (or random
@@ -181,7 +194,7 @@ class game_t {
         /**
           * Displays the monster menu.
           */
-        void monster_menu(monster_t *initial_target);
+        void monster_menu(Monster *initial_target);
         void inventory_menu();
         void cheater_menu();
 
@@ -203,13 +216,13 @@ class game_t {
          * - x_offset: Number to add to the X coordinate
          * - y_offset: Number to add to the Y coordinate
          */
-        void move_coords(tuple_t &coords, int x_offset, int y_offset);
+        void move_coords(IntPair &coords, int x_offset, int y_offset);
 
         /**
          * Forces the PC to move to some new coordinates, regardless of if
          *  they represent a possible PC location.
          */
-        void force_move(tuple_t dest);
+        void force_move(IntPair dest);
 
         /**
          * Regenerates the dungeon, placing the PC on the first instance of
@@ -221,9 +234,9 @@ class game_t {
         void fill_and_place_on(cell_type_t target_cell);
 
         void render_inventory_box(std::string title, std::string labels, std::string input_tip, unsigned int x0, unsigned int y0);
-        void render_inventory_item(item_t *item, int i, bool selected, unsigned int x0, unsigned int y0);
-        void render_inventory_details(ncpp::Plane *plane, item_t *item, unsigned int x0, unsigned int y0, unsigned int width, unsigned int height);
-        void render_monster_details(ncpp::Plane *plane, monster_t *monst, unsigned int x0, unsigned int y0, unsigned int width, unsigned int height);
+        void render_inventory_item(Item *item, int i, bool selected, unsigned int x0, unsigned int y0);
+        void render_inventory_details(ncpp::Plane *plane, Item *item, unsigned int x0, unsigned int y0, unsigned int width, unsigned int height);
+        void render_monster_details(ncpp::Plane *plane, Monster *monst, unsigned int x0, unsigned int y0, unsigned int width, unsigned int height);
 
         void render_frame(bool complete_redraw);
         void init_controls();

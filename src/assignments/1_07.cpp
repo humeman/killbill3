@@ -33,7 +33,7 @@ int prepare_args(int argc, char* argv[], int *read, int *write, int *debug, int 
     if (attrs & FLAG_COLOR_CYAN) std::cout << "CYAN "; \
     if (attrs & FLAG_COLOR_BLACK) std::cout << "BLACK "; }
 
-#define PRINT_ITEM_TYPE(attrs) { \
+#define PRINT_ItemYPE(attrs) { \
     if (attrs == ITEM_TYPE_WEAPON) std::cout << "WEAPON"; \
     else if (attrs == ITEM_TYPE_OFFHAND) std::cout << "OFFHAND"; \
     else if (attrs == ITEM_TYPE_RANGED) std::cout << "RANGED"; \
@@ -60,31 +60,31 @@ int main(int argc, char* argv[]) {
     if (home == NULL) throw dungeon_exception(__PRETTY_FUNCTION__, "env var 'HOME' is not set");
     std::string path_prefix(home);
 
-    std::vector<monster_definition_t *> monsters;
+    std::vector<MonsterDefinition *> monsters;
 
     std::ifstream monst_file(path_prefix + "/.rlg327/monster_desc.txt");
     if (monst_file.fail())
         throw dungeon_exception(__PRETTY_FUNCTION__, "failed to open file ~/.rlg327/monster_desc.txt");
 
     parser_definition_t monst_definitions[] {
-        {.name = "NAME", .offset = offsetof(monster_definition_t, name), .type = PARSE_TYPE_STRING, .required = true},
-        {.name = "DESC", .offset = offsetof(monster_definition_t, description), .type = PARSE_TYPE_LONG_STRING, .required = true},
-        {.name = "COLOR", .offset = offsetof(monster_definition_t, color), .type = PARSE_TYPE_COLOR, .required = true},
-        {.name = "SPEED", .offset = offsetof(monster_definition_t, speed), .type = PARSE_TYPE_DICE, .required = true},
-        {.name = "ABIL", .offset = offsetof(monster_definition_t, abilities), .type = PARSE_TYPE_MONSTER_ATTRIBUTES, .required = true},
-        {.name = "HP", .offset = offsetof(monster_definition_t, hp), .type = PARSE_TYPE_DICE, .required = true},
-        {.name = "DAM", .offset = offsetof(monster_definition_t, damage), .type = PARSE_TYPE_DICE, .required = true},
-        {.name = "SYMB", .offset = offsetof(monster_definition_t, symbol), .type = PARSE_TYPE_CHAR, .required = true},
-        {.name = "RRTY", .offset = offsetof(monster_definition_t, rarity), .type = PARSE_TYPE_RARITY, .required = true}
+        {.name = "NAME", .offset = offsetof(MonsterDefinition, name), .type = PARSE_TYPE_STRING, .required = true},
+        {.name = "DESC", .offset = offsetof(MonsterDefinition, description), .type = PARSE_TYPE_LONG_STRING, .required = true},
+        {.name = "COLOR", .offset = offsetof(MonsterDefinition, color), .type = PARSE_TYPE_COLOR, .required = true},
+        {.name = "SPEED", .offset = offsetof(MonsterDefinition, speed), .type = PARSE_TYPE_DICE, .required = true},
+        {.name = "ABIL", .offset = offsetof(MonsterDefinition, abilities), .type = PARSE_TYPE_MONSTER_ATTRIBUTES, .required = true},
+        {.name = "HP", .offset = offsetof(MonsterDefinition, hp), .type = PARSE_TYPE_DICE, .required = true},
+        {.name = "DAM", .offset = offsetof(MonsterDefinition, damage), .type = PARSE_TYPE_DICE, .required = true},
+        {.name = "SYMB", .offset = offsetof(MonsterDefinition, symbol), .type = PARSE_TYPE_CHAR, .required = true},
+        {.name = "RRTY", .offset = offsetof(MonsterDefinition, rarity), .type = PARSE_TYPE_RARITY, .required = true}
     };
 
-    parser_t<monster_definition_t> monst_parser(monst_definitions, sizeof (monst_definitions) / sizeof (monst_definitions[0]),
+    Parser<MonsterDefinition> monst_parser(monst_definitions, sizeof (monst_definitions) / sizeof (monst_definitions[0]),
         "RLG327 MONSTER DESCRIPTION 1", "MONSTER", true);
 
     monst_parser.parse(monsters, monst_file);
 
     std::cout << "========= MONSTERS =========" << std::endl;
-    for (monster_definition_t *monst : monsters) {
+    for (MonsterDefinition *monst : monsters) {
         std::cout << monst->name << std::endl;
         std::cout << monst->description << std::endl;
         PRINT_COLORS(monst->color);
@@ -105,39 +105,39 @@ int main(int argc, char* argv[]) {
 
 
     std::cout << std::endl;
-    std::vector<item_definition_t *> items;
+    std::vector<ItemDefinition *> items;
 
     std::ifstream item_file(path_prefix + "/.rlg327/object_desc.txt");
     if (item_file.fail())
         throw dungeon_exception(__PRETTY_FUNCTION__, "failed to open file ~/.rlg327/object_desc.txt");
 
     parser_definition_t item_definitions[] {
-        {.name = "NAME", .offset = offsetof(item_definition_t, name), .type = PARSE_TYPE_STRING, .required = true},
-        {.name = "DESC", .offset = offsetof(item_definition_t, description), .type = PARSE_TYPE_LONG_STRING, .required = true},
-        {.name = "TYPE", .offset = offsetof(item_definition_t, type), .type = PARSE_TYPE_ITEM_TYPE, .required = true},
-        {.name = "COLOR", .offset = offsetof(item_definition_t, color), .type = PARSE_TYPE_COLOR, .required = true},
-        {.name = "HIT", .offset = offsetof(item_definition_t, hit_bonus), .type = PARSE_TYPE_DICE, .required = true},
-        {.name = "DAM", .offset = offsetof(item_definition_t, damage_bonus), .type = PARSE_TYPE_DICE, .required = true},
-        {.name = "DODGE", .offset = offsetof(item_definition_t, dodge_bonus), .type = PARSE_TYPE_DICE, .required = true},
-        {.name = "DEF", .offset = offsetof(item_definition_t, defense_bonus), .type = PARSE_TYPE_DICE, .required = true},
-        {.name = "WEIGHT", .offset = offsetof(item_definition_t, weight), .type = PARSE_TYPE_DICE, .required = true},
-        {.name = "SPEED", .offset = offsetof(item_definition_t, speed_bonus), .type = PARSE_TYPE_DICE, .required = true},
-        {.name = "ATTR", .offset = offsetof(item_definition_t, attributes), .type = PARSE_TYPE_DICE, .required = true},
-        {.name = "VAL", .offset = offsetof(item_definition_t, value), .type = PARSE_TYPE_DICE, .required = true},
-        {.name = "ART", .offset = offsetof(item_definition_t, artifact), .type = PARSE_TYPE_BOOL, .required = true},
-        {.name = "RRTY", .offset = offsetof(item_definition_t, rarity), .type = PARSE_TYPE_RARITY, .required = true}
+        {.name = "NAME", .offset = offsetof(ItemDefinition, name), .type = PARSE_TYPE_STRING, .required = true},
+        {.name = "DESC", .offset = offsetof(ItemDefinition, description), .type = PARSE_TYPE_LONG_STRING, .required = true},
+        {.name = "TYPE", .offset = offsetof(ItemDefinition, type), .type = PARSE_TYPE_ItemYPE, .required = true},
+        {.name = "COLOR", .offset = offsetof(ItemDefinition, color), .type = PARSE_TYPE_COLOR, .required = true},
+        {.name = "HIT", .offset = offsetof(ItemDefinition, hit_bonus), .type = PARSE_TYPE_DICE, .required = true},
+        {.name = "DAM", .offset = offsetof(ItemDefinition, damage_bonus), .type = PARSE_TYPE_DICE, .required = true},
+        {.name = "DODGE", .offset = offsetof(ItemDefinition, dodge_bonus), .type = PARSE_TYPE_DICE, .required = true},
+        {.name = "DEF", .offset = offsetof(ItemDefinition, defense_bonus), .type = PARSE_TYPE_DICE, .required = true},
+        {.name = "WEIGHT", .offset = offsetof(ItemDefinition, weight), .type = PARSE_TYPE_DICE, .required = true},
+        {.name = "SPEED", .offset = offsetof(ItemDefinition, speed_bonus), .type = PARSE_TYPE_DICE, .required = true},
+        {.name = "ATTR", .offset = offsetof(ItemDefinition, attributes), .type = PARSE_TYPE_DICE, .required = true},
+        {.name = "VAL", .offset = offsetof(ItemDefinition, value), .type = PARSE_TYPE_DICE, .required = true},
+        {.name = "ART", .offset = offsetof(ItemDefinition, artifact), .type = PARSE_TYPE_BOOL, .required = true},
+        {.name = "RRTY", .offset = offsetof(ItemDefinition, rarity), .type = PARSE_TYPE_RARITY, .required = true}
     };
 
-    parser_t<item_definition_t> item_parser(item_definitions, sizeof (item_definitions) / sizeof (item_definitions[0]),
+    Parser<ItemDefinition> item_parser(item_definitions, sizeof (item_definitions) / sizeof (item_definitions[0]),
         "RLG327 OBJECT DESCRIPTION 1", "OBJECT", true);
 
     item_parser.parse(items, item_file);
 
     std::cout << "========= ITEMS =========" << std::endl;
-    for (item_definition_t *item : items) {
+    for (ItemDefinition *item : items) {
         std::cout << item->name << std::endl;
         std::cout << item->description << std::endl;
-        PRINT_ITEM_TYPE(item->type);
+        PRINT_ItemYPE(item->type);
         std::cout << std::endl;
         PRINT_COLORS(item->color);
         std::cout << std::endl;

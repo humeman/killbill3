@@ -11,9 +11,9 @@
 
 #define MAX_ATTEMPTS 2 * DUNGEON_WIDTH * DUNGEON_HEIGHT
 
-tuple_t random_location_no_kill(dungeon_t *dungeon, character_t ***character_map) {
+IntPair random_location_no_kill(Dungeon *dungeon, Character ***character_map) {
     int i;
-    tuple_t coords;
+    IntPair coords;
     for (i = 0; i < MAX_ATTEMPTS; i++) {
         try {
             coords = dungeon->random_location();
@@ -24,13 +24,13 @@ tuple_t random_location_no_kill(dungeon_t *dungeon, character_t ***character_map
     throw dungeon_exception(__PRETTY_FUNCTION__, "no available space for a new monster in dungeon");
 }
 
-void destroy_character(character_t ***character_map, character_t *ch) {
+void destroy_character(Character ***character_map, Character *ch) {
     if (character_map[ch->x][ch->y] == ch)
         character_map[ch->x][ch->y] = NULL;
     delete ch;
 }
 
-int monster_t::damage(int amount, game_result_t &result, item_t ***item_map, character_t ***character_map) {
+int Monster::damage(int amount, game_result_t &result, Item ***item_map, Character ***character_map) {
     hp -= amount;
     if (hp <= 0) {
         die(result, character_map, item_map);
@@ -38,7 +38,7 @@ int monster_t::damage(int amount, game_result_t &result, item_t ***item_map, cha
     return amount;
 }
 
-void character_t::move_to(tuple_t to, character_t ***character_map) {
+void Character::move_to(IntPair to, Character ***character_map) {
     if (location_initialized && character_map[x][y] == this) {
         character_map[x][y] = NULL;
     }
@@ -56,7 +56,7 @@ void character_t::move_to(tuple_t to, character_t ***character_map) {
     location_initialized = true;
 }
 
-bool character_t::has_los(dungeon_t *dungeon, tuple_t to) {
+bool Character::has_los(Dungeon *dungeon, IntPair to) {
     uint8_t x0 = x;
     uint8_t y0 = y;
     uint8_t x1 = to.x;
@@ -104,7 +104,7 @@ bool character_t::has_los(dungeon_t *dungeon, tuple_t to) {
     return true;
 }
 
-tuple_t monster_t::next_xy(dungeon_t *dungeon, tuple_t to) {
+IntPair Monster::next_xy(Dungeon *dungeon, IntPair to) {
     // Butchered version of has_los.
     uint8_t x0 = x;
     uint8_t y0 = y;
@@ -112,7 +112,7 @@ tuple_t monster_t::next_xy(dungeon_t *dungeon, tuple_t to) {
     uint8_t y1 = to.y;
     float m, b;
     int x_diff, y_diff, dir;
-    tuple_t next;
+    IntPair next;
     next.x = x0;
     next.y = y0;
     if (x0 == x1 && y0 == y1) return next;
@@ -147,7 +147,7 @@ tuple_t monster_t::next_xy(dungeon_t *dungeon, tuple_t to) {
 }
 
 
-monster_t::monster_t(monster_definition_t *definition) {
+Monster::Monster(MonsterDefinition *definition) {
     this->definition = definition;
     this->hp = definition->hp->roll();
     this->speed = (uint8_t) CLAMP(definition->speed->roll(), 1, 255);
@@ -164,12 +164,12 @@ monster_t::monster_t(monster_definition_t *definition) {
     }
 }
 
-uint8_t monster_t::next_color() {
+uint8_t Monster::next_color() {
     color_i = (color_i + 1) % color_count;
     return current_color();
 }
 
-uint8_t monster_t::current_color() {
+uint8_t Monster::current_color() {
     int i;
     int found = -1;
     int color_val = definition->color;
@@ -183,16 +183,16 @@ uint8_t monster_t::current_color() {
 
 int VALID_MOVES[][2] = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}};
 
-void monster_t::take_turn(dungeon_t *dungeon, pc_t *pc, binary_heap_t<character_t *> &turn_queue, character_t ***character_map, item_t ***item_map, uint32_t **pathfinding_tunnel, uint32_t **pathfinding_no_tunnel, uint32_t priority, game_result_t &result) {
+void Monster::take_turn(Dungeon *dungeon, PC *pc, BinaryHeap<Character *> &turn_queue, Character ***character_map, Item ***item_map, uint32_t **pathfinding_tunnel, uint32_t **pathfinding_no_tunnel, uint32_t priority, game_result_t &result) {
     // Find out which direction this monster wants to go.
     // - Telepathic: Directly to the PC
     // - Intelligent: Towards the last seen location
     // - None: Only towards the PC if there's LOS
     uint8_t min, x_offset, target_x, target_y;
-    tuple_t next;
+    IntPair next;
     int i, j, x1, y1, dam, r;
     uint32_t** map;
-    cell_t* next_cell;
+    Cell* next_cell;
     bool can_move;
 
     // Slightly inefficient but I prefer the readability since this algorithm is a bit more complex.
@@ -205,7 +205,7 @@ void monster_t::take_turn(dungeon_t *dungeon, pc_t *pc, binary_heap_t<character_
         target_y = pc->y;
     }
     //    b: If it has line of sight, it can.
-    else if (has_los(dungeon, (tuple_t) {pc->x, pc->y})) {
+    else if (has_los(dungeon, (IntPair) {pc->x, pc->y})) {
         can_move = 1;
         target_x = pc->x;
         target_y = pc->y;
@@ -257,7 +257,7 @@ void monster_t::take_turn(dungeon_t *dungeon, pc_t *pc, binary_heap_t<character_
 
         // Otherwise, we'll go in a straight line.
         else {
-            next = next_xy(dungeon, (tuple_t) {target_x, target_y});
+            next = next_xy(dungeon, (IntPair) {target_x, target_y});
             // Can't if it's non-tunneling and going towards stone.
             if (!(attributes & (MONSTER_ATTRIBUTE_TUNNELING | MONSTER_ATTRIBUTE_GHOST)) && dungeon->cells[next.x][next.y].type == CELL_TYPE_STONE) {
                 can_move = 0;
@@ -326,14 +326,14 @@ void monster_t::take_turn(dungeon_t *dungeon, pc_t *pc, binary_heap_t<character_
                     // See if the PC dodges.
                     r = rand() % 100;
                     if (pc->dodge_bonus() >= r) {
-                        message_queue_t::get()->add(
+                        MessageQueue::get()->add(
                             "You dodge an attack from &" +
                             std::to_string(current_color()) +
                             escape_col(definition->name) +
                             "&r.");
                     } else {
                         dam = pc->damage(definition->damage->roll(), result, item_map, character_map);
-                        message_queue_t::get()->add(
+                        MessageQueue::get()->add(
                             "&" +
                             std::to_string(current_color()) +
                             escape_col(definition->name) +
@@ -358,11 +358,11 @@ void monster_t::take_turn(dungeon_t *dungeon, pc_t *pc, binary_heap_t<character_
                         }
                     }
                     // No location was found, so we swap.
-                    character_map[next.x][next.y]->move_to((tuple_t) {x, y}, character_map);
+                    character_map[next.x][next.y]->move_to((IntPair) {x, y}, character_map);
                     goto end;
                     found:
                     // Move the monster to its displaced cell
-                    character_map[next.x][next.y]->move_to((tuple_t) {(uint8_t) x1, (uint8_t) y1}, character_map);
+                    character_map[next.x][next.y]->move_to((IntPair) {(uint8_t) x1, (uint8_t) y1}, character_map);
                     end:
                     move_to(next, character_map);
                 }
@@ -376,7 +376,7 @@ void monster_t::take_turn(dungeon_t *dungeon, pc_t *pc, binary_heap_t<character_
     return;
 }
 
-void monster_t::die(game_result_t &result, character_t ***character_map, item_t ***item_map) {
+void Monster::die(game_result_t &result, Character ***character_map, Item ***item_map) {
     // If the monster has stuff in its inventory, drop it here.
     if (item != NULL) {
         if (item_map[x][y]) {
@@ -395,26 +395,26 @@ void monster_t::die(game_result_t &result, character_t ***character_map, item_t 
     if (definition->abilities & MONSTER_ATTRIBUTE_BOSS) result = GAME_RESULT_WIN;
 }
 
-int character_t::inventory_size() {
-    // We could use a separate size variable here, but we're returning item_ts directly,
+int Character::inventory_size() {
+    // We could use a separate size variable here, but we're returning Items directly,
     // and they have methods on them to manage the stack. It's more reliable to re-count
     // every time, though less efficient.
     int i = 0;
-    item_t *current = item;
+    Item *current = item;
     while (current != NULL) {
         i++;
         current = current->next_in_stack();
     }
     return i;
 }
-void character_t::add_to_inventory(item_t *item) {
+void Character::add_to_inventory(Item *item) {
     if (this->item == NULL) this->item = item;
     else this->item->add_to_stack(item);
     item_count++;
 }
-item_t *character_t::remove_from_inventory(int i) {
+Item *Character::remove_from_inventory(int i) {
     if (i < 0 || i >= item_count) throw dungeon_exception(__PRETTY_FUNCTION__, "inventory index out of bounds");
-    item_t *current = item;
+    Item *current = item;
     int j;
     for (j = 0; j < i - 1; j++) {
         current = current->next_in_stack();
@@ -429,16 +429,16 @@ item_t *character_t::remove_from_inventory(int i) {
         return current->remove_next_in_stack();
     }
 }
-item_t *character_t::remove_inventory_stack() {
-    item_t *stack = item;
+Item *Character::remove_inventory_stack() {
+    Item *stack = item;
     item_count = 0;
     item = NULL;
     return stack;
 }
 
-item_t *character_t::inventory_at(int i) {
+Item *Character::inventory_at(int i) {
     if (i < 0 || i >= item_count) throw dungeon_exception(__PRETTY_FUNCTION__, "inventory index out of bounds");
-    item_t *current = item;
+    Item *current = item;
     int j;
     for (j = 0; j < i; j++) {
         current = current->next_in_stack();
@@ -447,24 +447,24 @@ item_t *character_t::inventory_at(int i) {
     return current;
 }
 
-pc_t::pc_t() {
-    dice_t dice(100, 1, 20);
+PC::PC() {
+    Dice dice(100, 1, 20);
     base_hp = dice.roll();
     hp = base_hp;
     for (unsigned long i = 0; i < sizeof (equipment) / sizeof (equipment[0]); i++)
         equipment[i] = NULL;
 }
 
-character_type pc_t::type() {
-    return CHARACTER_TYPE_PC;
+Characterype PC::type() {
+    return CharacterYPE_PC;
 }
 
-character_type monster_t::type() {
-    return CHARACTER_TYPE_MONSTER;
+Characterype Monster::type() {
+    return CharacterYPE_MONSTER;
 }
 
 
-int pc_t::speed_bonus() {
+int PC::speed_bonus() {
     int i;
     int sp = speed;
     for (i = 0; i < ARRAY_SIZE(equipment); i++) {
@@ -477,7 +477,7 @@ int pc_t::speed_bonus() {
     return sp;
 }
 
-int pc_t::damage_bonus() {
+int PC::damage_bonus() {
     int i;
     int dm = base_damage.roll();
     for (i = 0; i < ARRAY_SIZE(equipment); i++) {
@@ -488,7 +488,7 @@ int pc_t::damage_bonus() {
     return dm;
 }
 
-int pc_t::dodge_bonus() {
+int PC::dodge_bonus() {
     int i;
     int dodge = 0;
     for (i = 0; i < ARRAY_SIZE(equipment); i++) {
@@ -500,7 +500,7 @@ int pc_t::dodge_bonus() {
     return dodge;
 }
 
-int pc_t::defense_bonus() {
+int PC::defense_bonus() {
     int i;
     int def = 0;
     for (i = 0; i < ARRAY_SIZE(equipment); i++) {
@@ -511,7 +511,7 @@ int pc_t::defense_bonus() {
     return def;
 }
 
-int pc_t::damage(int amount, game_result_t &result, item_t ***item_map, character_t ***character_map) {
+int PC::damage(int amount, game_result_t &result, Item ***item_map, Character ***character_map) {
     amount -= defense_bonus();
     if (amount <= 0) return 0;
     hp -= amount;

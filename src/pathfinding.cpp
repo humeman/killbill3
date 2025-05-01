@@ -12,12 +12,12 @@
  * returning 0 if equivalent and 1 otherwise.
  */
 bool compare_coords(void *a, void *b) {
-    tuple_t *ca = (tuple_t *) a;
-    tuple_t *cb = (tuple_t *) b;
+    IntPair *ca = (IntPair *) a;
+    IntPair *cb = (IntPair *) b;
     return !(ca->x == cb->x && ca->y == cb->y);
 }
 
-void update_pathfinding(dungeon_t *dungeon, uint32_t **pathfinding_no_tunnel, uint32_t **pathfinding_tunnel, character_t *pc) {
+void update_pathfinding(Dungeon *dungeon, uint32_t **pathfinding_no_tunnel, uint32_t **pathfinding_tunnel, Character *pc) {
     generate_pathfinding_map(dungeon, pathfinding_no_tunnel, 0, pc);
     generate_pathfinding_map(dungeon, pathfinding_tunnel, 1, pc);
 }
@@ -26,19 +26,19 @@ void update_pathfinding(dungeon_t *dungeon, uint32_t **pathfinding_no_tunnel, ui
  * This algorithm is partially based on the pseuducode provided here:
  * https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm#Using_a_priority_queue
  */
-void generate_pathfinding_map(dungeon_t *dungeon, uint32_t **grid, int allow_tunneling, character_t *pc) {
+void generate_pathfinding_map(Dungeon *dungeon, uint32_t **grid, int allow_tunneling, Character *pc) {
     uint8_t x, y, x1, y1;
     uint8_t src_x, src_y;
     uint32_t distance;
-    tuple_t coords;
+    IntPair coords;
     int done[dungeon->width][dungeon->height];
-    binary_heap_t<tuple_t> queue;
+    BinaryHeap<IntPair> queue;
     src_x = pc->x;
     src_y = pc->y;
 
     // Set the source cell to distance 0, add to queue
     grid[src_x][src_y] = 0;
-    queue.insert((tuple_t) {src_x, src_y}, 0);
+    queue.insert((IntPair) {src_x, src_y}, 0);
 
     // Add every other cell with a distance of infinity
     for (x = 0; x < dungeon->width; x++) {
@@ -51,7 +51,7 @@ void generate_pathfinding_map(dungeon_t *dungeon, uint32_t **grid, int allow_tun
                     done[x][y] = 1; // to signal not to attempt any checks against this cell
             } else {
                 done[x][y] = 0;
-                queue.insert((tuple_t) {x, y}, UINT32_MAX);
+                queue.insert((IntPair) {x, y}, UINT32_MAX);
             }
         }
     }
@@ -77,7 +77,7 @@ void generate_pathfinding_map(dungeon_t *dungeon, uint32_t **grid, int allow_tun
                 distance = grid[x][y] + HARDNESS_OF(dungeon->cells[x][y].hardness);
                 if (distance < grid[x1][y1]) {
                     grid[x1][y1] = distance;
-                    queue.decrease_priority((tuple_t) {x1, y1}, distance);
+                    queue.decrease_priority((IntPair) {x1, y1}, distance);
                 }
             }
         }

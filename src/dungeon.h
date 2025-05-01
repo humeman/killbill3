@@ -12,18 +12,20 @@
 
 #include "heap.h"
 
-typedef struct {
-    std::string name;
-    tuple_t nummon;
-    tuple_t numitems;
-    tuple_t rooms;
-    tuple_t size;
-    std::string up_staircase;
-    std::string down_staircase;
-    std::vector<std::string> monsters;
-    std::vector<std::string> items;
-    std::string boss;
-} dungeon_options_t;
+class DungeonOptions {
+    public:
+        std::string name;
+        IntPair nummon;
+        IntPair numitems;
+        IntPair rooms;
+        IntPair size;
+        std::string up_staircase = "";
+        std::string down_staircase = "";
+        std::vector<std::string> monsters;
+        std::vector<std::string> items;
+        std::string boss = "";
+        bool is_default = false;
+};
 
 #define CELL_TYPES 8
 typedef enum { // if modified, sync with CELL_TYPES_TO_FLOOR_TEXTURES, game_loop.cpp
@@ -37,7 +39,7 @@ typedef enum { // if modified, sync with CELL_TYPES_TO_FLOOR_TEXTURES, game_loop
     CELL_TYPE_HIDDEN
 } cell_type_t;
 
-class room_t {
+class Room {
     public:
         uint8_t x0;
         uint8_t y0;
@@ -45,7 +47,7 @@ class room_t {
         uint8_t y1;
 };
 
-class cell_t {
+class Cell {
     public:
         cell_type_t type;
         uint8_t hardness;
@@ -57,39 +59,45 @@ typedef enum {
     CELL_ATTRIBUTE_IMMUTABLE = 0x01
 } cell_attributes_t;
 
-class queue_node_t {
+class QueueNode {
     public:
         int x;
         int y;
-        queue_node_t *next;
+        QueueNode *next;
 
 };
 
-class tuple_t {
+class IntPair {
     public:
         uint8_t x;
         uint8_t y;
-        tuple_t(uint8_t x, uint8_t y) {
+        IntPair(uint8_t x, uint8_t y) {
             this->x = x;
             this->y = y;
         }
-        tuple_t() {
+        IntPair() {
             this->x = 0;
             this->y = 0;
         }
-        bool operator==(const tuple_t &o) const;
+        bool operator==(const IntPair &o) const;
 };
 
-class dungeon_t {
+typedef enum {
+    GAME_RESULT_RUNNING = 0,
+    GAME_RESULT_WIN = 1,
+    GAME_RESULT_LOSE = 2
+} game_result_t;
+
+class Dungeon {
     private:
         bool is_initalized;
-        dungeon_options_t *options = nullptr;
+        DungeonOptions *options = nullptr;
 
     public:
         uint8_t width;
         uint8_t height;
-        std::vector<room_t> rooms;
-        cell_t **cells;
+        std::vector<Room> rooms;
+        Cell **cells;
 
         /**
          * Allocates memory for a dungeon. It still must be filled after creation
@@ -100,9 +108,9 @@ class dungeon_t {
          * - height: Height of the dungeon
          * - max_rooms: Number of room objects to allocate
          */
-        dungeon_t(uint8_t width, uint8_t height, int max_rooms);
-        dungeon_t(dungeon_options_t &options);
-        ~dungeon_t();
+        Dungeon(uint8_t width, uint8_t height, int max_rooms);
+        Dungeon(DungeonOptions &options);
+        ~Dungeon();
 
         /**
          * Writes a .pgm file for the dungeon hardness map for debugging purposes.
@@ -112,7 +120,7 @@ class dungeon_t {
 
         /**
          * Fills a dungeon (2D array) with a randomly generated one.
-         * Must have been created with the dungeon_options_t constructor.
+         * Must have been created with the DungeonOptions constructor.
          */
         void fill();
 
@@ -123,14 +131,14 @@ class dungeon_t {
          * - room: Room to find an open space in
          * Returns: The picked coordinates
          */
-        tuple_t random_location_in_room(room_t *room);
+        IntPair random_location_in_room(Room *room);
 
         /**
          * Picks a random, unobstructred location in any room within a dungeon.
          *
          * Returns: The picked coordinates
          */
-        tuple_t random_location();
+        IntPair random_location();
 
         /**
          * Fills this dungeon with the data read from an RLG327 file.
@@ -140,7 +148,7 @@ class dungeon_t {
          * - debug: If true, debug messages will be printed
          * - pc_coords: A pointer to coordinates that contain the PC's location
          */
-        void fill_from_file(FILE *f, int debug, tuple_t *pc_coords);
+        void fill_from_file(FILE *f, int debug, IntPair *pc_coords);
 
         /**
          * Saves this dungeon to an RLG327 file.
@@ -151,7 +159,7 @@ class dungeon_t {
          * - pc_coords: A pointer to coordinates that will be updated with
          *      the PC's location
          */
-        void save_to_file(FILE *f, int debug, tuple_t *pc_coords);
+        void save_to_file(FILE *f, int debug, IntPair *pc_coords);
 
     private:
         /**
@@ -186,7 +194,7 @@ class dungeon_t {
          * - room_width: Width of the room
          * - room_height: Height of the room
          */
-        room_t create_room(uint8_t room_width, uint8_t room_height);
+        Room create_room(uint8_t room_width, uint8_t room_height);
 
         /**
          * Connects every room in the dungeon.
@@ -224,7 +232,7 @@ class dungeon_t {
          * - material: Material to place
          * Returns: coordinates to location of placed material
          */
-        tuple_t place_in_room(room_t *room, cell_type_t material);
+        IntPair place_in_room(Room *room, cell_type_t material);
 };
 
 #endif

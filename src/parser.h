@@ -23,7 +23,7 @@ typedef enum {
     PARSE_TYPE_CHAR,
     PARSE_TYPE_MONSTER_ATTRIBUTES,
     PARSE_TYPE_COLOR,
-    PARSE_TYPE_ITEM_TYPE,
+    PARSE_TYPE_ItemYPE,
     PARSE_TYPE_BOOL,
     PARSE_TYPE_TUPLE,
     PARSE_TYPE_VECTOR_STRINGS
@@ -36,7 +36,7 @@ void write_to_dice(void *item, std::string line, std::ifstream &input);
 void write_to_char(void *item, std::string line, std::ifstream &input);
 void write_to_monster_attributes(void *item, std::string line, std::ifstream &input);
 void write_to_color(void *item, std::string line, std::ifstream &input);
-void write_to_item_type(void *item, std::string line, std::ifstream &input);
+void write_to_Itemype(void *item, std::string line, std::ifstream &input);
 void write_to_bool(void *item, std::string line, std::ifstream &input);
 void write_to_tuple(void *item, std::string line, std::ifstream &input);
 void write_to_vector_strings(void *item, std::string line, std::ifstream &input, int &line_i);
@@ -52,7 +52,7 @@ typedef struct {
 } parser_definition_t;
 
 template <class T>
-class parser_t {
+class Parser {
     private:
         parser_definition_t *definitions;
         int definition_count;
@@ -62,14 +62,14 @@ class parser_t {
         bool skip_failures;
 
     public:
-        parser_t(parser_definition_t definitions[], int definition_count, std::string header, std::string begin_header, bool skip_failures) {
+        Parser(parser_definition_t definitions[], int definition_count, std::string header, std::string begin_header, bool skip_failures) {
             this->definitions = definitions;
             this->definition_count = definition_count;
             this->header = header;
             this->begin_header = begin_header;
             this->skip_failures = skip_failures;
         }
-        ~parser_t() {}
+        ~Parser() {}
 
         /**
           * Parses an input stream, storing the results in a vector of pointers to allocated structs.

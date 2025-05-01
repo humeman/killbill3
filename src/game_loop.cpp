@@ -25,7 +25,7 @@
     vopts.scaling = NCSCALE_STRETCH; \
     vopts.blitter = NCBLIT_PIXEL; \
     vopts.n = (plane)->to_ncplane(); \
-    resource_manager_t::get()->get_visual(texture_name)->blit(&vopts); }
+    ResourceManager::get()->get_visual(texture_name)->blit(&vopts); }
 
 #define CELL_NAME(x, y) "cell_" + std::to_string(x) + "_" + std::to_string(y)
 #define HEART_NAME(x) "heart_" + std::to_string(x)
@@ -51,17 +51,17 @@ const std::string CELL_TYPES_TO_FLOOR_TEXTURES[] = {
 #define CHEATER_MENU_WIDTH 40
 #define CHEATER_MENU_HEIGHT 10
 
-void game_t::create_nc() {
-    logger_t::get()->off();
+void Game::create_nc() {
+    Logger::get()->off();
     nc = new ncpp::NotCurses();
 }
-void game_t::end_nc() {
+void Game::end_nc() {
     if (nc) {
         nc->stop();
         delete nc;
         nc = nullptr;
     }
-    logger_t::get()->on();
+    Logger::get()->on();
 }
 
 /**
@@ -77,19 +77,19 @@ void game_t::end_nc() {
  * To start, we need our Notcurses planes -- one for the top status message, one for the health/inventory, and then
  * the game window itself (where each cell gets a plane).
  */
-void game_t::run() {
+void Game::run() {
     if (!nc)
-        throw dungeon_exception(__PRETTY_FUNCTION__, "run game_t::create_nc()");
+        throw dungeon_exception(__PRETTY_FUNCTION__, "run Game::create_nc()");
     const dungeon_exception *ex = nullptr;
     ncpp::Plane *plane;
     try {
         // Dimensioning stuff...
-        logger_t::debug(__FILE__, "dimensioning terminal");
+        Logger::debug(__FILE__, "dimensioning terminal");
         nc->get_term_dim(term_y, term_x);
         if (term_x < 60 || term_y < 20) {
             throw dungeon_exception(__PRETTY_FUNCTION__, "terminal is too small (minimum 60x20)");
         }
-        logger_t::debug(__FILE__, "size is (" + std::to_string(term_x) + "x" + std::to_string(term_y) + ")");
+        Logger::debug(__FILE__, "size is (" + std::to_string(term_x) + "x" + std::to_string(term_y) + ")");
     
         // Reserve 4 rows on the bottom, a line of gap, and a row on the top.
         unsigned int cell_rows = term_y - 5;
@@ -164,17 +164,17 @@ void game_t::run() {
     }
 
     planes.clear();
-    resource_manager_t::destroy();
+    ResourceManager::destroy();
     end_nc();
     if (ex) {
-        logger_t::error(__FILE__, "rethrowing game loop exception");
+        Logger::error(__FILE__, "rethrowing game loop exception");
         throw *ex;
     }
 }
 
-void game_t::run_internal() {
+void Game::run_internal() {
     ncinput inp;
-    message_queue_t::get()->add("--- &0&bKILL BILL 3&r ---");
+    MessageQueue::get()->add("--- &0&bKILL BILL 3&r ---");
     unsigned int x, y;
     render_frame(true);
     while (true) {
@@ -234,17 +234,17 @@ void game_t::run_internal() {
         }
         if (result != GAME_RESULT_RUNNING) {
             seethrough = true;
-            message_queue_t::get()->clear();
-            message_queue_t::get()->add("&bGame over. Press any key to continue.");
+            MessageQueue::get()->clear();
+            MessageQueue::get()->add("&bGame over. Press any key to continue.");
         }
     }
     ncinput ni;
     nc->get(true, &ni);
 }
 
-void game_t::run_until_pc() {
-    character_t *ch = NULL;
-    monster_t *monster;
+void Game::run_until_pc() {
+    Character *ch = NULL;
+    Monster *monster;
     uint32_t priority;
 
     while (true) {
@@ -272,7 +272,7 @@ void game_t::run_until_pc() {
             return;
         }
 
-        monster = (monster_t *) ch;
+        monster = (Monster *) ch;
         result = GAME_RESULT_RUNNING;
         monster->take_turn(dungeon, &pc, turn_queue, character_map, item_map, pathfinding_tunnel, pathfinding_no_tunnel, priority, result);
         if (pc.dead) result = GAME_RESULT_LOSE;
@@ -280,19 +280,19 @@ void game_t::run_until_pc() {
     }
 }
 
-void game_t::render_frame(bool complete_redraw) {
+void Game::render_frame(bool complete_redraw) {
     // Status message.
     ncpp::Plane *top_plane = planes.get("top");
     top_plane->erase();
     if (teleport_mode) {
-        if (message_queue_t::get()->empty())
-            message_queue_t::get()->add("-- &4&bTELEPORT MODE&r --");
+        if (MessageQueue::get()->empty())
+            MessageQueue::get()->add("-- &4&bTELEPORT MODE&r --");
     }
     else if (look_mode) {
-        if (message_queue_t::get()->empty())
-            message_queue_t::get()->add("-- &3&bLOOK MODE&r --");
+        if (MessageQueue::get()->empty())
+            MessageQueue::get()->add("-- &3&bLOOK MODE&r --");
     }
-    message_queue_t::get()->emit(*top_plane, false);
+    MessageQueue::get()->emit(*top_plane, false);
 
     // Dungeon.
     // Complete redraw means empty out all the cells.
@@ -301,7 +301,7 @@ void game_t::render_frame(bool complete_redraw) {
     int x, y;
     ncpp::Plane *plane;
     if (complete_redraw) {
-        logger_t::debug(__FILE__, "running complete redraw");
+        Logger::debug(__FILE__, "running complete redraw");
         for (x = 0; x < (int) cells_x; x++) {
             for (y = 0; y < (int) cells_y; y++) {
                 plane = planes.get(CELL_NAME(x, y));
@@ -325,7 +325,7 @@ void game_t::render_frame(bool complete_redraw) {
     // Easiest method here is to keep track of the texture name.
     int cell_x, cell_y;
     std::string new_texture;
-    monster_t *monst;
+    Monster *monst;
     std::string cell_name;
     for (x = dungeon_x0; x < (int) (dungeon_x0 + cells_x); x++) {
         if (x < 0 || x >= dungeon->width) continue;
@@ -340,16 +340,16 @@ void game_t::render_frame(bool complete_redraw) {
                 if ((teleport_mode || look_mode) && pointer.x == x && pointer.y == y) {
                     new_texture = "characters_pointer";
                 }
-                else if (!teleport_mode && !look_mode && !seethrough && !pc.has_los(dungeon, (tuple_t) {(unsigned char) x, (unsigned char) y})) {
+                else if (!teleport_mode && !look_mode && !seethrough && !pc.has_los(dungeon, (IntPair) {(unsigned char) x, (unsigned char) y})) {
                     new_texture = CELL_TYPES_TO_FLOOR_TEXTURES[CELL_TYPE_STONE];
                 }
                 // Characters get first priority.
                 else if (character_map[x][y]) {
-                    if (character_map[x][y]->type() == CHARACTER_TYPE_PC) {
-                        new_texture = std::string(PC_TEXTURE) + "_" + "nesw"[pc.direction];
+                    if (character_map[x][y]->type() == CharacterYPE_PC) {
+                        new_texture = std::string(PCEXTURE) + "_" + "nesw"[pc.direction];
                     }
-                    else if (character_map[x][y]->type() == CHARACTER_TYPE_MONSTER) {
-                        monst = (monster_t *) character_map[x][y];
+                    else if (character_map[x][y]->type() == CharacterYPE_MONSTER) {
+                        monst = (Monster *) character_map[x][y];
                         switch (monst->direction) {
                             case DIRECTION_NORTH:
                                 new_texture = monst->definition->floor_texture_n;
@@ -414,34 +414,34 @@ void game_t::render_frame(bool complete_redraw) {
     }
 
     // The inventory.
-    std::string item_texture;
+    std::string Itemexture;
     NC_APPLY_COLOR(*bottom_plane, RGB_COLOR_WHITE_DIM, RGB_COLOR_BLACK);
     for (i = 0; i < MAX_CARRY_SLOTS; i++) {
         plane_name = ITEM_NAME(i);
         plane = planes.get(plane_name);
-        item_texture = i < pc.inventory_size() ? pc.inventory_at(i)->definition->ui_texture : "items_empty";
+        Itemexture = i < pc.inventory_size() ? pc.inventory_at(i)->definition->ui_texture : "items_empty";
 
-        if (planes.cache_set(plane_name, item_texture)) {
-            DRAW_TO_PLANE(plane, item_texture);
+        if (planes.cache_set(plane_name, Itemexture)) {
+            DRAW_TO_PLANE(plane, Itemexture);
         }
         bottom_plane->putc(2, plane->get_x() - 1, i == 9 ? '0' : '1' + i);
     }
     for (i = 0; i < ARRAY_SIZE(pc.equipment); i++) {
         plane_name = ITEM_NAME(i + MAX_CARRY_SLOTS);
         plane = planes.get(plane_name);
-        item_texture = pc.equipment[i] ? pc.equipment[i]->definition->ui_texture : "items_empty";
+        Itemexture = pc.equipment[i] ? pc.equipment[i]->definition->ui_texture : "items_empty";
 
-        if (planes.cache_set(plane_name, item_texture)) {
-            DRAW_TO_PLANE(plane, item_texture);
+        if (planes.cache_set(plane_name, Itemexture)) {
+            DRAW_TO_PLANE(plane, Itemexture);
         }
         bottom_plane->putc(2, plane->get_x() - 1, "asdfghjk"[i]);
     }
 
     if (look_mode) {
         plane = planes.get("look");
-        if (character_map[pointer.x][pointer.y] && character_map[pointer.x][pointer.y]->type() == CHARACTER_TYPE_MONSTER) {
+        if (character_map[pointer.x][pointer.y] && character_map[pointer.x][pointer.y]->type() == CharacterYPE_MONSTER) {
             plane->move_top();
-            render_monster_details(plane, (monster_t *) character_map[pointer.x][pointer.y], 0, 0, DETAILS_WIDTH, DETAILS_HEIGHT);
+            render_monster_details(plane, (Monster *) character_map[pointer.x][pointer.y], 0, 0, DETAILS_WIDTH, DETAILS_HEIGHT);
         }
         else if (item_map[pointer.x][pointer.y]) {
             plane->move_top();
@@ -454,7 +454,7 @@ void game_t::render_frame(bool complete_redraw) {
     nc->render();
 }
 
-void game_t::render_inventory_box(std::string title, std::string labels, std::string input_tip, unsigned int x0, unsigned int y0) {
+void Game::render_inventory_box(std::string title, std::string labels, std::string input_tip, unsigned int x0, unsigned int y0) {
     int height = labels.length() + 2;
     unsigned int i, x, y;
     ncpp::Plane *plane = planes.get("inventory");
@@ -476,7 +476,7 @@ void game_t::render_inventory_box(std::string title, std::string labels, std::st
     plane->printf(y0 + 1 + i, x0, "%c", labels[i]);
 }
 
-void game_t::render_inventory_item(item_t *item, int i, bool selected, unsigned int x0, unsigned int y0) {
+void Game::render_inventory_item(Item *item, int i, bool selected, unsigned int x0, unsigned int y0) {
     ncpp::Plane *plane = planes.get("inventory");
     // one of the most incredible macro expansions the world will ever see
     NC_APPLY_COLOR_BY_NUM(*plane, item ? item->current_color() : RGB_COLOR_BLACK, (selected ? RGB_COLOR_BLACK : RGB_COLOR_WHITE));
@@ -497,7 +497,7 @@ void game_t::render_inventory_item(item_t *item, int i, bool selected, unsigned 
         plane->printf(y0 + 1 + i, x0 + 5, "%s", item->definition->name.c_str());
 }
 
-void game_t::render_inventory_details(ncpp::Plane *plane, item_t *item, unsigned int x0, unsigned int y0, unsigned int width, unsigned int height) {
+void Game::render_inventory_details(ncpp::Plane *plane, Item *item, unsigned int x0, unsigned int y0, unsigned int width, unsigned int height) {
     unsigned int i, x, y;
     std::string desc;
     // Draw out a box, taking up the whole width of the screen at y0.
@@ -531,7 +531,7 @@ void game_t::render_inventory_details(ncpp::Plane *plane, item_t *item, unsigned
     // The last line will be the dice.
     NC_APPLY_COLOR(*plane, RGB_COLOR_BLACK_DIM, RGB_COLOR_WHITE);
     std::string res = "";
-    dice_t *c;
+    Dice *c;
     if (item->definition->artifact) res += "*ARTIFACT* ";
     c = item->definition->damage_bonus;
     if (c->base != 0 || c->dice != 0) res += "dmg: " + c->str() + " "; 
@@ -545,7 +545,7 @@ void game_t::render_inventory_details(ncpp::Plane *plane, item_t *item, unsigned
     NC_PRINT_CENTERED_AT(plane, x0 + width / 2, y0 + height - 1, "%s", res.c_str());
 }
 
-void game_t::render_monster_details(ncpp::Plane *plane, monster_t *monst, unsigned int x0, unsigned int y0, unsigned int width, unsigned int height) {
+void Game::render_monster_details(ncpp::Plane *plane, Monster *monst, unsigned int x0, unsigned int y0, unsigned int width, unsigned int height) {
     unsigned int i, x, y;
     std::string desc;
     // Draw out a box, taking up the whole width of the screen at y0.
@@ -600,13 +600,13 @@ void move_back(ncpp::Plane *plane) {
     plane->move_bottom();
 }
 
-void game_t::inventory_menu() {
+void Game::inventory_menu() {
     bool inventory = true, expunge_confirm = false;
     int menu_i = -1;
     int i, j, swap_slot;
     ncinput inp;
     char ch;
-    item_t *item, *target_item;
+    Item *item, *target_item;
     item_type_t type;
     int scroll_dir;
     int inv_count;
@@ -618,14 +618,14 @@ void game_t::inventory_menu() {
     plane->styles_set(ncpp::CellStyle::Bold);
     plane->erase();
     plane->move_top();
-    message_queue_t::get()->clear();
+    MessageQueue::get()->clear();
     while (true) {
         top->erase();
         plane->erase();
-        if (message_queue_t::get()->empty()) {
-            message_queue_t::get()->add("-- &5&bINVENTORY&r --");
+        if (MessageQueue::get()->empty()) {
+            MessageQueue::get()->add("-- &5&bINVENTORY&r --");
         }
-        message_queue_t::get()->emit(*top, false);
+        MessageQueue::get()->emit(*top, false);
         inv_count = pc.inventory_size();
         // Check if the selected item is out of bounds.
         // If it is, we'll move to the next available item.
@@ -699,8 +699,8 @@ void game_t::inventory_menu() {
                     type = target_item->definition->type;
                     // Make sure it's equippable.
                     if (type < ITEM_TYPE_WEAPON || type > ITEM_TYPE_POCKET) {
-                        message_queue_t::get()->clear();
-                        message_queue_t::get()->add("&0&bYou can't equip &" + std::to_string(
+                        MessageQueue::get()->clear();
+                        MessageQueue::get()->add("&0&bYou can't equip &" + std::to_string(
                             target_item->current_color()) + escape_col(target_item->definition->name) + "&0&b!");
                         break;
                     }
@@ -714,12 +714,12 @@ void game_t::inventory_menu() {
                     if (target_item->is_stacked()) throw dungeon_exception(__PRETTY_FUNCTION__, "invalid state: removed item is stacked");
                     // If the swap slot is empty, just add the item there.
                     if (pc.equipment[swap_slot] == NULL) {
-                        message_queue_t::get()->add("You equipped &" + std::to_string(
+                        MessageQueue::get()->add("You equipped &" + std::to_string(
                             target_item->current_color()) + escape_col(target_item->definition->name) + "&r.");
                     } else {
                         // Then we have to move that item out to the inventory.
                         // This will reorder them, but it seems way more difficult than it's worth not to.
-                        message_queue_t::get()->add("You equipped &"
+                        MessageQueue::get()->add("You equipped &"
                                 + std::to_string(target_item->current_color())
                                 + escape_col(target_item->definition->name) + "&r, swapping out &"
                                 + std::to_string(pc.equipment[swap_slot]->current_color())
@@ -731,13 +731,13 @@ void game_t::inventory_menu() {
                     menu_i = swap_slot;
                 } else {
                     if (pc.inventory_size() >= 10) {
-                        message_queue_t::get()->clear();
-                        message_queue_t::get()->add("&0&bYou have no carry slots open!");
+                        MessageQueue::get()->clear();
+                        MessageQueue::get()->add("&0&bYou have no carry slots open!");
                         break;
                     }
                     pc.add_to_inventory(target_item);
                     pc.equipment[menu_i] = NULL;
-                    message_queue_t::get()->add("You unequipped &" + std::to_string(
+                    MessageQueue::get()->add("You unequipped &" + std::to_string(
                         target_item->current_color()) + escape_col(target_item->definition->name) + "&r.");
                     inventory = true;
                     menu_i = pc.inventory_size() - 1;
@@ -746,7 +746,7 @@ void game_t::inventory_menu() {
             case NCKEY_BACKSPACE:
                 if (!target_item) break;
                 if (!expunge_confirm) {
-                    message_queue_t::get()->add("Press BACKSPACE again to expunge &" + std::to_string(
+                    MessageQueue::get()->add("Press BACKSPACE again to expunge &" + std::to_string(
                         target_item->current_color()) + escape_col(target_item->definition->name) + "&r.");
                     expunge_confirm = true;
                     break;
@@ -756,7 +756,7 @@ void game_t::inventory_menu() {
                 } else {
                     pc.equipment[menu_i] = nullptr;
                 }
-                message_queue_t::get()->add("You expunged &" + std::to_string(
+                MessageQueue::get()->add("You expunged &" + std::to_string(
                     target_item->current_color()) + escape_col(target_item->definition->name) + "&r.");
                 delete target_item;
                 expunge_confirm = false;
@@ -774,7 +774,7 @@ void game_t::inventory_menu() {
                 } else {
                     item_map[pc.x][pc.y] = target_item;
                 }
-                message_queue_t::get()->add("You dropped &" + std::to_string(
+                MessageQueue::get()->add("You dropped &" + std::to_string(
                     target_item->current_color()) + escape_col(target_item->definition->name) + "&r.");
                 break;
             default:
@@ -826,7 +826,7 @@ void game_t::inventory_menu() {
     else NC_APPLY_COLOR(*plane, RGB_COLOR_BLACK, RGB_COLOR_WHITE); \
     plane->printf(1 + i, 0, opt); }
 
-void game_t::cheater_menu() {
+void Game::cheater_menu() {
     int menu_i = 0;
     ncinput inp;
     int options = 3;
@@ -836,11 +836,11 @@ void game_t::cheater_menu() {
 
     plane->erase();
     plane->move_top();
-    message_queue_t::get()->clear();
+    MessageQueue::get()->clear();
     while (true) {
         top->erase();
         plane->erase();
-        message_queue_t::get()->emit(*top, false);
+        MessageQueue::get()->emit(*top, false);
 
         NC_APPLY_COLOR(*plane, RGB_COLOR_BLACK, RGB_COLOR_WHITE);
         for (x = 0; x < CHEATER_MENU_WIDTH; x++) {

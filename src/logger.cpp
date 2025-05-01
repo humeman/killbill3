@@ -8,7 +8,7 @@ const char *log_level_names[] = {
     "ERROR"
 };
 
-void logger_t::log(log_level_t level, const char *location, std::string log) {
+void Logger::log(log_level_t level, const char *location, std::string log) {
     if (!levels_enabled[level]) return;
     std::ostringstream rendered_log;
     rendered_log << log_level_names[level] << " @ " << location << ": " << log;
@@ -24,13 +24,13 @@ void logger_t::log(log_level_t level, const char *location, std::string log) {
     std::cout << rendered_log_str << std::endl;
 }
 
-void logger_t::off() {
+void Logger::off() {
     if (!is_on) return;
     log(LOG_LEVEL_INFO, "logger", "logger disabled");
     is_on = false;
 }
 
-void logger_t::on() {
+void Logger::on() {
     if (is_on) return;
     is_on = true;
     std::string backlog_log;
@@ -44,10 +44,10 @@ void logger_t::on() {
     log(LOG_LEVEL_INFO, "logger", "logger re-enabled");
 }
 
-void logger_t::on(log_level_t level) {
+void Logger::on(log_level_t level) {
     levels_enabled[level] = true;
 }
 
-void logger_t::off(log_level_t level) {
+void Logger::off(log_level_t level) {
     levels_enabled[level] = false;
 }

@@ -1,6 +1,6 @@
 /**
 A simple, global implementation of a message queue.
-This would be associated with the game_t instance, but I'd like to be able to print debugging
+This would be associated with the Game instance, but I'd like to be able to print debugging
  messages even before that exists, so it's structured as a singleton.
 */
 
@@ -14,13 +14,13 @@ This would be associated with the game_t instance, but I'd like to be able to pr
 
 std::string escape_col(std::string inp);
 
-class message_queue_t {
+class MessageQueue {
     private:
-        static message_queue_t *instance;
+        static MessageQueue *instance;
     
     public:
-        static message_queue_t *get() {
-            if (!instance) instance = new message_queue_t();
+        static MessageQueue *get() {
+            if (!instance) instance = new MessageQueue();
             return instance;
         }
         static void destroy() {
@@ -30,8 +30,8 @@ class message_queue_t {
         }
 
     private:
-        message_queue_t() {};
-        ~message_queue_t() {};
+        MessageQueue() {};
+        ~MessageQueue() {};
 
         std::deque<std::string> messages;
 

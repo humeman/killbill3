@@ -19,19 +19,19 @@
 #define MONSTER_ATTRIBUTE_BOSS 0x100
 
 typedef enum {
-    CHARACTER_TYPE_PC,
-    CHARACTER_TYPE_MONSTER
-} character_type;
+    CharacterYPE_PC,
+    CharacterYPE_MONSTER
+} Characterype;
 
-class monster_definition_t {
+class MonsterDefinition {
     public:
         std::string name;
         std::string description;
         int color;
-        dice_t *speed;
+        Dice *speed;
         int abilities;
-        dice_t *hp;
-        dice_t *damage;
+        Dice *hp;
+        Dice *damage;
         char symbol;
         int rarity;
         bool unique_slain = false;
@@ -42,7 +42,7 @@ class monster_definition_t {
         std::string ui_texture;
 };
 
-void verify_monster_definition(monster_definition_t *def);
+void verify_monster_definition(MonsterDefinition *def);
 
 typedef enum {
     DIRECTION_NORTH,
@@ -54,9 +54,9 @@ typedef enum {
 /**
  * The base class (abstract) for a dungeon character.
  */
-class character_t {
+class Character {
     protected:
-        item_t *item = NULL;
+        Item *item = NULL;
         int item_count = 0;
         
     public:
@@ -69,7 +69,7 @@ class character_t {
         bool location_initialized = false;
         int hp;
         int base_hp;
-        virtual ~character_t() {};
+        virtual ~Character() {};
 
         /**
          * Deals damage.
@@ -78,7 +78,7 @@ class character_t {
          * - amount: Amount of damage to deal
          * - character_map (modified if dead)
          */
-        virtual int damage(int amount, game_result_t &result, item_t ***item_map, character_t ***character_map) = 0;
+        virtual int damage(int amount, game_result_t &result, Item ***item_map, Character ***character_map) = 0;
 
         /**
          * Moves this character to a location.
@@ -87,7 +87,7 @@ class character_t {
          * - to: Coordinates to move to
          * - character_map: Map of character pointers to update
          */
-        void move_to(tuple_t to, character_t ***character_map);
+        void move_to(IntPair to, Character ***character_map);
         /**
          * Checks if this character has line-of-sight with a coordinate,
          *  defined by a direct straight line to the point that isn't
@@ -98,19 +98,19 @@ class character_t {
          * - to: Coordinates to check LOS to
          * Returns: True if has LOS
          */
-        bool has_los(dungeon_t *dungeon, tuple_t to);
+        bool has_los(Dungeon *dungeon, IntPair to);
         /**
          * Gets the type of this character.
          *
-         * Returns: CHARACTER_TYPE_PC or CHARACTER_TYPE_MONSTER
+         * Returns: CharacterYPE_PC or CharacterYPE_MONSTER
          */
-        virtual character_type type() = 0;
+        virtual Characterype type() = 0;
 
         int inventory_size();
-        void add_to_inventory(item_t *item);
-        item_t *remove_from_inventory(int i);
-        item_t *remove_inventory_stack();
-        item_t *inventory_at(int i);
+        void add_to_inventory(Item *item);
+        Item *remove_from_inventory(int i);
+        Item *remove_inventory_stack();
+        Item *inventory_at(int i);
 };
 
 typedef enum {
@@ -124,22 +124,22 @@ typedef enum {
     PC_SLOT_POCKET_1 // Must be the last one for counting
 } pc_slot_t;
 
-class pc_t : public character_t {
+class PC : public Character {
     public:
-        item_t *equipment[PC_SLOT_POCKET_1 + 1];
-        dice_t base_damage = dice_t(0, 1, 4);
+        Item *equipment[PC_SLOT_POCKET_1 + 1];
+        Dice base_damage = Dice(0, 1, 4);
 
-        pc_t();
-        ~pc_t() {};
-        character_type type() override;
-        int damage(int amount, game_result_t &result, item_t ***item_map, character_t ***character_map) override;
+        PC();
+        ~PC() {};
+        Characterype type() override;
+        int damage(int amount, game_result_t &result, Item ***item_map, Character ***character_map) override;
         int speed_bonus();
         int damage_bonus();
         int dodge_bonus();
         int defense_bonus();
 };
 
-class monster_t : public character_t {
+class Monster : public Character {
     private:
         bool pc_seen;
         uint8_t pc_last_seen_x;
@@ -149,9 +149,9 @@ class monster_t : public character_t {
         uint8_t color_count;
 
     public:
-        monster_definition_t *definition;
-        monster_t(monster_definition_t *definition);
-        ~monster_t() {};
+        MonsterDefinition *definition;
+        Monster(MonsterDefinition *definition);
+        ~Monster() {};
         /**
          * Finds the next coordinate to move to on a direct line to a
          *  coordinate pair.
@@ -162,14 +162,14 @@ class monster_t : public character_t {
          * Returns: Next coordinates to move to (if possible),
          *  otherwise the current coordinates
          */
-        tuple_t next_xy(dungeon_t *dungeon, tuple_t to);
+        IntPair next_xy(Dungeon *dungeon, IntPair to);
         // A few too many parameters, but it'd be annoying to rework. Oh well.
-        void take_turn(dungeon_t *dungeon, pc_t *pc, binary_heap_t<character_t *> &turn_queue, character_t ***character_map, item_t ***item_map, uint32_t **pathfinding_tunnel, uint32_t **pathfinding_no_tunnel, uint32_t priority, game_result_t &result);
-        void die(game_result_t &result, character_t ***character_map, item_t ***item_map);
+        void take_turn(Dungeon *dungeon, PC *pc, BinaryHeap<Character *> &turn_queue, Character ***character_map, Item ***item_map, uint32_t **pathfinding_tunnel, uint32_t **pathfinding_no_tunnel, uint32_t priority, game_result_t &result);
+        void die(game_result_t &result, Character ***character_map, Item ***item_map);
         uint8_t next_color();
         uint8_t current_color();
-        character_type type() override;
-        int damage(int amount, game_result_t &result, item_t ***item_map, character_t ***character_map) override;
+        Characterype type() override;
+        int damage(int amount, game_result_t &result, Item ***item_map, Character ***character_map) override;
 };
 
 /**
@@ -180,7 +180,7 @@ class monster_t : public character_t {
  * - dungeon
  * - character_map: Map of character pointers
  */
-tuple_t random_location_no_kill(dungeon_t *dungeon, character_t ***character_map);
+IntPair random_location_no_kill(Dungeon *dungeon, Character ***character_map);
 
 /**
  * Places a monster randomly into the character map and turn queue.
@@ -191,7 +191,7 @@ tuple_t random_location_no_kill(dungeon_t *dungeon, character_t ***character_map
  * - character_map: Map of character pointers
  * - attributes: The attributes (0-F) to apply to the monster
  */
-void place_monster(dungeon_t *dungeon, binary_heap_t<character_t *> &turn_queue, character_t ***character_map, uint8_t attributes);
+void place_monster(Dungeon *dungeon, BinaryHeap<Character *> &turn_queue, Character ***character_map, uint8_t attributes);
 
 /**
  * Generates a specified number of random monsters and inserts them
@@ -204,7 +204,7 @@ void place_monster(dungeon_t *dungeon, binary_heap_t<character_t *> &turn_queue,
  * - attributes: The attributes (0-F) to apply to the monster
  * - nummon: Number of monsters to generate
  */
-void generate_monsters(dungeon_t *dungeon, binary_heap_t<character_t *> &turn_queue, character_t ***character_map, int count);
+void generate_monsters(Dungeon *dungeon, BinaryHeap<Character *> &turn_queue, Character ***character_map, int count);
 
 /**
  * Takes the turn of the next available character in the turn queue.
@@ -219,7 +219,7 @@ void generate_monsters(dungeon_t *dungeon, binary_heap_t<character_t *> &turn_qu
  * - result: Pointer to a game result, which will be updated to reflect win/lose
  * - was_pc: Pointer that's set to true if the turn just taken was the PC's (NOOP)
  */
-void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t<character_t *> &turn_queue, character_t ***character_map, uint32_t **pathfinding_tunnel, uint32_t **pathfinding_no_tunnel, game_result_t *result, bool *was_pc);
+void next_turn(Dungeon *dungeon, Character *pc, BinaryHeap<Character *> &turn_queue, Character ***character_map, uint32_t **pathfinding_tunnel, uint32_t **pathfinding_no_tunnel, game_result_t *result, bool *was_pc);
 
 /**
  * Cleans up the memory for a character and removes it from the character map.
@@ -228,6 +228,6 @@ void next_turn(dungeon_t *dungeon, character_t *pc, binary_heap_t<character_t *>
  * - character_map: Map of character pointers
  * - ch: Character to destroy
  */
-void destroy_character(character_t ***character_map, character_t *ch);
+void destroy_character(Character ***character_map, Character *ch);
 
 #endif

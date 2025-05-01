@@ -39,8 +39,8 @@ void convert(void *item, std::string line, std::ifstream &input, parse_type_t ty
         case PARSE_TYPE_COLOR:
             write_to_color(item, line, input);
             break;
-        case PARSE_TYPE_ITEM_TYPE:
-            write_to_item_type(item, line, input);
+        case PARSE_TYPE_ItemYPE:
+            write_to_Itemype(item, line, input);
             break;
         case PARSE_TYPE_BOOL:
             write_to_bool(item, line, input);
@@ -104,8 +104,8 @@ void write_to_dice(void *item, std::string line, std::ifstream &input) {
         throw dungeon_exception(__PRETTY_FUNCTION__, "dice definition must be formatted <base>+<dice>d<sides>, got " + line);
     sides = std::stoi(line.substr(j + 1, line.length()));
 
-    dice_t *d = new dice_t(base, dice, sides);
-    memcpy(item, &d, sizeof (dice_t *));
+    Dice *d = new Dice(base, dice, sides);
+    memcpy(item, &d, sizeof (Dice *));
 }
 
 void write_to_char(void *item, std::string line, std::ifstream &input) {
@@ -201,7 +201,7 @@ void write_to_color(void *item, std::string line, std::ifstream &input) {
     }
 }
 
-void write_to_item_type(void *item, std::string line, std::ifstream &input) {
+void write_to_Itemype(void *item, std::string line, std::ifstream &input) {
     item_type_t *type = (item_type_t *) item;
     if (line == "WEAPON") *type = ITEM_TYPE_WEAPON;
     else if (line == "HAT") *type = ITEM_TYPE_HAT;
@@ -249,7 +249,7 @@ void write_to_tuple(void *item, std::string line, std::ifstream &input) {
     x = std::stoi(line.substr(0, i));
     y = std::stoi(line.substr(i + 1, line.length()));
 
-    tuple_t *d = (tuple_t *) item;
+    IntPair *d = (IntPair *) item;
     d->x = x;
     d->y = y;
 }

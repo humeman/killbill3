@@ -4,14 +4,14 @@
 #include <map>
 #include <ncpp/NotCurses.hh>
 
-class plane_manager_t {
+class PlaneManager {
     private:
         std::map<std::string, ncpp::Plane *> planes;
         std::map<std::string, std::string> visual_cache;
 
     public:
-        plane_manager_t() {}
-        ~plane_manager_t() {
+        PlaneManager() {}
+        ~PlaneManager() {
             clear();
         }
         

@@ -2,7 +2,7 @@
 #include "random.h"
 #include "macros.h"
 
-item_t::item_t(item_definition_t *definition) {
+Item::Item(ItemDefinition *definition) {
     if (definition->artifact) {
         if (definition->artifact_created)
             throw dungeon_exception(__PRETTY_FUNCTION__, "artifact already exists");
@@ -27,19 +27,19 @@ item_t::item_t(item_definition_t *definition) {
     }
 }
 
-item_t::~item_t() {
+Item::~Item() {
     // Deletes all stacked items too
     if (next != NULL) {
         delete next;
     }
 }
 
-uint8_t item_t::next_color() {
+uint8_t Item::next_color() {
     color_i = (color_i + 1) % color_count;
     return current_color();
 }
 
-uint8_t item_t::current_color() {
+uint8_t Item::current_color() {
     int i;
     int found = -1;
     int color_val = definition->color;
@@ -51,35 +51,35 @@ uint8_t item_t::current_color() {
     throw dungeon_exception(__PRETTY_FUNCTION__, "did not find target color (was it modified?)");
 }
 
-int item_t::get_damage() {
+int Item::get_damage() {
     return definition->damage_bonus->roll();
 }
 
-void item_t::add_to_stack(item_t *item) {
-    item_t *current = this;
+void Item::add_to_stack(Item *item) {
+    Item *current = this;
     while (current->next != NULL)
         current = current->next;
     current->next = item;
 }
 
-item_t *item_t::detach_stack() {
-    item_t *removed = next;
+Item *Item::detach_stack() {
+    Item *removed = next;
     next = NULL;
     return removed;
 }
 
-item_t *item_t::remove_next_in_stack() {
-    item_t *removed = next;
+Item *Item::remove_next_in_stack() {
+    Item *removed = next;
     if (removed != NULL) next = removed->next;
     else next = NULL;
     removed->next = NULL;
     return removed;
 }
 
-item_t *item_t::next_in_stack() {
+Item *Item::next_in_stack() {
     return next;
 }
 
-bool item_t::is_stacked() {
+bool Item::is_stacked() {
     return next != NULL;
 }

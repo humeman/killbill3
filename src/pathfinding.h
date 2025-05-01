@@ -16,7 +16,7 @@
  * Params:
  *  - dungeon: The dungeon to generate the pathfinding maps for.
  */
-void update_pathfinding(dungeon_t *dungeon, uint32_t **pathfinding_no_tunnel, uint32_t **pathfinding_tunnel, character_t *pc);
+void update_pathfinding(Dungeon *dungeon, uint32_t **pathfinding_no_tunnel, uint32_t **pathfinding_tunnel, Character *pc);
 
 /**
  * Generates a pathfinding map for the specified dungeon and writes it
@@ -29,6 +29,6 @@ void update_pathfinding(dungeon_t *dungeon, uint32_t **pathfinding_no_tunnel, ui
  *  - allow_tunneling: If non-zero, generates a map allowing tunneling through rock.
  *  - pc: A pointer to the coordinates of the PC (destination).
  */
-void generate_pathfinding_map(dungeon_t *dungeon, uint32_t **grid, int allow_tunneling, character_t *pc);
+void generate_pathfinding_map(Dungeon *dungeon, uint32_t **grid, int allow_tunneling, Character *pc);
 
 #endif

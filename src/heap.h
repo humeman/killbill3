@@ -14,7 +14,7 @@
 #include "macros.h"
 
 template <class T>
-class binary_heap_t {
+class BinaryHeap {
     private:
         class binary_heap_node_t {
             public:
@@ -28,8 +28,8 @@ class binary_heap_t {
         /**
          * Initializes a new binary heap.
          */
-        binary_heap_t() {}
-        ~binary_heap_t() {}
+        BinaryHeap() {}
+        ~BinaryHeap() {}
 
         /**
          * Inserts an item into the heap.

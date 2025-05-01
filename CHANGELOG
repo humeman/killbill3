@@ -138,7 +138,7 @@
          General cleanup: moved variable declarations to the top of functions,
           made all error returns use RETURN_ERROR or ERROR_AND_EXIT macros,
           switched C standard library imports to C++ (ie, string.h -> cstring).
-    4p:  Began migrating the dungeon_t struct to its own C++ class. Program is now
+    4p:  Began migrating the Dungeon struct to its own C++ class. Program is now
           very broken :)
 3/28:
     12p: Decided to go all in on C++ stuff. Much of the program had to be changed, and
@@ -149,7 +149,7 @@
           - Replacing the print error/return status code pattern with exceptions
              -> This also allowed me to make methods return their values rather than
                  updating values of pointers where possible. For example, getting a
-                 pair of coordinates will return tuple_t rather than updating
+                 pair of coordinates will return IntPair rather than updating
                  an X and Y pointer.
           - Got rid of the files.cpp/h methods and moved them into dungeon.cpp/h -- they
              made way more sense there to begin with.
@@ -157,12 +157,12 @@
           source files/classes and make things easier to follow.
           - The dungeon code now exclusively handles dungeons, not characters or any
              of that extra stuff.
-          - A new game_t class (in game.cpp/h) handles the game logic, and is where the
+          - A new Game class (in game.cpp/h) handles the game logic, and is where the
              dungeon generation and character management, turns, etc converge. Character
              maps, pathfinding, PC, etc. are all defined here. This required a signficant
              refactor of dungeon/file/game code.
-          - Moved a lot of the game prep logic into game_t and out of main. Now, the init
-             logic in main is just `new game_t` and `game.init_from_file()` or
+          - Moved a lot of the game prep logic into Game and out of main. Now, the init
+             logic in main is just `new Game` and `game.init_from_file()` or
              `game.init_random()`. Cleanup is also in the game destructor.
 3/29:
     9a:  Continued the Great C++ Refactor. Began to move on to debugging the now very,
@@ -181,7 +181,7 @@
              dungeon for one turn.
           - Found and cleaned up some memory leaks introduced in the refactor. Got rid of
              some now unnecessary mallocs.
-          - `nummon` implementation was redone with the new game_t class, and I forgot to
+          - `nummon` implementation was redone with the new Game class, and I forgot to
              actually set it if the user overrides it, so it does that now.
           - Fixed a bug in the monster menu implementation where a uint8_t was being used
              for possibly negative values, making the numbers wrap around to 255.
@@ -217,10 +217,10 @@
           data will then be parsed given that type and set at the given offset.
     3p:  Completed first iteration of the parser, and tested with STRING, LONG_STRING,
           DICE, and INT.
-         Added the basic dice_t class in dice.h. It just stores the 3 values.
+         Added the basic Dice class in dice.h. It just stores the 3 values.
          Tested against a simple monster declaration, fixed memory leaks.
     6p:  Completed monster parsing. With it, added COLOR and MONSTER_ATTRIBUTE types.
-    9p:  Completed item parsing. With it, added ITEM_TYPE and BOOL types.
+    9p:  Completed item parsing. With it, added ItemYPE and BOOL types.
     10p: Cleaned up some extra imports everywhere and tested against full files.
 4/9:
     7p:  Realized there were some issues relative to the spec:

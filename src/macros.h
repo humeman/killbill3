@@ -180,40 +180,40 @@ class dungeon_exception : public std::exception {
     size_t size = fread(&var, sizeof (var), 1, f); \
     if (size != 1) throw dungeon_exception(__PRETTY_FUNCTION__, "the specified file is not a valid RLG327 file (file ended too early)"); \
     var = be32toh(var); \
-    logger_t::debug(__FILE__, std::string(description) + " = " + std::to_string(var)); }
+    Logger::debug(__FILE__, std::string(description) + " = " + std::to_string(var)); }
 
 // Reads a uint16 from f into the variable specified in 'var'.
 #define READ_UINT16(var, description, f, debug) { \
     size_t size = fread(&var, sizeof (var), 1, f); \
     if (size != 1) throw dungeon_exception(__PRETTY_FUNCTION__, "the specified file is not a valid RLG327 file (file ended too early)"); \
     var = be16toh(var); \
-    logger_t::debug(__FILE__, std::string(description) + " = " + std::to_string(var)); }
+    Logger::debug(__FILE__, std::string(description) + " = " + std::to_string(var)); }
 
 // Reads a uint8 from f into the variable specified in 'var'.
 #define READ_UINT8(var, description, f, debug) { \
     size_t size = fread(&var, sizeof (var), 1, f); \
     if (size != 1) throw dungeon_exception(__PRETTY_FUNCTION__, "the specified file is not a valid RLG327 file (file ended too early)"); \
-    logger_t::debug(__FILE__, std::string(description) + " = " + std::to_string(var)); }
+    Logger::debug(__FILE__, std::string(description) + " = " + std::to_string(var)); }
 
 // Writes the uint32 variable 'var' into f.
 #define WRITE_UINT32(var, description, f, debug) { \
     uint32_t be = htobe32(var); \
     size_t size = fwrite(&be, sizeof (uint32_t), 1, f); \
     if (size != 1) throw dungeon_exception(__PRETTY_FUNCTION__, "could not write to file"); \
-    logger_t::debug(__FILE__, std::string(description) + " = " + std::to_string(var) + ", wrote " + std::to_string(sizeof (var)) + " bytes"); }
+    Logger::debug(__FILE__, std::string(description) + " = " + std::to_string(var) + ", wrote " + std::to_string(sizeof (var)) + " bytes"); }
 
 // Writes the uint16 variable 'var' into f.
 #define WRITE_UINT16(var, description, f, debug) { \
     uint16_t be = htobe16(var); \
     size_t size = fwrite(&be, sizeof (uint16_t), 1, f); \
     if (size != 1) throw dungeon_exception(__PRETTY_FUNCTION__, "could not write to file"); \
-    logger_t::debug(__FILE__, std::string(description) + " = " + std::to_string(var) + ", wrote " + std::to_string(sizeof (var)) + " bytes"); }
+    Logger::debug(__FILE__, std::string(description) + " = " + std::to_string(var) + ", wrote " + std::to_string(sizeof (var)) + " bytes"); }
 
 // Writes the uint8 variable 'var' into f.
 #define WRITE_UINT8(var, description, f, debug) { \
     size_t size = fwrite(&var, sizeof (uint8_t), 1, f); \
     if (size != 1) throw dungeon_exception(__PRETTY_FUNCTION__, "could not write to file"); \
-    logger_t::debug(__FILE__, std::string(description) + " = " + std::to_string(var) + ", wrote " + std::to_string(sizeof (var)) + " bytes"); }
+    Logger::debug(__FILE__, std::string(description) + " = " + std::to_string(var) + ", wrote " + std::to_string(sizeof (var)) + " bytes"); }
 
 #define APPEND_MONST_ATTRS(attrs, str) { \
     if (attrs & MONSTER_ATTRIBUTE_BOSS) str += "*BOSS* "; \
@@ -226,6 +226,6 @@ class dungeon_exception : public std::exception {
     if (attrs & MONSTER_ATTRIBUTE_DESTROY) str += "destroy "; \
     if (attrs & MONSTER_ATTRIBUTE_UNIQUE) str += "unique "; }
 
-#define PC_TEXTURE "characters_pc"
+#define PCEXTURE "characters_pc"
 
 #endif

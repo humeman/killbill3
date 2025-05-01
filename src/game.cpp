@@ -12,51 +12,52 @@
 #include "logger.h"
 
 parser_definition_t MONSTER_PARSE_RULES[] {
-    {.name = "NAME", .offset = offsetof(monster_definition_t, name), .type = PARSE_TYPE_STRING, .required = true},
-    {.name = "DESC", .offset = offsetof(monster_definition_t, description), .type = PARSE_TYPE_LONG_STRING, .required = true},
-    {.name = "COLOR", .offset = offsetof(monster_definition_t, color), .type = PARSE_TYPE_COLOR, .required = true},
-    {.name = "SPEED", .offset = offsetof(monster_definition_t, speed), .type = PARSE_TYPE_DICE, .required = true},
-    {.name = "ABIL", .offset = offsetof(monster_definition_t, abilities), .type = PARSE_TYPE_MONSTER_ATTRIBUTES, .required = true},
-    {.name = "HP", .offset = offsetof(monster_definition_t, hp), .type = PARSE_TYPE_DICE, .required = true},
-    {.name = "DAM", .offset = offsetof(monster_definition_t, damage), .type = PARSE_TYPE_DICE, .required = true},
-    {.name = "TEXTURE_N", .offset = offsetof(monster_definition_t, floor_texture_n), .type = PARSE_TYPE_STRING, .required = true},
-    {.name = "TEXTURE_E", .offset = offsetof(monster_definition_t, floor_texture_e), .type = PARSE_TYPE_STRING, .required = true},
-    {.name = "TEXTURE_W", .offset = offsetof(monster_definition_t, floor_texture_w), .type = PARSE_TYPE_STRING, .required = true},
-    {.name = "TEXTURE_S", .offset = offsetof(monster_definition_t, floor_texture_s), .type = PARSE_TYPE_STRING, .required = true},
-    {.name = "UI_TEXTURE", .offset = offsetof(monster_definition_t, ui_texture), .type = PARSE_TYPE_STRING, .required = true},
-    {.name = "RRTY", .offset = offsetof(monster_definition_t, rarity), .type = PARSE_TYPE_RARITY, .required = true}
+    {.name = "NAME", .offset = offsetof(MonsterDefinition, name), .type = PARSE_TYPE_STRING, .required = true},
+    {.name = "DESC", .offset = offsetof(MonsterDefinition, description), .type = PARSE_TYPE_LONG_STRING, .required = true},
+    {.name = "COLOR", .offset = offsetof(MonsterDefinition, color), .type = PARSE_TYPE_COLOR, .required = true},
+    {.name = "SPEED", .offset = offsetof(MonsterDefinition, speed), .type = PARSE_TYPE_DICE, .required = true},
+    {.name = "ABIL", .offset = offsetof(MonsterDefinition, abilities), .type = PARSE_TYPE_MONSTER_ATTRIBUTES, .required = true},
+    {.name = "HP", .offset = offsetof(MonsterDefinition, hp), .type = PARSE_TYPE_DICE, .required = true},
+    {.name = "DAM", .offset = offsetof(MonsterDefinition, damage), .type = PARSE_TYPE_DICE, .required = true},
+    {.name = "TEXTURE_N", .offset = offsetof(MonsterDefinition, floor_texture_n), .type = PARSE_TYPE_STRING, .required = true},
+    {.name = "TEXTURE_E", .offset = offsetof(MonsterDefinition, floor_texture_e), .type = PARSE_TYPE_STRING, .required = true},
+    {.name = "TEXTURE_W", .offset = offsetof(MonsterDefinition, floor_texture_w), .type = PARSE_TYPE_STRING, .required = true},
+    {.name = "TEXTURE_S", .offset = offsetof(MonsterDefinition, floor_texture_s), .type = PARSE_TYPE_STRING, .required = true},
+    {.name = "UI_TEXTURE", .offset = offsetof(MonsterDefinition, ui_texture), .type = PARSE_TYPE_STRING, .required = true},
+    {.name = "RRTY", .offset = offsetof(MonsterDefinition, rarity), .type = PARSE_TYPE_RARITY, .required = true}
 };
 
 parser_definition_t ITEM_PARSE_RULES[] {
-    {.name = "NAME", .offset = offsetof(item_definition_t, name), .type = PARSE_TYPE_STRING, .required = true},
-    {.name = "DESC", .offset = offsetof(item_definition_t, description), .type = PARSE_TYPE_LONG_STRING, .required = true},
-    {.name = "TYPE", .offset = offsetof(item_definition_t, type), .type = PARSE_TYPE_ITEM_TYPE, .required = true},
-    {.name = "COLOR", .offset = offsetof(item_definition_t, color), .type = PARSE_TYPE_COLOR, .required = true},
-    {.name = "HIT", .offset = offsetof(item_definition_t, hit_bonus), .type = PARSE_TYPE_DICE, .required = true},
-    {.name = "DAM", .offset = offsetof(item_definition_t, damage_bonus), .type = PARSE_TYPE_DICE, .required = true},
-    {.name = "DODGE", .offset = offsetof(item_definition_t, dodge_bonus), .type = PARSE_TYPE_DICE, .required = true},
-    {.name = "DEF", .offset = offsetof(item_definition_t, defense_bonus), .type = PARSE_TYPE_DICE, .required = true},
-    {.name = "WEIGHT", .offset = offsetof(item_definition_t, weight), .type = PARSE_TYPE_DICE, .required = true},
-    {.name = "SPEED", .offset = offsetof(item_definition_t, speed_bonus), .type = PARSE_TYPE_DICE, .required = true},
-    {.name = "ATTR", .offset = offsetof(item_definition_t, attributes), .type = PARSE_TYPE_DICE, .required = true},
-    {.name = "VAL", .offset = offsetof(item_definition_t, value), .type = PARSE_TYPE_DICE, .required = true},
-    {.name = "ART", .offset = offsetof(item_definition_t, artifact), .type = PARSE_TYPE_BOOL, .required = true},
-    {.name = "RRTY", .offset = offsetof(item_definition_t, rarity), .type = PARSE_TYPE_RARITY, .required = true},
-    {.name = "TEXTURE", .offset = offsetof(item_definition_t, floor_texture), .type = PARSE_TYPE_STRING, .required = true},
-    {.name = "UI_TEXTURE", .offset = offsetof(item_definition_t, ui_texture), .type = PARSE_TYPE_STRING, .required = true}
+    {.name = "NAME", .offset = offsetof(ItemDefinition, name), .type = PARSE_TYPE_STRING, .required = true},
+    {.name = "DESC", .offset = offsetof(ItemDefinition, description), .type = PARSE_TYPE_LONG_STRING, .required = true},
+    {.name = "TYPE", .offset = offsetof(ItemDefinition, type), .type = PARSE_TYPE_ItemYPE, .required = true},
+    {.name = "COLOR", .offset = offsetof(ItemDefinition, color), .type = PARSE_TYPE_COLOR, .required = true},
+    {.name = "HIT", .offset = offsetof(ItemDefinition, hit_bonus), .type = PARSE_TYPE_DICE, .required = true},
+    {.name = "DAM", .offset = offsetof(ItemDefinition, damage_bonus), .type = PARSE_TYPE_DICE, .required = true},
+    {.name = "DODGE", .offset = offsetof(ItemDefinition, dodge_bonus), .type = PARSE_TYPE_DICE, .required = true},
+    {.name = "DEF", .offset = offsetof(ItemDefinition, defense_bonus), .type = PARSE_TYPE_DICE, .required = true},
+    {.name = "WEIGHT", .offset = offsetof(ItemDefinition, weight), .type = PARSE_TYPE_DICE, .required = true},
+    {.name = "SPEED", .offset = offsetof(ItemDefinition, speed_bonus), .type = PARSE_TYPE_DICE, .required = true},
+    {.name = "ATTR", .offset = offsetof(ItemDefinition, attributes), .type = PARSE_TYPE_DICE, .required = true},
+    {.name = "VAL", .offset = offsetof(ItemDefinition, value), .type = PARSE_TYPE_DICE, .required = true},
+    {.name = "ART", .offset = offsetof(ItemDefinition, artifact), .type = PARSE_TYPE_BOOL, .required = true},
+    {.name = "RRTY", .offset = offsetof(ItemDefinition, rarity), .type = PARSE_TYPE_RARITY, .required = true},
+    {.name = "TEXTURE", .offset = offsetof(ItemDefinition, floor_texture), .type = PARSE_TYPE_STRING, .required = true},
+    {.name = "UI_TEXTURE", .offset = offsetof(ItemDefinition, ui_texture), .type = PARSE_TYPE_STRING, .required = true}
 };
 
 parser_definition_t DUNGEON_OPTIONS_PARSE_RULES[] {
-    {.name = "NAME", .offset = offsetof(dungeon_options_t, name), .type = PARSE_TYPE_STRING, .required = true},
-    {.name = "NUMENEMIES", .offset = offsetof(dungeon_options_t, nummon), .type = PARSE_TYPE_TUPLE, .required = true},
-    {.name = "NUMITEMS", .offset = offsetof(dungeon_options_t, numitems), .type = PARSE_TYPE_TUPLE, .required = true},
-    {.name = "NUMROOMS", .offset = offsetof(dungeon_options_t, rooms), .type = PARSE_TYPE_TUPLE, .required = true},
-    {.name = "SIZE", .offset = offsetof(dungeon_options_t, size), .type = PARSE_TYPE_TUPLE, .required = true},
-    {.name = "UP", .offset = offsetof(dungeon_options_t, up_staircase), .type = PARSE_TYPE_STRING, .required = false},
-    {.name = "DOWN", .offset = offsetof(dungeon_options_t, down_staircase), .type = PARSE_TYPE_STRING, .required = false},
-    {.name = "ENEMIES", .offset = offsetof(dungeon_options_t, monsters), .type = PARSE_TYPE_VECTOR_STRINGS, .required = true},
-    {.name = "ITEMS", .offset = offsetof(dungeon_options_t, items), .type = PARSE_TYPE_VECTOR_STRINGS, .required = true},
-    {.name = "BOSS", .offset = offsetof(dungeon_options_t, down_staircase), .type = PARSE_TYPE_STRING, .required = false}
+    {.name = "NAME", .offset = offsetof(DungeonOptions, name), .type = PARSE_TYPE_STRING, .required = true},
+    {.name = "NUMENEMIES", .offset = offsetof(DungeonOptions, nummon), .type = PARSE_TYPE_TUPLE, .required = true},
+    {.name = "NUMITEMS", .offset = offsetof(DungeonOptions, numitems), .type = PARSE_TYPE_TUPLE, .required = true},
+    {.name = "NUMROOMS", .offset = offsetof(DungeonOptions, rooms), .type = PARSE_TYPE_TUPLE, .required = true},
+    {.name = "SIZE", .offset = offsetof(DungeonOptions, size), .type = PARSE_TYPE_TUPLE, .required = true},
+    {.name = "UP", .offset = offsetof(DungeonOptions, up_staircase), .type = PARSE_TYPE_STRING, .required = false},
+    {.name = "DOWN", .offset = offsetof(DungeonOptions, down_staircase), .type = PARSE_TYPE_STRING, .required = false},
+    {.name = "ENEMIES", .offset = offsetof(DungeonOptions, monsters), .type = PARSE_TYPE_VECTOR_STRINGS, .required = true},
+    {.name = "ITEMS", .offset = offsetof(DungeonOptions, items), .type = PARSE_TYPE_VECTOR_STRINGS, .required = true},
+    {.name = "BOSS", .offset = offsetof(DungeonOptions, down_staircase), .type = PARSE_TYPE_STRING, .required = false},
+    {.name = "DEFAULT", .offset = offsetof(DungeonOptions, is_default), .type = PARSE_TYPE_BOOL, .required = false}
 };
 
 char CHARACTERS_BY_CELL_TYPE[CELL_TYPES] = {
@@ -93,10 +94,9 @@ std::string ITEM_TYPE_STRINGS[ITEM_TYPE_UNKNOWN + 1] = {
     "mysterious object"
 };
 
-game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
+Game::Game(int debug, uint8_t width, uint8_t height, int max_rooms) {
     int i, j;
     this->debug = debug;
-    this->dungeon = new dungeon_t(width, height, max_rooms);
 
     pathfinding_no_tunnel = (uint32_t **) malloc(width * sizeof (uint32_t*));
     if (pathfinding_no_tunnel == NULL) {
@@ -122,35 +122,9 @@ game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
         }
     }
 
-    character_map = (character_t ***) malloc(width * sizeof (character_t**));
-    if (character_map == NULL) {
-        goto init_free_all_pathfinding_tunnel;
-    }
-    for (i = 0; i < width; i++) {
-        character_map[i] = (character_t **) malloc(height * sizeof (character_t*));
-        if (character_map[i] == NULL) {
-            for (j = 0; j < i; j++) free(character_map[j]);
-            goto init_free_character_map;
-        }
-        for (j = 0; j < height; j++) character_map[i][j] = NULL;
-    }
-
-    item_map = (item_t ***) malloc(width * sizeof (item_t**));
-    if (item_map == NULL) {
-        goto init_free_all_character_map;
-    }
-    for (i = 0; i < width; i++) {
-        item_map[i] = (item_t **) malloc(height * sizeof (item_t*));
-        if (item_map[i] == NULL) {
-            for (j = 0; j < i; j++) free(item_map[j]);
-            goto init_free_item_map;
-        }
-        for (j = 0; j < height; j++) item_map[i][j] = NULL;
-    }
-
-    monst_parser = new parser_t<monster_definition_t>(MONSTER_PARSE_RULES, sizeof (MONSTER_PARSE_RULES) / sizeof (MONSTER_PARSE_RULES[0]), "KILL BILL 3 ENEMY DESCRIPTION 1", "ENEMY", true);
-    item_parser = new parser_t<item_definition_t>(ITEM_PARSE_RULES, sizeof (ITEM_PARSE_RULES) / sizeof (ITEM_PARSE_RULES[0]), "KILL BILL 3 ITEM DESCRIPTION 1", "ITEM", true);
-    map_parser = new parser_t<dungeon_options_t>(DUNGEON_OPTIONS_PARSE_RULES, sizeof (DUNGEON_OPTIONS_PARSE_RULES) / sizeof (DUNGEON_OPTIONS_PARSE_RULES[0]), "KILL BILL 3 MAP DESCRIPTION 1", "MAP", true);
+    monst_parser = new Parser<MonsterDefinition>(MONSTER_PARSE_RULES, sizeof (MONSTER_PARSE_RULES) / sizeof (MONSTER_PARSE_RULES[0]), "KILL BILL 3 ENEMY DESCRIPTION 1", "ENEMY", true);
+    item_parser = new Parser<ItemDefinition>(ITEM_PARSE_RULES, sizeof (ITEM_PARSE_RULES) / sizeof (ITEM_PARSE_RULES[0]), "KILL BILL 3 ITEM DESCRIPTION 1", "ITEM", true);
+    map_parser = new Parser<DungeonOptions>(DUNGEON_OPTIONS_PARSE_RULES, sizeof (DUNGEON_OPTIONS_PARSE_RULES) / sizeof (DUNGEON_OPTIONS_PARSE_RULES[0]), "KILL BILL 3 MAP DESCRIPTION 1", "MAP", true);
 
     init_controls();
 
@@ -174,14 +148,14 @@ game_t::game_t(int debug, uint8_t width, uint8_t height, int max_rooms) {
     throw dungeon_exception(__PRETTY_FUNCTION__, "failed to allocate dungeon");
 }
 
-game_t::~game_t() {
-    character_t *character;
+Game::~Game() {
+    Character *character;
     while (turn_queue.size() > 0) {
         try {
             character = turn_queue.remove();
          } catch (std::exception &e) {
             // Nothing we can do here :shrug:
-            logger_t::error(__FILE__, "catastrophe: failed to remove from heap while destroying game");
+            Logger::error(__FILE__, "catastrophe: failed to remove from heap while destroying game");
         }
         if (character == &pc) continue;
         destroy_character(character_map, character);
@@ -224,7 +198,7 @@ game_t::~game_t() {
     delete item_parser;
 }
 
-void game_t::init_monster_defs(const char *path) {
+void Game::init_monster_defs(const char *path) {
     std::ifstream file(path);
     if (file.fail())
         throw dungeon_exception(__PRETTY_FUNCTION__, "failed to open file");
@@ -232,7 +206,7 @@ void game_t::init_monster_defs(const char *path) {
     monst_parser->parse(monster_defs, file);
 }
 
-void game_t::init_item_defs(const char *path) {
+void Game::init_item_defs(const char *path) {
     std::ifstream file(path);
     if (file.fail())
         throw dungeon_exception(__PRETTY_FUNCTION__, "failed to open file");
@@ -240,7 +214,7 @@ void game_t::init_item_defs(const char *path) {
     item_parser->parse(item_defs, file);
 }
 
-void game_t::init_maps(const char *path) {
+void Game::init_maps(const char *path) {
     for (const auto &entry : std::filesystem::directory_iterator(path)) {
         if (entry.is_regular_file()) {
             std::ifstream file(entry.path());
@@ -254,8 +228,8 @@ void game_t::init_maps(const char *path) {
     }
 }
 
-void game_t::init_from_file(const char *path) {
-    tuple_t pc_coords;
+void Game::init_from_file(const char *path) {
+    IntPair pc_coords;
     FILE *f;
     f = fopen(path, "rb");
     if (f == NULL) {
@@ -283,18 +257,32 @@ void game_t::init_from_file(const char *path) {
     is_initialized = true;
 }
 
-void game_t::init_random() {
-    tuple_t pc_coords;
-    dungeon->fill(ROOM_MIN_COUNT, ROOM_COUNT_MAX_RANDOMNESS, ROOM_MIN_WIDTH, ROOM_MIN_HEIGHT, ROOM_MAX_RANDOMNESS, debug);
+void Game::init_from_map(std::string map_name) {
+    std::map<std::string, DungeonOptions *> map = map_defs[map_name];
+    IntPair pc_coords;
+    DungeonFloor *dungeon_floor;
+    Dungeon *new_dungeon;
+    bool default_found = false;
 
-    pc_coords = dungeon->random_location();
+    for (const auto &pair : map) {
+        new_dungeon = new Dungeon(*(pair.second));
+        new_dungeon->fill();
+        dungeon_floor = new DungeonFloor(new_dungeon);
 
-    // Place the PC now
-    pc.move_to(pc_coords, character_map);
+        if (pair.second->is_default) {
+            if (default_found) throw dungeon_exception(__PRETTY_FUNCTION__, "multiple default dungeons found");
+            default_found = true;
+            pc_coords = new_dungeon->random_location();
+            pc.move_to(pc_coords, character_map);
+        }
+
+        dungeons.push_back(dungeon_floor);
+    }
+    if (!default_found) throw dungeon_exception(__PRETTY_FUNCTION__, "no default dungeon found");
+
     pc.dead = false;
     pc.display = '@';
     pc.speed = PC_SPEED;
-    character_map[pc.x][pc.y] = &pc;
 
     update_pathfinding(dungeon, pathfinding_no_tunnel, pathfinding_tunnel, &pc);
 
@@ -302,10 +290,10 @@ void game_t::init_random() {
     is_initialized = true;
 }
 
-void game_t::write_to_file(const char *path) {
+void Game::write_to_file(const char *path) {
     if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
     FILE *f;
-    tuple_t pc_coords;
+    IntPair pc_coords;
     f = fopen(path, "wb");
     if (f == NULL) throw dungeon_exception(__PRETTY_FUNCTION__, "couldn't open file for writing");
     pc_coords.x = pc.x;
@@ -319,25 +307,25 @@ void game_t::write_to_file(const char *path) {
     fclose(f);
 }
 
-void game_t::override_nummon(int nummon) {
+void Game::override_nummon(int nummon) {
     this->nummon = nummon;
 }
 
-void game_t::override_numitems(int numitems) {
+void Game::override_numitems(int numitems) {
     this->numitems = numitems;
 }
 
-void game_t::random_monsters() {
+void Game::random_monsters() {
     if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
     if (monster_defs.size() == 0) throw dungeon_exception(__PRETTY_FUNCTION__, "no monster definitions are set");
 
     // Pick how many we want to generate.
     int count = nummon < 0 ? (rand() % (RANDOM_MONSTERS_MAX - RANDOM_MONSTERS_MIN + 1)) + RANDOM_MONSTERS_MIN : nummon;
 
-    tuple_t loc;
+    IntPair loc;
     int monster_i, attempts;
-    monster_t *monst;
-    character_t *ch;
+    Monster *monst;
+    Character *ch;
     int i, j;
     bool allowed;
     std::vector<std::string> monster_names;
@@ -357,7 +345,7 @@ void game_t::random_monsters() {
                 for (j = 0; j < turn_queue.size(); j++) {
                     ch = turn_queue.at(i);
                     if (ch == &pc) continue;
-                    if (&(((monster_t *) ch)->definition) == &(monster_defs[mid])) {
+                    if (&(((Monster *) ch)->definition) == &(monster_defs[mid])) {
                         allowed = false;
                         break;
                     }
@@ -372,7 +360,7 @@ void game_t::random_monsters() {
             throw dungeon_exception(__PRETTY_FUNCTION__, "no available monster definitions to use after " STRING(MAX_GENERATION_ATTEMPTS) "rolls (all unique or really unlucky)");
 
         // Now we can make a monster from this definition.
-        monst = new monster_t(monster_defs[mid]);
+        monst = new Monster(monster_defs[mid]);
         // Pick a location...
         try {
             loc = random_location_no_kill(dungeon, character_map);
@@ -390,16 +378,16 @@ void game_t::random_monsters() {
     }
 }
 
-void game_t::random_items() {
+void Game::random_items() {
     if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
     if (item_defs.size() == 0) throw dungeon_exception(__PRETTY_FUNCTION__, "no item definitions are set");
     // Ripped for the most part from random_monsters().
     // Pick how many we want to generate.
     int count = numitems < 0 ? (rand() % (RANDOM_ITEMS_MAX - RANDOM_ITEMS_MIN + 1)) + RANDOM_ITEMS_MIN : numitems;
 
-    tuple_t loc;
+    IntPair loc;
     int item_i, attempts;
-    item_t *item;
+    Item *item;
     std::vector<std::string> item_names;
     for (const auto &e : item_defs) {
         item_names.push_back(e.first);
@@ -419,7 +407,7 @@ void game_t::random_items() {
             throw dungeon_exception(__PRETTY_FUNCTION__, "no available item definitions to use after " STRING(MAX_GENERATION_ATTEMPTS) "rolls (all unique or really unlucky)");
 
         // Now we can make a monster from this definition.
-        item = new item_t(item_defs[iid]);
+        item = new Item(item_defs[iid]);
         // Pick a location...
         try {
             loc = dungeon->random_location();
@@ -435,7 +423,7 @@ void game_t::random_items() {
     }
 }
 
-void game_t::move_coords(tuple_t &coords, int x_offset, int y_offset) {
+void Game::move_coords(IntPair &coords, int x_offset, int y_offset) {
     int new_x = (int) coords.x + x_offset;
     int new_y = (int) coords.y + y_offset;
     if (new_x < 0) new_x = 0;
@@ -446,9 +434,9 @@ void game_t::move_coords(tuple_t &coords, int x_offset, int y_offset) {
     coords.y = new_y;
 }
 
-void game_t::try_move(int x_offset, int y_offset) {
+void Game::try_move(int x_offset, int y_offset) {
     int damage;
-    monster_t *monst;
+    Monster *monst;
     if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
     int new_x = pc.x + x_offset;
     int new_y = pc.y + y_offset;
@@ -457,34 +445,34 @@ void game_t::try_move(int x_offset, int y_offset) {
     if (new_y < 0) new_y = 0;
     if (new_y >= dungeon->height) new_y = dungeon->height - 1;
     if (dungeon->cells[new_x][new_y].type == CELL_TYPE_STONE) {
-        message_queue_t::get()->clear();
-        message_queue_t::get()->add("&0&bThere's stone in the way!");
+        MessageQueue::get()->clear();
+        MessageQueue::get()->add("&0&bThere's stone in the way!");
     }
     else {
-        if (character_map[new_x][new_y] && character_map[new_x][new_y]->type() == CHARACTER_TYPE_MONSTER) {
+        if (character_map[new_x][new_y] && character_map[new_x][new_y]->type() == CharacterYPE_MONSTER) {
             // If that second condition didn't hit, we're moving to our own location (or there are two PCs somehow).
             // Attack the monster there
             damage = pc.damage_bonus();
-            monst = (monster_t *) (character_map[new_x][new_y]);
+            monst = (Monster *) (character_map[new_x][new_y]);
             monst->damage(damage, result, item_map, character_map);
-            message_queue_t::get()->add(
+            MessageQueue::get()->add(
                 "You hit &" +
                 std::to_string(monst->current_color()) +
                 escape_col(monst->definition->name) +
                 "&r for &b" + std::to_string(damage) + "&r"
                 + (monst->hp <= 0 ? ", killing it" : (" (" + std::to_string(monst->hp) + " left)")) + ".");
         } else {
-            pc.move_to((tuple_t) {(uint8_t) new_x, (uint8_t) new_y}, character_map);
+            pc.move_to((IntPair) {(uint8_t) new_x, (uint8_t) new_y}, character_map);
         }
     }
 }
 
-void game_t::force_move(tuple_t dest) {
-    monster_t *monst;
-    if (character_map[dest.x][dest.y] && character_map[dest.x][dest.y]->type() == CHARACTER_TYPE_MONSTER) {
-        monst = (monster_t *) character_map[dest.x][dest.y];
+void Game::force_move(IntPair dest) {
+    Monster *monst;
+    if (character_map[dest.x][dest.y] && character_map[dest.x][dest.y]->type() == CharacterYPE_MONSTER) {
+        monst = (Monster *) character_map[dest.x][dest.y];
         // Kill the monster there
-        message_queue_t::get()->add(
+        MessageQueue::get()->add(
             "You suddenly materialize above &" +
             std::to_string(monst->current_color()) +
             escape_col(monst->definition->name) +
@@ -494,10 +482,10 @@ void game_t::force_move(tuple_t dest) {
     pc.move_to(dest, character_map);
 }
 
-void game_t::fill_and_place_on(cell_type_t target_cell) {
+void Game::fill_and_place_on(cell_type_t target_cell) {
     if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
     // Kill all the monsters (RIP)
-    character_t *character;
+    Character *character;
     int x, y, placed;
     while (turn_queue.size() > 0) {
         character = turn_queue.remove();
@@ -519,7 +507,7 @@ void game_t::fill_and_place_on(cell_type_t target_cell) {
     for (x = 0; x < dungeon->width; x++) {
         for (y = 0; y < dungeon->height; y++) {
             if (dungeon->cells[x][y].type == target_cell) {
-                pc.move_to((tuple_t) {(uint8_t) x, (uint8_t) y}, character_map);
+                pc.move_to((IntPair) {(uint8_t) x, (uint8_t) y}, character_map);
                 placed = 1;
                 break;
             }

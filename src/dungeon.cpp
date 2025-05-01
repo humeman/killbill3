@@ -11,21 +11,21 @@
 
 #define ENSURE_INITIALIZED if (!is_initalized) throw dungeon_exception(__PRETTY_FUNCTION__, "dungeon is not initialized")
 
-bool tuple_t::operator==(const tuple_t &o) const {
+bool IntPair::operator==(const IntPair &o) const {
     return this->x == o.x && this->y == o.y;
 }
 
-dungeon_t::dungeon_t(dungeon_options_t &options) {
+Dungeon::Dungeon(DungeonOptions &options) {
     int i, j;
-    this->width = options.width;
-    this->height = options.height;
+    this->width = options.size.x;
+    this->height = options.size.y;
     this->options = &options;
-    cells = (cell_t **) malloc(width * sizeof (cell_t *));
+    cells = (Cell **) malloc(width * sizeof (Cell *));
     if (cells == NULL) {
         goto init_free;
     }
     for (i = 0; i < width; i++) {
-        cells[i] = (cell_t *) malloc(height * sizeof (cell_t));
+        cells[i] = (Cell *) malloc(height * sizeof (Cell));
         if (cells[i] == NULL) {
             for (j = 0; j < i; j++) free(cells[j]);
             goto init_free_cells;
@@ -50,16 +50,16 @@ dungeon_t::dungeon_t(dungeon_options_t &options) {
     throw dungeon_exception(__PRETTY_FUNCTION__, "failed to allocate dungeon");
 }
 
-dungeon_t::dungeon_t(uint8_t width, uint8_t height, int max_rooms) {
+Dungeon::Dungeon(uint8_t width, uint8_t height, int max_rooms) {
     int i, j;
     this->width = width;
     this->height = height;
-    cells = (cell_t **) malloc(width * sizeof (cell_t *));
+    cells = (Cell **) malloc(width * sizeof (Cell *));
     if (cells == NULL) {
         goto  init_free;
     }
     for (i = 0; i < width; i++) {
-        cells[i] = (cell_t *) malloc(height * sizeof (cell_t));
+        cells[i] = (Cell *) malloc(height * sizeof (Cell));
         if (cells[i] == NULL) {
             for (j = 0; j < i; j++) free(cells[j]);
             goto init_free_cells;
@@ -84,7 +84,7 @@ dungeon_t::dungeon_t(uint8_t width, uint8_t height, int max_rooms) {
     throw dungeon_exception(__PRETTY_FUNCTION__, "failed to allocate dungeon");
 }
 
-dungeon_t::~dungeon_t() {
+Dungeon::~Dungeon() {
     int i;
     for (i = 0; i < width; i++) {
         free(cells[i]);
@@ -92,7 +92,7 @@ dungeon_t::~dungeon_t() {
     free(cells);
 }
 
-void dungeon_t::write_pgm() {
+void Dungeon::write_pgm() {
     ENSURE_INITIALIZED;
     FILE* out;
     out = fopen("dungeon.pgm", "w");
@@ -106,10 +106,10 @@ void dungeon_t::write_pgm() {
     fclose(out);
 }
 
-void dungeon_t::fill() {
+void Dungeon::fill() {
     if (!options) throw dungeon_exception(__PRETTY_FUNCTION__, "dungeon not created with dungeon options");
     fill_stone();
-    create_rooms(options->rooms_min + (rand() % (options->rooms_max - options->rooms_min)), 5, 5, 10);
+    create_rooms(options->rooms.x + (rand() % (options->rooms.y - options->rooms.x)), 5, 5, 10);
     connect_rooms();
     fill_outside();
     place_staircases();
@@ -129,9 +129,9 @@ int gaussian[5][5] = {
 // the Assignment 1.01 solution code, Piazza post @80.
 // I might rewrite it before 1.03, but we'll see.
 // Update from 1.06: I didn't :)
-void dungeon_t::fill_stone() {
+void Dungeon::fill_stone() {
     uint8_t x, y, ix, iy;
-    queue_node_t *head, *tail, *temp;
+    QueueNode *head, *tail, *temp;
     int i, step, s, t, p, q;
 
     for (x = 0; x < width; x++) {
@@ -156,11 +156,11 @@ void dungeon_t::fill_stone() {
 
         cells[x][y].hardness = (i == 0 ? 1 : i * step);
         if (i == 0) {
-            head = (queue_node_t *) malloc(sizeof (*head));
+            head = new QueueNode;
             tail = head;
         }
         else {
-            tail->next = (queue_node_t *) malloc(sizeof (*tail));
+            tail->next = new QueueNode;
             tail = tail->next;
         }
         tail->next = NULL;
@@ -180,7 +180,7 @@ void dungeon_t::fill_stone() {
                 if (ix >= 0 && ix < width && iy >= 0 && iy < height
                     && !cells[ix][iy].hardness) {
                     cells[ix][iy].hardness = i;
-                    tail->next = (queue_node_t *) malloc(sizeof (*tail));
+                    tail->next = new QueueNode;
                     tail = tail->next;
                     tail->next = NULL;
                     tail->x = ix;
@@ -190,7 +190,7 @@ void dungeon_t::fill_stone() {
         }
         temp = head;
         head = head->next;
-        free(temp);
+        delete temp;
     }
 
     // Applies a gaussian convolution to smooth it out.
@@ -213,7 +213,7 @@ void dungeon_t::fill_stone() {
     }
 }
 
-void dungeon_t::fill_outside() {
+void Dungeon::fill_outside() {
     int i;
     for (i = 0; i < width; i++) {
         cells[i][0].type = CELL_TYPE_STONE;
@@ -233,7 +233,7 @@ void dungeon_t::fill_outside() {
     }
 }
 
-void dungeon_t::create_rooms(int count, uint8_t min_width, uint8_t min_height, int size_randomness_max) {
+void Dungeon::create_rooms(int count, uint8_t min_width, uint8_t min_height, int size_randomness_max) {
     int i;
     int room_width, room_height;
 
@@ -245,13 +245,13 @@ void dungeon_t::create_rooms(int count, uint8_t min_width, uint8_t min_height, i
             create_room(room_width, room_height);
         }
         catch (dungeon_exception &e) {
-            if (i < options->rooms_min)
+            if (i < options->rooms.x)
                 throw dungeon_exception(__PRETTY_FUNCTION__, e, "failed to create the minimum number of rooms (full?)");
         }
     }
 }
 
-room_t dungeon_t::create_room(uint8_t room_width, uint8_t room_height) {
+Room Dungeon::create_room(uint8_t room_width, uint8_t room_height) {
     int x_offset = rand();
     int y_offset = rand();
     uint8_t ix, iy;
@@ -259,7 +259,7 @@ room_t dungeon_t::create_room(uint8_t room_width, uint8_t room_height) {
     int16_t jx, jy;
     int placed = 0;
 
-    room_t room;
+    Room room;
 
     for (ix = 0; ix < width && !placed; ix++) {
         x = (ix + x_offset) % width;
@@ -298,15 +298,15 @@ room_t dungeon_t::create_room(uint8_t room_width, uint8_t room_height) {
     return room;
 }
 
-void dungeon_t::connect_rooms() {
+void Dungeon::connect_rooms() {
     // Each room will connect to its nearest room until every room is marked as visited.
     int i;
     int visited[rooms.size()];
     for (i = 0; i < rooms.size(); i++) visited[i] = 0;
     visited[0] = 1;
-    room_t *a;
-    room_t *b;
-    room_t *current;
+    Room *a;
+    Room *b;
+    Room *current;
     uint8_t ax, bx, ay, by;
     double distance, max_distance;
     int done = 0;
@@ -360,7 +360,7 @@ void dungeon_t::connect_rooms() {
     }
 }
 
-void dungeon_t::connect_points(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1) {
+void Dungeon::connect_points(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1) {
     // We want to make these paths semi-random, since right angles are boring.
     // We know we're going to travel x_diff and y_diff overall -- just to mix
     // things up, we'll randomly switch between which (X or Y) we're moving
@@ -413,37 +413,37 @@ void dungeon_t::connect_points(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1) {
     }
 }
 
-void dungeon_t::place_staircases() {
-    room_t room;
+void Dungeon::place_staircases() {
+    Room room;
     if (rooms.size() < 1) throw dungeon_exception(__PRETTY_FUNCTION__, "attempted to place but no rooms exist");
 
     // Pick a random location in a room for the up staircase.
-    if (options->up_staircase) {
+    if (options->up_staircase.length() > 0) {
         room = rooms[rand() % rooms.size()];
         place_in_room(&room, CELL_TYPE_UP_STAIRCASE);
     }
 
     // And again for down...
-    if (options->down_staircase) {
+    if (options->down_staircase.length() > 0) {
         room = rooms[rand() % rooms.size()];
         place_in_room(&room, CELL_TYPE_DOWN_STAIRCASE);
     }
 }
 
-tuple_t dungeon_t::place_in_room(room_t *room, cell_type_t material) {
-    tuple_t coords = random_location_in_room(room);
+IntPair Dungeon::place_in_room(Room *room, cell_type_t material) {
+    IntPair coords = random_location_in_room(room);
     cells[coords.x][coords.y].type = material;
     cells[coords.x][coords.y].hardness = 0;
     return coords;
 }
 
-tuple_t dungeon_t::random_location_in_room(room_t *room) {
+IntPair Dungeon::random_location_in_room(Room *room) {
     uint8_t x_offset = rand();
     uint8_t y_offset = rand();
     uint8_t i, j, x, y;
     uint8_t room_width = room->x1 - room->x0;
     uint8_t room_height = room->y1 - room->y0;
-    tuple_t coords;
+    IntPair coords;
     for (i = 0; i < room_width; i++) {
         x = room->x0 + (x_offset + i) % room_width;
         for (j = 0; j < room_height; j++) {
@@ -472,10 +472,10 @@ tuple_t dungeon_t::random_location_in_room(room_t *room) {
     throw dungeon_exception(__PRETTY_FUNCTION__, "couldn't find a location to place in");
 }
 
-tuple_t dungeon_t::random_location() {
+IntPair Dungeon::random_location() {
     int room_offset = rand();
     int i;
-    room_t *room;
+    Room *room;
 
     for (i = 0; i < rooms.size(); i++) {
         room = &rooms[(i + room_offset) % rooms.size()];
@@ -486,20 +486,20 @@ tuple_t dungeon_t::random_location() {
     throw dungeon_exception(__PRETTY_FUNCTION__, "no available space in dungeon");
 }
 
-void dungeon_t::fill_from_file(FILE *f, int debug, tuple_t *pc_coords) {
+void Dungeon::fill_from_file(FILE *f, int debug, IntPair *pc_coords) {
     size_t size;
     uint32_t version, file_size;
     uint8_t hardness, x, y, x0, y0;
     uint16_t down_staircase_count, up_staircase_count;
     int i;
-    room_t *temp;
+    Room *temp;
     int header_size = strlen(FILE_HEADER);
     char header[header_size + 1];
 
     size = fread(header, sizeof (*header), header_size, f);
     if (size != strlen(FILE_HEADER)) throw dungeon_exception(__PRETTY_FUNCTION__, "the specified file is not an RLG327 file (file ended too early)");
     header[header_size] = 0; // ensures null byte to terminate
-    logger_t::debug(__FILE__, "file header: " + std::string(header));
+    Logger::debug(__FILE__, "file header: " + std::string(header));
     if (strcmp(FILE_HEADER, header)) throw dungeon_exception(__PRETTY_FUNCTION__, "the specified file is not an RLG327 file (header mismatch)");
 
     READ_UINT32(version, "version", f, debug);
@@ -529,13 +529,13 @@ void dungeon_t::fill_from_file(FILE *f, int debug, tuple_t *pc_coords) {
     if (fseek(f, FILE_ROOM_COUNT_OFFSET + sizeof (room_count), SEEK_SET)) throw dungeon_exception(__PRETTY_FUNCTION__, "unexpected error while reading file (could not seek past room count)");
 
     for (i = 0; i < room_count; i++) {
-        logger_t::debug(__FILE__, "reading room " + std::to_string(i));
+        Logger::debug(__FILE__, "reading room " + std::to_string(i));
         READ_UINT8(x0, "room x0", f, debug);
         READ_UINT8(y0, "room y0", f, debug);
         READ_UINT8(width, "room width", f, debug);
         READ_UINT8(height, "room height", f, debug);
 
-        room_t room;
+        Room room;
         room.x0 = x0;
         room.y0 = y0;
         room.x1 = x0 + width - 1;
@@ -550,7 +550,7 @@ void dungeon_t::fill_from_file(FILE *f, int debug, tuple_t *pc_coords) {
 
     READ_UINT16(up_staircase_count, "up staircase count", f, debug);
     for (i = 0; i < up_staircase_count; i++) {
-        logger_t::debug(__FILE__, "reading up staircase " + std::to_string(i));
+        Logger::debug(__FILE__, "reading up staircase " + std::to_string(i));
         READ_UINT8(x, "up staircase x", f, debug);
         READ_UINT8(y, "up staircase y", f, debug);
 
@@ -558,7 +558,7 @@ void dungeon_t::fill_from_file(FILE *f, int debug, tuple_t *pc_coords) {
     }
     READ_UINT16(down_staircase_count, "down staircase count", f, debug);
     for (i = 0; i < down_staircase_count; i++) {
-        logger_t::debug(__FILE__, "reading down staircase " + std::to_string(i));
+        Logger::debug(__FILE__, "reading down staircase " + std::to_string(i));
         READ_UINT8(x, "down staircase x", f, debug);
         READ_UINT8(y, "down staircase y", f, debug);
         cells[x][y].type = CELL_TYPE_DOWN_STAIRCASE;
@@ -567,18 +567,18 @@ void dungeon_t::fill_from_file(FILE *f, int debug, tuple_t *pc_coords) {
     is_initalized = true;
 }
 
-void dungeon_t::save_to_file(FILE *f, int debug, tuple_t *pc_coords) {
+void Dungeon::save_to_file(FILE *f, int debug, IntPair *pc_coords) {
     ENSURE_INITIALIZED;
     uint32_t version, file_size;
     uint8_t width, height;
     int up_count, down_count, x, y;
-    tuple_t *up, *down;
+    IntPair *up, *down;
     char header[] = FILE_HEADER;
     int header_size = strlen(header);
     size_t size = fwrite(header, sizeof (*header), header_size, f);
 
     if (size != (size_t) header_size) throw dungeon_exception(__PRETTY_FUNCTION__, "could not write to file");
-    logger_t::debug(__FILE__, "header = " + std::string(header) + ", wrote " + std::to_string(sizeof (*header) * header_size) + " bytes");
+    Logger::debug(__FILE__, "header = " + std::string(header) + ", wrote " + std::to_string(sizeof (*header) * header_size) + " bytes");
 
     version = FILE_VERSION;
     WRITE_UINT32(version, "version", f, debug);
@@ -594,18 +594,18 @@ void dungeon_t::save_to_file(FILE *f, int debug, tuple_t *pc_coords) {
             if (cells[x][y].type == CELL_TYPE_UP_STAIRCASE) {
                 up_count++;
                 if (up == NULL)
-                    up = (tuple_t *) malloc(sizeof (*up));
+                    up = (IntPair *) malloc(sizeof (*up));
                 else
-                    up = (tuple_t *) realloc(up, up_count * sizeof (*up));
+                    up = (IntPair *) realloc(up, up_count * sizeof (*up));
                 up[up_count - 1].x = x;
                 up[up_count - 1].y = y;
             }
             else if (cells[x][y].type == CELL_TYPE_DOWN_STAIRCASE) {
                 down_count++;
                 if (down == NULL)
-                    down = (tuple_t *) malloc(sizeof (*down));
+                    down = (IntPair *) malloc(sizeof (*down));
                 else
-                    down = (tuple_t *) realloc(down, down_count * sizeof (*down));
+                    down = (IntPair *) realloc(down, down_count * sizeof (*down));
                 down[down_count - 1].x = x;
                 down[down_count - 1].y = y;
             }
@@ -626,7 +626,7 @@ void dungeon_t::save_to_file(FILE *f, int debug, tuple_t *pc_coords) {
     WRITE_UINT16(rooms.size(), "room count", f, debug);
     int i;
     for (i = 0; i < rooms.size(); i++) {
-        logger_t::debug(__FILE__, "writing room " + std::to_string(i));
+        Logger::debug(__FILE__, "writing room " + std::to_string(i));
         WRITE_UINT8((rooms[i].x0), "room x0", f, debug);
         WRITE_UINT8((rooms[i].y0), "room y0", f, debug);
         width = rooms[i].x1 - rooms[i].x0 + 1;
@@ -637,13 +637,13 @@ void dungeon_t::save_to_file(FILE *f, int debug, tuple_t *pc_coords) {
 
     WRITE_UINT16(up_count, "up staircase count", f, debug);
     for (i = 0; i < up_count; i++) {
-        logger_t::debug(__FILE__, "writing up staircase " + std::to_string(i));
+        Logger::debug(__FILE__, "writing up staircase " + std::to_string(i));
         WRITE_UINT8((up[i].x), "up staircase x", f, debug);
         WRITE_UINT8((up[i].y), "up staircase y", f, debug);
     }
     WRITE_UINT16(down_count, "down staircase count", f, debug);
     for (i = 0; i < down_count; i++) {
-        logger_t::debug(__FILE__, "writing down staircase " + std::to_string(i));
+        Logger::debug(__FILE__, "writing down staircase " + std::to_string(i));
         WRITE_UINT8((down[i].x), "down staircase x", f, debug);
         WRITE_UINT8((down[i].y), "down staircase y", f, debug);
     }

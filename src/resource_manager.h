@@ -13,13 +13,13 @@
 
 #define DEFAULT_VISUAL "error"
 
-class resource_manager_t {
+class ResourceManager {
     private:
-        static resource_manager_t *instance;
+        static ResourceManager *instance;
     
     public:
-        static resource_manager_t *get() {
-            if (!instance) instance = new resource_manager_t();
+        static ResourceManager *get() {
+            if (!instance) instance = new ResourceManager();
             return instance;
         }
         static void destroy() {
@@ -33,8 +33,8 @@ class resource_manager_t {
         std::vector<std::string> errored_visuals;
         bool loaded = false;
 
-        resource_manager_t();
-        ~resource_manager_t();
+        ResourceManager();
+        ~ResourceManager();
         void add_visual_path(const std::filesystem::path &dir, std::string prefix);
 
     public:

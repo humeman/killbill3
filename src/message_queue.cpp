@@ -2,7 +2,7 @@
 #include "macros.h"
 
 
-message_queue_t *message_queue_t::instance = nullptr;
+MessageQueue *MessageQueue::instance = nullptr;
 
 std::string escape_col(std::string inp) {
     unsigned long n = 0;
@@ -13,7 +13,7 @@ std::string escape_col(std::string inp) {
     return inp;
 }
 
-void message_queue_t::emit(ncpp::Plane &plane, bool sticky) {
+void MessageQueue::emit(ncpp::Plane &plane, bool sticky) {
     if (messages.empty()) return;
     std::string message = messages.front();
     if (!sticky)
@@ -110,19 +110,19 @@ void message_queue_t::emit(ncpp::Plane &plane, bool sticky) {
     }
 }
 
-void message_queue_t::drop() {
+void MessageQueue::drop() {
     if (!messages.empty())
         messages.pop_front();
 }
 
-void message_queue_t::clear() {
+void MessageQueue::clear() {
     messages.clear();
 }
 
-void message_queue_t::add(std::string message) {
+void MessageQueue::add(std::string message) {
     messages.push_back(message);
 }
 
-bool message_queue_t::empty() {
+bool MessageQueue::empty() {
     return messages.empty();
 }
