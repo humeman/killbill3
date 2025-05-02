@@ -9,7 +9,7 @@
 #include <cmath>
 #include <cstdlib>
 
-#define MAX_ATTEMPTS 2 * DUNGEON_WIDTH * DUNGEON_HEIGHT
+#define MAX_ATTEMPTS 2048
 
 IntPair random_location_no_kill(Dungeon *dungeon, Character ***character_map) {
     int i;
@@ -455,12 +455,12 @@ PC::PC() {
         equipment[i] = NULL;
 }
 
-Characterype PC::type() {
-    return CharacterYPE_PC;
+CHARACTER_TYPE PC::type() {
+    return CHARACTER_TYPE_PC;
 }
 
-Characterype Monster::type() {
-    return CharacterYPE_MONSTER;
+CHARACTER_TYPE Monster::type() {
+    return CHARACTER_TYPE_MONSTER;
 }
 
 

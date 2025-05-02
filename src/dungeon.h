@@ -12,20 +12,6 @@
 
 #include "heap.h"
 
-class DungeonOptions {
-    public:
-        std::string name;
-        IntPair nummon;
-        IntPair numitems;
-        IntPair rooms;
-        IntPair size;
-        std::string up_staircase = "";
-        std::string down_staircase = "";
-        std::vector<std::string> monsters;
-        std::vector<std::string> items;
-        std::string boss = "";
-        bool is_default = false;
-};
 
 #define CELL_TYPES 8
 typedef enum { // if modified, sync with CELL_TYPES_TO_FLOOR_TEXTURES, game_loop.cpp
@@ -45,6 +31,16 @@ class Room {
         uint8_t y0;
         uint8_t x1;
         uint8_t y1;
+
+
+        std::string str() const {
+            return "(" + std::to_string(x0) + ", " + std::to_string(y0) + ") to (" + std::to_string(x1) + ", " + std::to_string(y1) + ")";
+        }
+
+        friend std::ostream &operator<<(std::ostream &o, const Room &ip) {
+            return o << ip.str();
+        }
+
 };
 
 class Cell {
@@ -56,7 +52,8 @@ class Cell {
 };
 
 typedef enum {
-    CELL_ATTRIBUTE_IMMUTABLE = 0x01
+    CELL_ATTRIBUTE_IMMUTABLE = 0x01,
+    CELL_ATTRIBUTE_UNLOCKED = 0x02
 } cell_attributes_t;
 
 class QueueNode {
@@ -79,7 +76,28 @@ class IntPair {
             this->x = 0;
             this->y = 0;
         }
+        std::string str() const {
+            return "(" + std::to_string(x) + ", " + std::to_string(y) + ")";
+        }
+
+        friend std::ostream &operator<<(std::ostream &o, const IntPair &ip) {
+            return o << ip.str();
+        }
         bool operator==(const IntPair &o) const;
+};
+class DungeonOptions {
+    public:
+        std::string name;
+        IntPair nummon;
+        IntPair numitems;
+        IntPair rooms;
+        IntPair size;
+        std::string up_staircase = "";
+        std::string down_staircase = "";
+        std::vector<std::string> monsters;
+        std::vector<std::string> items;
+        std::string boss = "";
+        bool is_default = false;
 };
 
 typedef enum {
@@ -91,9 +109,9 @@ typedef enum {
 class Dungeon {
     private:
         bool is_initalized;
-        DungeonOptions *options = nullptr;
-
+        
     public:
+        DungeonOptions *options = nullptr;
         uint8_t width;
         uint8_t height;
         std::vector<Room> rooms;

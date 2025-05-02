@@ -243,7 +243,7 @@ void write_to_vector_strings(void *item, std::string line, std::ifstream &input,
 
 void write_to_tuple(void *item, std::string line, std::ifstream &input) {
     unsigned int x, y;
-    int i = line.find(' ');
+    unsigned long i = line.find(' ');
     if (i == std::string::npos)
         throw dungeon_exception(__PRETTY_FUNCTION__, "coordinate pair definition must be formatted <x> <y>, got " + line);
     x = std::stoi(line.substr(0, i));

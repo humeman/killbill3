@@ -329,3 +329,9 @@
           Look mode is the new and improved version of the monster menu -- it lets
           the user move all around the map with a pointer, and hovering over any
           item or monster gives a description at the bottom of the screen.
+5/1:
+    5p: Added a new map parsing format which describes various floors of the map.
+          The dungeon now has multiple active dungeons (with items & characters).
+          Stairs are re-added and link to another floor.
+         Added keycards so players can't skip the game progression and go upstairs
+          without killing all the monsters first.

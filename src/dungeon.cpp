@@ -109,7 +109,8 @@ void Dungeon::write_pgm() {
 void Dungeon::fill() {
     if (!options) throw dungeon_exception(__PRETTY_FUNCTION__, "dungeon not created with dungeon options");
     fill_stone();
-    create_rooms(options->rooms.x + (rand() % (options->rooms.y - options->rooms.x)), 5, 5, 10);
+    Logger::debug(__FILE__, "numrooms: " + options->rooms.str());
+    create_rooms(RAND_BETWEEN(options->rooms.x, options->rooms.y), 4, 4, 5);
     connect_rooms();
     fill_outside();
     place_staircases();
@@ -237,12 +238,14 @@ void Dungeon::create_rooms(int count, uint8_t min_width, uint8_t min_height, int
     int i;
     int room_width, room_height;
 
+    Logger::debug(__FILE__, "room count: " + std::to_string(count));
     for (i = 0; i < count; i++) {
         room_width = min_width + (rand() % size_randomness_max);
         room_height = min_height + (rand() % size_randomness_max);
 
         try {
-            create_room(room_width, room_height);
+            rooms.push_back(create_room(room_width, room_height));
+            Logger::debug(__FILE__, "room " + std::to_string(i) + ": " + rooms[rooms.size() - 1].str());
         }
         catch (dungeon_exception &e) {
             if (i < options->rooms.x)
@@ -295,12 +298,12 @@ Room Dungeon::create_room(uint8_t room_width, uint8_t room_height) {
         }
     }
     if (!placed) throw dungeon_exception(__PRETTY_FUNCTION__, "no space available to place room");
-    return room;
+    return room; 
 }
 
 void Dungeon::connect_rooms() {
     // Each room will connect to its nearest room until every room is marked as visited.
-    int i;
+    unsigned int i;
     int visited[rooms.size()];
     for (i = 0; i < rooms.size(); i++) visited[i] = 0;
     visited[0] = 1;
@@ -414,19 +417,46 @@ void Dungeon::connect_points(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1) {
 }
 
 void Dungeon::place_staircases() {
-    Room room;
+    unsigned int x, y, yf, yo;
+    bool done;
     if (rooms.size() < 1) throw dungeon_exception(__PRETTY_FUNCTION__, "attempted to place but no rooms exist");
 
     // Pick a random location in a room for the up staircase.
     if (options->up_staircase.length() > 0) {
-        room = rooms[rand() % rooms.size()];
-        place_in_room(&room, CELL_TYPE_UP_STAIRCASE);
+        // We want to place these on the rightmost side of the map.
+        // This is an inefficient algorithm for that, but I don't see an obvious easier one.
+        yo = rand();
+        done = false;
+        for (x = width - 2; x >= 0; x--) {
+            for (yf = 0; yf < height; yf++) {
+                y = (yf + yo) % height;
+                if (cells[x][y].type == CELL_TYPE_ROOM) {
+                    done = true;
+                    break;
+                }
+            }
+            if (done) break;
+        }
+        cells[x + 1][y].type = CELL_TYPE_UP_STAIRCASE;
+        cells[x + 1][y].hardness = 0;
     }
 
     // And again for down...
     if (options->down_staircase.length() > 0) {
-        room = rooms[rand() % rooms.size()];
-        place_in_room(&room, CELL_TYPE_DOWN_STAIRCASE);
+        yo = rand();
+        done = false;
+        for (x = 2; x < width; x++) {
+            for (yf = 0; yf < height; yf++) {
+                y = (yf + yo) % height;
+                if (cells[x][y].type == CELL_TYPE_ROOM) {
+                    done = true;
+                    break;
+                }
+            }
+            if (done) break;
+        }
+        cells[x + 1][y].type = CELL_TYPE_DOWN_STAIRCASE;
+        cells[x + 1][y].hardness = 0;
     }
 }
 
@@ -474,7 +504,7 @@ IntPair Dungeon::random_location_in_room(Room *room) {
 
 IntPair Dungeon::random_location() {
     int room_offset = rand();
-    int i;
+    unsigned int i;
     Room *room;
 
     for (i = 0; i < rooms.size(); i++) {
@@ -486,168 +516,172 @@ IntPair Dungeon::random_location() {
     throw dungeon_exception(__PRETTY_FUNCTION__, "no available space in dungeon");
 }
 
-void Dungeon::fill_from_file(FILE *f, int debug, IntPair *pc_coords) {
-    size_t size;
-    uint32_t version, file_size;
-    uint8_t hardness, x, y, x0, y0;
-    uint16_t down_staircase_count, up_staircase_count;
-    int i;
-    Room *temp;
-    int header_size = strlen(FILE_HEADER);
-    char header[header_size + 1];
 
-    size = fread(header, sizeof (*header), header_size, f);
-    if (size != strlen(FILE_HEADER)) throw dungeon_exception(__PRETTY_FUNCTION__, "the specified file is not an RLG327 file (file ended too early)");
-    header[header_size] = 0; // ensures null byte to terminate
-    Logger::debug(__FILE__, "file header: " + std::string(header));
-    if (strcmp(FILE_HEADER, header)) throw dungeon_exception(__PRETTY_FUNCTION__, "the specified file is not an RLG327 file (header mismatch)");
+/**
+ * The current file format can't work with this new dungeon format.
+ * We use dynamic sizing -- the dungeons have arbitrary dimensions, and this file format requires 80x21.
+ * To re-implement, we'll need to make a new format.
+ */
+// void Dungeon::fill_from_file(FILE *f, int debug, IntPair *pc_coords) {
+//     size_t size;
+//     uint32_t version, file_size;
+//     uint8_t hardness, x, y, x0, y0;
+//     uint16_t down_staircase_count, up_staircase_count;
+//     int i;
+//     int header_size = strlen(FILE_HEADER);
+//     char header[header_size + 1];
 
-    READ_UINT32(version, "version", f, debug);
-    if (version != 0) throw dungeon_exception(__PRETTY_FUNCTION__, "this program is incompatible with the provided file's version");
+//     size = fread(header, sizeof (*header), header_size, f);
+//     if (size != strlen(FILE_HEADER)) throw dungeon_exception(__PRETTY_FUNCTION__, "the specified file is not an RLG327 file (file ended too early)");
+//     header[header_size] = 0; // ensures null byte to terminate
+//     Logger::debug(__FILE__, "file header: " + std::string(header));
+//     if (strcmp(FILE_HEADER, header)) throw dungeon_exception(__PRETTY_FUNCTION__, "the specified file is not an RLG327 file (header mismatch)");
 
-    READ_UINT32(file_size, "file size", f, debug);
+//     READ_UINT32(version, "version", f, debug);
+//     if (version != 0) throw dungeon_exception(__PRETTY_FUNCTION__, "this program is incompatible with the provided file's version");
 
-    READ_UINT8(pc_coords->x, "pc x", f, debug);
-    READ_UINT8(pc_coords->y, "pc y", f, debug);
+//     READ_UINT32(file_size, "file size", f, debug);
 
-    // An unfortunate consequence of the room count being stored after this is
-    // that we need the room count to initialize the dungeon. This isn't ideal,
-    // but will work.
-    if (fseek(f, FILE_ROOM_COUNT_OFFSET, SEEK_SET)) dungeon_exception(__PRETTY_FUNCTION__, "unexpected error while reading file (could not seek to room count)");
+//     READ_UINT8(pc_coords->x, "pc x", f, debug);
+//     READ_UINT8(pc_coords->y, "pc y", f, debug);
 
-    uint16_t room_count;
-    READ_UINT16(room_count, "room count", f, debug);
+//     // An unfortunate consequence of the room count being stored after this is
+//     // that we need the room count to initialize the dungeon. This isn't ideal,
+//     // but will work.
+//     if (fseek(f, FILE_ROOM_COUNT_OFFSET, SEEK_SET)) dungeon_exception(__PRETTY_FUNCTION__, "unexpected error while reading file (could not seek to room count)");
 
-    if (fseek(f, FILE_MATRIX_OFFSET, SEEK_SET)) throw dungeon_exception(__PRETTY_FUNCTION__, "unexpected error while reading file (could not seek to dungeon matrix)");
-    for (y = 0; y < DUNGEON_HEIGHT; y++) {
-        for (x = 0; x < DUNGEON_WIDTH; x++) {
-            READ_UINT8(hardness, "cell matrix", f, debug);
-            cells[x][y].hardness = hardness;
-            cells[x][y].type = hardness == 0 ? CELL_TYPE_HALL : CELL_TYPE_STONE;
-        }
-    }
-    if (fseek(f, FILE_ROOM_COUNT_OFFSET + sizeof (room_count), SEEK_SET)) throw dungeon_exception(__PRETTY_FUNCTION__, "unexpected error while reading file (could not seek past room count)");
+//     uint16_t room_count;
+//     READ_UINT16(room_count, "room count", f, debug);
 
-    for (i = 0; i < room_count; i++) {
-        Logger::debug(__FILE__, "reading room " + std::to_string(i));
-        READ_UINT8(x0, "room x0", f, debug);
-        READ_UINT8(y0, "room y0", f, debug);
-        READ_UINT8(width, "room width", f, debug);
-        READ_UINT8(height, "room height", f, debug);
+//     if (fseek(f, FILE_MATRIX_OFFSET, SEEK_SET)) throw dungeon_exception(__PRETTY_FUNCTION__, "unexpected error while reading file (could not seek to dungeon matrix)");
+//     for (y = 0; y < DUNGEON_HEIGHT; y++) {
+//         for (x = 0; x < DUNGEON_WIDTH; x++) {
+//             READ_UINT8(hardness, "cell matrix", f, debug);
+//             cells[x][y].hardness = hardness;
+//             cells[x][y].type = hardness == 0 ? CELL_TYPE_HALL : CELL_TYPE_STONE;
+//         }
+//     }
+//     if (fseek(f, FILE_ROOM_COUNT_OFFSET + sizeof (room_count), SEEK_SET)) throw dungeon_exception(__PRETTY_FUNCTION__, "unexpected error while reading file (could not seek past room count)");
 
-        Room room;
-        room.x0 = x0;
-        room.y0 = y0;
-        room.x1 = x0 + width - 1;
-        room.y1 = y0 + height - 1;
+//     for (i = 0; i < room_count; i++) {
+//         Logger::debug(__FILE__, "reading room " + std::to_string(i));
+//         READ_UINT8(x0, "room x0", f, debug);
+//         READ_UINT8(y0, "room y0", f, debug);
+//         READ_UINT8(width, "room width", f, debug);
+//         READ_UINT8(height, "room height", f, debug);
 
-        for (x = room.x0; x <= room.x1; x++)
-            for (y = room.y0; y<= room.y1; y++)
-                cells[x][y].type = CELL_TYPE_ROOM;
+//         Room room;
+//         room.x0 = x0;
+//         room.y0 = y0;
+//         room.x1 = x0 + width - 1;
+//         room.y1 = y0 + height - 1;
 
-        rooms.push_back(room);
-    }
+//         for (x = room.x0; x <= room.x1; x++)
+//             for (y = room.y0; y<= room.y1; y++)
+//                 cells[x][y].type = CELL_TYPE_ROOM;
 
-    READ_UINT16(up_staircase_count, "up staircase count", f, debug);
-    for (i = 0; i < up_staircase_count; i++) {
-        Logger::debug(__FILE__, "reading up staircase " + std::to_string(i));
-        READ_UINT8(x, "up staircase x", f, debug);
-        READ_UINT8(y, "up staircase y", f, debug);
+//         rooms.push_back(room);
+//     }
 
-        cells[x][y].type = CELL_TYPE_UP_STAIRCASE;
-    }
-    READ_UINT16(down_staircase_count, "down staircase count", f, debug);
-    for (i = 0; i < down_staircase_count; i++) {
-        Logger::debug(__FILE__, "reading down staircase " + std::to_string(i));
-        READ_UINT8(x, "down staircase x", f, debug);
-        READ_UINT8(y, "down staircase y", f, debug);
-        cells[x][y].type = CELL_TYPE_DOWN_STAIRCASE;
-    }
+//     READ_UINT16(up_staircase_count, "up staircase count", f, debug);
+//     for (i = 0; i < up_staircase_count; i++) {
+//         Logger::debug(__FILE__, "reading up staircase " + std::to_string(i));
+//         READ_UINT8(x, "up staircase x", f, debug);
+//         READ_UINT8(y, "up staircase y", f, debug);
 
-    is_initalized = true;
-}
+//         cells[x][y].type = CELL_TYPE_UP_STAIRCASE;
+//     }
+//     READ_UINT16(down_staircase_count, "down staircase count", f, debug);
+//     for (i = 0; i < down_staircase_count; i++) {
+//         Logger::debug(__FILE__, "reading down staircase " + std::to_string(i));
+//         READ_UINT8(x, "down staircase x", f, debug);
+//         READ_UINT8(y, "down staircase y", f, debug);
+//         cells[x][y].type = CELL_TYPE_DOWN_STAIRCASE;
+//     }
 
-void Dungeon::save_to_file(FILE *f, int debug, IntPair *pc_coords) {
-    ENSURE_INITIALIZED;
-    uint32_t version, file_size;
-    uint8_t width, height;
-    int up_count, down_count, x, y;
-    IntPair *up, *down;
-    char header[] = FILE_HEADER;
-    int header_size = strlen(header);
-    size_t size = fwrite(header, sizeof (*header), header_size, f);
+//     is_initalized = true;
+// }
+// void Dungeon::save_to_file(FILE *f, int debug, IntPair *pc_coords) {
+//     ENSURE_INITIALIZED;
+//     uint32_t version, file_size;
+//     uint8_t width, height;
+//     int up_count, down_count, x, y;
+//     IntPair *up, *down;
+//     char header[] = FILE_HEADER;
+//     int header_size = strlen(header);
+//     size_t size = fwrite(header, sizeof (*header), header_size, f);
 
-    if (size != (size_t) header_size) throw dungeon_exception(__PRETTY_FUNCTION__, "could not write to file");
-    Logger::debug(__FILE__, "header = " + std::string(header) + ", wrote " + std::to_string(sizeof (*header) * header_size) + " bytes");
+//     if (size != (size_t) header_size) throw dungeon_exception(__PRETTY_FUNCTION__, "could not write to file");
+//     Logger::debug(__FILE__, "header = " + std::string(header) + ", wrote " + std::to_string(sizeof (*header) * header_size) + " bytes");
 
-    version = FILE_VERSION;
-    WRITE_UINT32(version, "version", f, debug);
+//     version = FILE_VERSION;
+//     WRITE_UINT32(version, "version", f, debug);
 
-    // File size calculation:
-    // 1708 + r * 4 + u * 2 + d * 2
-    up_count = 0;
-    down_count = 0;
-    up = NULL;
-    down = NULL;
-    for (x = 0; x < DUNGEON_WIDTH; x++) {
-        for (y = 0; y < DUNGEON_HEIGHT; y++) {
-            if (cells[x][y].type == CELL_TYPE_UP_STAIRCASE) {
-                up_count++;
-                if (up == NULL)
-                    up = (IntPair *) malloc(sizeof (*up));
-                else
-                    up = (IntPair *) realloc(up, up_count * sizeof (*up));
-                up[up_count - 1].x = x;
-                up[up_count - 1].y = y;
-            }
-            else if (cells[x][y].type == CELL_TYPE_DOWN_STAIRCASE) {
-                down_count++;
-                if (down == NULL)
-                    down = (IntPair *) malloc(sizeof (*down));
-                else
-                    down = (IntPair *) realloc(down, down_count * sizeof (*down));
-                down[down_count - 1].x = x;
-                down[down_count - 1].y = y;
-            }
-        }
-    }
-    file_size = 1708 + rooms.size() * 4 + up_count * 2 + down_count * 2;
-    WRITE_UINT32(file_size, "file size", f, debug);
+//     // File size calculation:
+//     // 1708 + r * 4 + u * 2 + d * 2
+//     up_count = 0;
+//     down_count = 0;
+//     up = NULL;
+//     down = NULL;
+//     for (x = 0; x < DUNGEON_WIDTH; x++) {
+//         for (y = 0; y < DUNGEON_HEIGHT; y++) {
+//             if (cells[x][y].type == CELL_TYPE_UP_STAIRCASE) {
+//                 up_count++;
+//                 if (up == NULL)
+//                     up = (IntPair *) malloc(sizeof (*up));
+//                 else
+//                     up = (IntPair *) realloc(up, up_count * sizeof (*up));
+//                 up[up_count - 1].x = x;
+//                 up[up_count - 1].y = y;
+//             }
+//             else if (cells[x][y].type == CELL_TYPE_DOWN_STAIRCASE) {
+//                 down_count++;
+//                 if (down == NULL)
+//                     down = (IntPair *) malloc(sizeof (*down));
+//                 else
+//                     down = (IntPair *) realloc(down, down_count * sizeof (*down));
+//                 down[down_count - 1].x = x;
+//                 down[down_count - 1].y = y;
+//             }
+//         }
+//     }
+//     file_size = 1708 + rooms.size() * 4 + up_count * 2 + down_count * 2;
+//     WRITE_UINT32(file_size, "file size", f, debug);
 
-    WRITE_UINT8(pc_coords->x, "pc x", f, debug);
-    WRITE_UINT8(pc_coords->y, "pc y", f, debug);
+//     WRITE_UINT8(pc_coords->x, "pc x", f, debug);
+//     WRITE_UINT8(pc_coords->y, "pc y", f, debug);
 
-    for (y = 0; y < DUNGEON_HEIGHT; y++) {
-        for (x = 0; x < DUNGEON_WIDTH; x++) {
-            WRITE_UINT8((cells[x][y].hardness), "cell matrix", f, debug);
-        }
-    }
+//     for (y = 0; y < DUNGEON_HEIGHT; y++) {
+//         for (x = 0; x < DUNGEON_WIDTH; x++) {
+//             WRITE_UINT8((cells[x][y].hardness), "cell matrix", f, debug);
+//         }
+//     }
 
-    WRITE_UINT16(rooms.size(), "room count", f, debug);
-    int i;
-    for (i = 0; i < rooms.size(); i++) {
-        Logger::debug(__FILE__, "writing room " + std::to_string(i));
-        WRITE_UINT8((rooms[i].x0), "room x0", f, debug);
-        WRITE_UINT8((rooms[i].y0), "room y0", f, debug);
-        width = rooms[i].x1 - rooms[i].x0 + 1;
-        height = rooms[i].y1 - rooms[i].y0 + 1;
-        WRITE_UINT8(width, "room width", f, debug);
-        WRITE_UINT8(height, "room height", f, debug);
-    }
+//     WRITE_UINT16(rooms.size(), "room count", f, debug);
+//     int i;
+//     for (i = 0; i < (int) rooms.size(); i++) {
+//         Logger::debug(__FILE__, "writing room " + std::to_string(i));
+//         WRITE_UINT8((rooms[i].x0), "room x0", f, debug);
+//         WRITE_UINT8((rooms[i].y0), "room y0", f, debug);
+//         width = rooms[i].x1 - rooms[i].x0 + 1;
+//         height = rooms[i].y1 - rooms[i].y0 + 1;
+//         WRITE_UINT8(width, "room width", f, debug);
+//         WRITE_UINT8(height, "room height", f, debug);
+//     }
 
-    WRITE_UINT16(up_count, "up staircase count", f, debug);
-    for (i = 0; i < up_count; i++) {
-        Logger::debug(__FILE__, "writing up staircase " + std::to_string(i));
-        WRITE_UINT8((up[i].x), "up staircase x", f, debug);
-        WRITE_UINT8((up[i].y), "up staircase y", f, debug);
-    }
-    WRITE_UINT16(down_count, "down staircase count", f, debug);
-    for (i = 0; i < down_count; i++) {
-        Logger::debug(__FILE__, "writing down staircase " + std::to_string(i));
-        WRITE_UINT8((down[i].x), "down staircase x", f, debug);
-        WRITE_UINT8((down[i].y), "down staircase y", f, debug);
-    }
+//     WRITE_UINT16(up_count, "up staircase count", f, debug);
+//     for (i = 0; i < up_count; i++) {
+//         Logger::debug(__FILE__, "writing up staircase " + std::to_string(i));
+//         WRITE_UINT8((up[i].x), "up staircase x", f, debug);
+//         WRITE_UINT8((up[i].y), "up staircase y", f, debug);
+//     }
+//     WRITE_UINT16(down_count, "down staircase count", f, debug);
+//     for (i = 0; i < down_count; i++) {
+//         Logger::debug(__FILE__, "writing down staircase " + std::to_string(i));
+//         WRITE_UINT8((down[i].x), "down staircase x", f, debug);
+//         WRITE_UINT8((down[i].y), "down staircase y", f, debug);
+//     }
 
-    free(up);
-    free(down);
-}
+//     free(up);
+//     free(down);
+// }

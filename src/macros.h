@@ -14,8 +14,6 @@
 #define ROOM_MIN_WIDTH 4
 #define ROOM_MIN_HEIGHT 3
 #define ROOM_MAX_RANDOMNESS 6
-#define DUNGEON_WIDTH 80
-#define DUNGEON_HEIGHT 21
 #define RANDOM_MONSTERS_MIN 5
 #define RANDOM_MONSTERS_MAX 10
 #define RANDOM_ITEMS_MIN 10
@@ -28,9 +26,6 @@
 
 #define FILE_MATRIX_OFFSET 22
 #define FILE_ROOM_COUNT_OFFSET 1702
-
-#define WIDTH 80
-#define HEIGHT 24
 
 #define REDRAW_TIMEOUT 500
 #define NO_ACTION_TIMEOUT 2500
@@ -169,6 +164,8 @@ class dungeon_exception : public std::exception {
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define CLAMP(a, low, high) ((a < low) ? low : ((a > high) ? high : a))
+
+#define RAND_BETWEEN(low, high) (low) + (rand() % ((high) - (low))) 
 
 #define ARRAY_SIZE(x) ((int) (sizeof(x) / sizeof(x[0])))
 

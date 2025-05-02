@@ -345,10 +345,10 @@ void Game::render_frame(bool complete_redraw) {
                 }
                 // Characters get first priority.
                 else if (character_map[x][y]) {
-                    if (character_map[x][y]->type() == CharacterYPE_PC) {
+                    if (character_map[x][y]->type() == CHARACTER_TYPE_PC) {
                         new_texture = std::string(PCEXTURE) + "_" + "nesw"[pc.direction];
                     }
-                    else if (character_map[x][y]->type() == CharacterYPE_MONSTER) {
+                    else if (character_map[x][y]->type() == CHARACTER_TYPE_MONSTER) {
                         monst = (Monster *) character_map[x][y];
                         switch (monst->direction) {
                             case DIRECTION_NORTH:
@@ -414,32 +414,32 @@ void Game::render_frame(bool complete_redraw) {
     }
 
     // The inventory.
-    std::string Itemexture;
+    std::string item_texture;
     NC_APPLY_COLOR(*bottom_plane, RGB_COLOR_WHITE_DIM, RGB_COLOR_BLACK);
     for (i = 0; i < MAX_CARRY_SLOTS; i++) {
         plane_name = ITEM_NAME(i);
         plane = planes.get(plane_name);
-        Itemexture = i < pc.inventory_size() ? pc.inventory_at(i)->definition->ui_texture : "items_empty";
+        item_texture = i < pc.inventory_size() ? pc.inventory_at(i)->definition->ui_texture : "items_empty";
 
-        if (planes.cache_set(plane_name, Itemexture)) {
-            DRAW_TO_PLANE(plane, Itemexture);
+        if (planes.cache_set(plane_name, item_texture)) {
+            DRAW_TO_PLANE(plane, item_texture);
         }
         bottom_plane->putc(2, plane->get_x() - 1, i == 9 ? '0' : '1' + i);
     }
     for (i = 0; i < ARRAY_SIZE(pc.equipment); i++) {
         plane_name = ITEM_NAME(i + MAX_CARRY_SLOTS);
         plane = planes.get(plane_name);
-        Itemexture = pc.equipment[i] ? pc.equipment[i]->definition->ui_texture : "items_empty";
+        item_texture = pc.equipment[i] ? pc.equipment[i]->definition->ui_texture : "items_empty";
 
-        if (planes.cache_set(plane_name, Itemexture)) {
-            DRAW_TO_PLANE(plane, Itemexture);
+        if (planes.cache_set(plane_name, item_texture)) {
+            DRAW_TO_PLANE(plane, item_texture);
         }
-        bottom_plane->putc(2, plane->get_x() - 1, "asdfghjk"[i]);
+        bottom_plane->putc(2, plane->get_x() - 1, "asdfghjkl"[i]);
     }
 
     if (look_mode) {
         plane = planes.get("look");
-        if (character_map[pointer.x][pointer.y] && character_map[pointer.x][pointer.y]->type() == CharacterYPE_MONSTER) {
+        if (character_map[pointer.x][pointer.y] && character_map[pointer.x][pointer.y]->type() == CHARACTER_TYPE_MONSTER) {
             plane->move_top();
             render_monster_details(plane, (Monster *) character_map[pointer.x][pointer.y], 0, 0, DETAILS_WIDTH, DETAILS_HEIGHT);
         }
@@ -651,7 +651,7 @@ void Game::inventory_menu() {
             render_inventory_item(pc.inventory_at(i), i, inventory && i == menu_i, 0, 0);
         for (i = inv_count; i < MAX_CARRY_SLOTS; i++)
             render_inventory_item(nullptr, i, false, 0, 0);
-        render_inventory_box("EQUIPMENT", "asdfghjk  ", !inventory ? "^^^" : "", INVENTORY_BOX_WIDTH + 2, 0);
+        render_inventory_box("EQUIPMENT", "asdfghjkl ", !inventory ? "^^^" : "", INVENTORY_BOX_WIDTH + 2, 0);
         for (i = 0; i < equip_count; i++) {
             if (pc.equipment[i]) render_inventory_item(pc.equipment[i], i, !inventory && i == menu_i, INVENTORY_BOX_WIDTH + 2, 0);
             else render_inventory_item(nullptr, i, false, INVENTORY_BOX_WIDTH + 2, 0);
@@ -789,7 +789,7 @@ void Game::inventory_menu() {
                             break;
                         }
                     }
-                    else if (str_contains_char("abcdefghijkl", inp.id)) {
+                    else if (str_contains_char("asdfghjkl", inp.id)) {
                         inventory = false;
                         i = inp.id - 'a';
                     }

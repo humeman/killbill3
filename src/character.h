@@ -19,9 +19,9 @@
 #define MONSTER_ATTRIBUTE_BOSS 0x100
 
 typedef enum {
-    CharacterYPE_PC,
-    CharacterYPE_MONSTER
-} Characterype;
+    CHARACTER_TYPE_PC,
+    CHARACTER_TYPE_MONSTER
+} CHARACTER_TYPE;
 
 class MonsterDefinition {
     public:
@@ -102,9 +102,9 @@ class Character {
         /**
          * Gets the type of this character.
          *
-         * Returns: CharacterYPE_PC or CharacterYPE_MONSTER
+         * Returns: CHARACTER_TYPE_PC or CHARACTER_TYPE_MONSTER
          */
-        virtual Characterype type() = 0;
+        virtual CHARACTER_TYPE type() = 0;
 
         int inventory_size();
         void add_to_inventory(Item *item);
@@ -120,6 +120,7 @@ typedef enum {
     PC_SLOT_PANTS,
     PC_SLOT_SHOES,
     PC_SLOT_GLASSES,
+    PC_SLOT_KEY,
     PC_SLOT_POCKET_0,
     PC_SLOT_POCKET_1 // Must be the last one for counting
 } pc_slot_t;
@@ -131,7 +132,7 @@ class PC : public Character {
 
         PC();
         ~PC() {};
-        Characterype type() override;
+        CHARACTER_TYPE type() override;
         int damage(int amount, game_result_t &result, Item ***item_map, Character ***character_map) override;
         int speed_bonus();
         int damage_bonus();
@@ -168,7 +169,7 @@ class Monster : public Character {
         void die(game_result_t &result, Character ***character_map, Item ***item_map);
         uint8_t next_color();
         uint8_t current_color();
-        Characterype type() override;
+        CHARACTER_TYPE type() override;
         int damage(int amount, game_result_t &result, Item ***item_map, Character ***character_map) override;
 };
 

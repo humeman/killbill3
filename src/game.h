@@ -18,8 +18,13 @@ class DungeonFloor {
     Dungeon *dungeon;
     Character ***character_map;
     Item ***item_map;
+    std::string id;
+    // It is completely unnecessary to have one for each dungeon, but they have arbitrary sizes now,
+    // so to take the easy way out that's what I'm doing.
+    uint32_t **pathfinding_tunnel;
+    uint32_t **pathfinding_no_tunnel;
 
-    DungeonFloor(Dungeon *dungeon) {
+    DungeonFloor(std::string id, Dungeon *dungeon) {
       int i, j;
       this->dungeon = dungeon;
       character_map = (Character ***) malloc(dungeon->width * sizeof (Character**));
@@ -48,7 +53,39 @@ class DungeonFloor {
           for (j = 0; j < dungeon->height; j++) item_map[i][j] = NULL;
       }
 
+      pathfinding_no_tunnel = (uint32_t **) malloc(dungeon->width * sizeof (uint32_t*));
+      if (pathfinding_no_tunnel == NULL) {
+          goto init_free_all_item_map;
+      }
+      for (i = 0; i < dungeon->width; i++) {
+          pathfinding_no_tunnel[i] = (uint32_t *) malloc(dungeon->height * sizeof (uint32_t));
+          if (pathfinding_no_tunnel[i] == NULL) {
+              for (j = 0; j < i; j++) free(pathfinding_no_tunnel[j]);
+              goto init_free_pathfinding_no_tunnel;
+          }
+      }
+  
+      pathfinding_tunnel = (uint32_t **) malloc(dungeon->width * sizeof (uint32_t*));
+      if (pathfinding_tunnel == NULL) {
+          goto init_free_all_pathfinding_no_tunnel;
+      }
+      for (i = 0; i < dungeon->width; i++) {
+          pathfinding_tunnel[i] = (uint32_t *) malloc(dungeon->height * sizeof (uint32_t));
+          if (pathfinding_tunnel[i] == NULL) {
+              for (j = 0; j < i; j++) free(pathfinding_tunnel[j]);
+              goto init_free_pathfinding_tunnel;
+          }
+      }
+
       return;
+      init_free_pathfinding_tunnel:
+      free(pathfinding_tunnel);
+      init_free_all_pathfinding_no_tunnel:
+      for (j = 0; j < dungeon->width; j++) free(pathfinding_no_tunnel[j]);
+      init_free_pathfinding_no_tunnel:
+      free(pathfinding_no_tunnel);
+      init_free_all_item_map:
+      for (j = 0; j < dungeon->width; j++) free(item_map[j]);
       init_free_item_map:
       free(item_map);
       init_free_all_character_map:
@@ -71,8 +108,6 @@ class Game {
         Character ***character_map;
         Item ***item_map;
         bool is_initialized = false;
-        int nummon = -1;
-        int numitems = -1;
         int debug;
         Parser<MonsterDefinition> *monst_parser;
         Parser<ItemDefinition> *item_parser;
@@ -101,7 +136,7 @@ class Game {
     public:
         Dungeon *dungeon = nullptr;
 
-        Game(int debug, uint8_t width, uint8_t height, int max_rooms);
+        Game(int debug);
         ~Game();
 
         void create_nc();
@@ -132,7 +167,7 @@ class Game {
          * Params:
          * - path: The path to the file to read.
          */
-        void init_from_file(const char *path);
+        //void init_from_file(const char *path);
 
         void init_from_map(std::string map_name);
 
@@ -147,31 +182,15 @@ class Game {
          */
         void random_items();
 
+        void apply_dungeon(DungeonFloor &floor, IntPair pc_coords);
+
         /**
          * Writes the game's dungeon to an RLG327 file.
          *
          * Params:
          * - path: The path to the file to write.
          */
-        void write_to_file(const char *path);
-
-        /**
-         * Overrides the number of monsters used when calling random_monsters()
-         *  or when the PC goes up/down staircases. By default, this is random.
-         *
-         * Params:
-         * - nummon: New number of monsters per dungeon
-         */
-        void override_nummon(int nummon);
-
-        /**
-         * Overrides the number of items used when calling random_items()
-         *  or when the PC goes up/down staircases. By default, this is random.
-         *
-         * Params:
-         * - numitems: New number of items per dungeon
-         */
-        void override_numitems(int numitems);
+        //void write_to_file(const char *path);
 
         /**
          * Runs the game.
@@ -194,7 +213,7 @@ class Game {
         /**
           * Displays the monster menu.
           */
-        void monster_menu(Monster *initial_target);
+        //void monster_menu(Monster *initial_target);
         void inventory_menu();
         void cheater_menu();
 
@@ -223,15 +242,6 @@ class Game {
          *  they represent a possible PC location.
          */
         void force_move(IntPair dest);
-
-        /**
-         * Regenerates the dungeon, placing the PC on the first instance of
-         *  a specified target cell.
-         *
-         * Params:
-         * - target_cell: Cell type to place on
-         */
-        void fill_and_place_on(cell_type_t target_cell);
 
         void render_inventory_box(std::string title, std::string labels, std::string input_tip, unsigned int x0, unsigned int y0);
         void render_inventory_item(Item *item, int i, bool selected, unsigned int x0, unsigned int y0);
