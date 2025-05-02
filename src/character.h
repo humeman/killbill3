@@ -78,7 +78,7 @@ class Character {
          * - amount: Amount of damage to deal
          * - character_map (modified if dead)
          */
-        virtual int damage(int amount, game_result_t &result, Item ***item_map, Character ***character_map) = 0;
+        virtual int damage(int amount, game_result_t &result, Dungeon *dungeon, Item ***item_map, Character ***character_map) = 0;
 
         /**
          * Moves this character to a location.
@@ -120,7 +120,6 @@ typedef enum {
     PC_SLOT_PANTS,
     PC_SLOT_SHOES,
     PC_SLOT_GLASSES,
-    PC_SLOT_KEY,
     PC_SLOT_POCKET_0,
     PC_SLOT_POCKET_1 // Must be the last one for counting
 } pc_slot_t;
@@ -128,12 +127,12 @@ typedef enum {
 class PC : public Character {
     public:
         Item *equipment[PC_SLOT_POCKET_1 + 1];
-        Dice base_damage = Dice(0, 1, 4);
+        Dice base_damage = Dice(1, 1, 4);
 
         PC();
         ~PC() {};
         CHARACTER_TYPE type() override;
-        int damage(int amount, game_result_t &result, Item ***item_map, Character ***character_map) override;
+        int damage(int amount, game_result_t &result, Dungeon *dungeon, Item ***item_map, Character ***character_map) override;
         int speed_bonus();
         int damage_bonus();
         int dodge_bonus();
@@ -148,10 +147,11 @@ class Monster : public Character {
         uint16_t attributes;
         uint8_t color_i = 0;
         uint8_t color_count;
+        ItemDefinition *key_drop;
 
     public:
         MonsterDefinition *definition;
-        Monster(MonsterDefinition *definition);
+        Monster(MonsterDefinition *definition, ItemDefinition *key_drop);
         ~Monster() {};
         /**
          * Finds the next coordinate to move to on a direct line to a
@@ -166,11 +166,11 @@ class Monster : public Character {
         IntPair next_xy(Dungeon *dungeon, IntPair to);
         // A few too many parameters, but it'd be annoying to rework. Oh well.
         void take_turn(Dungeon *dungeon, PC *pc, BinaryHeap<Character *> &turn_queue, Character ***character_map, Item ***item_map, uint32_t **pathfinding_tunnel, uint32_t **pathfinding_no_tunnel, uint32_t priority, game_result_t &result);
-        void die(game_result_t &result, Character ***character_map, Item ***item_map);
+        void die(game_result_t &result, Dungeon *dungeon, Character ***character_map, Item ***item_map);
         uint8_t next_color();
         uint8_t current_color();
         CHARACTER_TYPE type() override;
-        int damage(int amount, game_result_t &result, Item ***item_map, Character ***character_map) override;
+        int damage(int amount, game_result_t &result, Dungeon *dungeon, Item ***item_map, Character ***character_map) override;
 };
 
 /**

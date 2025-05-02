@@ -108,6 +108,25 @@ typedef enum {
     NC_APPLY_COLOR(plane, RGB_COLOR_WHITE, RGB_COLOR_BLACK); \
     (plane).styles_off(ncpp::CellStyle::Bold); }
 
+#define NC_CLEAR(plane) { \
+    for (unsigned int y = 0; y < (plane).get_dim_y(); y++) { \
+        (plane).cursor_move(y, 0); \
+        for (unsigned int x = 0; x < (plane).get_dim_x(); x++) \
+            (plane).putc(' '); \
+        } \
+    }
+
+
+// This extra clear/render is because of a bug in either notcurses or my terminal.
+// Just moving the plane down is not enough -- in certain window sizes,
+// there are small gaps between lines that remain as the menu color.
+// Rendering first, then re-rendering once it's moved down, fixes this.
+#define NC_HIDE(nc, plane) { \
+    NC_RESET(plane); \
+    NC_CLEAR(plane); \
+    nc->render(); \
+    (plane).move_bottom(); }
+
 #define NC_PRINT_CENTERED_AT(plane, x, y, msg, ...) { \
     int len = snprintf(NULL, 0, msg, ##__VA_ARGS__); \
     plane->printf(y, (x) - len / 2, msg, ##__VA_ARGS__); }

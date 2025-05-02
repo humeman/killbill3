@@ -5,7 +5,7 @@ DEFAULT TRUE
 NAME The Lobby
 UP 2
 SIZE 55 35
-NUMENEMIES 3 8
+NUMENEMIES 1 2
 NUMROOMS 6 8
 NUMITEMS 3 5
 ENEMIES
@@ -14,6 +14,7 @@ employee_a
 ITEMS
 keyboard
 .
+KEY key
 END
 
 BEGIN MAP 2
@@ -32,6 +33,7 @@ robot
 ITEMS
 keyboard
 .
+KEY key
 END
 
 BEGIN MAP 3

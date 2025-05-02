@@ -13,6 +13,7 @@ typedef enum {
     ITEM_TYPE_PANTS,
     ITEM_TYPE_SHOES,
     ITEM_TYPE_GLASSES,
+    ITEM_TYPE_KEY,
     ITEM_TYPE_POCKET, // End of PC-equippable items
     ITEM_TYPE_STACK,
     ITEM_TYPE_UNKNOWN // This must always be the last one for counting.

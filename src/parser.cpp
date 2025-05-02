@@ -39,8 +39,8 @@ void convert(void *item, std::string line, std::ifstream &input, parse_type_t ty
         case PARSE_TYPE_COLOR:
             write_to_color(item, line, input);
             break;
-        case PARSE_TYPE_ItemYPE:
-            write_to_Itemype(item, line, input);
+        case PARSE_TYPE_ITEM_TYPE:
+            write_to_item_type(item, line, input);
             break;
         case PARSE_TYPE_BOOL:
             write_to_bool(item, line, input);
@@ -201,7 +201,7 @@ void write_to_color(void *item, std::string line, std::ifstream &input) {
     }
 }
 
-void write_to_Itemype(void *item, std::string line, std::ifstream &input) {
+void write_to_item_type(void *item, std::string line, std::ifstream &input) {
     item_type_t *type = (item_type_t *) item;
     if (line == "WEAPON") *type = ITEM_TYPE_WEAPON;
     else if (line == "HAT") *type = ITEM_TYPE_HAT;
@@ -210,6 +210,7 @@ void write_to_Itemype(void *item, std::string line, std::ifstream &input) {
     else if (line == "SHOES") *type = ITEM_TYPE_SHOES;
     else if (line == "GLASSES") *type = ITEM_TYPE_GLASSES;
     else if (line == "POCKET") *type = ITEM_TYPE_POCKET;
+    else if (line == "KEY") *type = ITEM_TYPE_KEY;
     else throw dungeon_exception(__PRETTY_FUNCTION__, "unrecognized item type " + line);
 }
 

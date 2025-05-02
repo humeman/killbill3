@@ -54,6 +54,7 @@ const std::string CELL_TYPES_TO_FLOOR_TEXTURES[] = {
 void Game::create_nc() {
     Logger::get()->off();
     nc = new ncpp::NotCurses();
+    planes = new PlaneManager(nc);
 }
 void Game::end_nc() {
     if (nc) {
@@ -80,7 +81,6 @@ void Game::end_nc() {
 void Game::run() {
     if (!nc)
         throw dungeon_exception(__PRETTY_FUNCTION__, "run Game::create_nc()");
-    const dungeon_exception *ex = nullptr;
     ncpp::Plane *plane;
     try {
         // Dimensioning stuff...
@@ -102,8 +102,8 @@ void Game::run() {
         unsigned int xoff = (term_x - cells_x * 6) / 2;
 
         /*
-        Now we'll make the planes.
-        This uses a 'plane manager', a simple key-value caching map from names to planes.
+        Now we'll make the planes->
+        This uses a 'plane manager', a simple key-value caching map from names to planes->
         Planes have been a bit annoying to deal with (and it's quite possible there's a better recommended way,
         but I did not spend the time to study the user manual and find out). If they're destroyed (go out of 
         scope), they do not appear when calling nc.render(). I also haven't found a way to just blit a
@@ -111,44 +111,44 @@ void Game::run() {
         I had previously done this with a bunch of instance variables and arrays of planes, but with the number
         of UI elements this seemed very unsustainable. 
          */
-        planes.get("top", 0, 0, term_x, 1);
-        planes.get("bottom", 0, term_y - 4, term_x, 4);
+        planes->get("top", 0, 0, term_x, 1);
+        planes->get("bottom", 0, term_y - 4, term_x, 4);
         // These are dynamically allocated, so we should always use term_x/y and never refresh them.
         for (unsigned int x = 0; x < cells_x; x++) {
             for (unsigned int y = 0; y < cells_y; y++) {
-                planes.get(CELL_NAME(x, y), x * 6 + xoff, y * 3 + 1, 6, 3);
+                planes->get(CELL_NAME(x, y), x * 6 + xoff, y * 3 + 1, 6, 3);
             }
         }
         // 4 cols wide, 2 rows high. Center in the middle
-        xoff = (planes.get("bottom")->get_dim_x() - 4 * HEARTS) / 2;
-        unsigned int yoff = planes.get("bottom")->get_y();
+        xoff = (planes->get("bottom")->get_dim_x() - 4 * HEARTS) / 2;
+        unsigned int yoff = planes->get("bottom")->get_y();
         for (unsigned int x = 0; x < HEARTS; x++) {
-            planes.get(HEART_NAME(x), x * 4 + xoff, yoff, 4, 2);
+            planes->get(HEART_NAME(x), x * 4 + xoff, yoff, 4, 2);
         }
         unsigned long item_count = ARRAY_SIZE(pc.equipment) + MAX_CARRY_SLOTS;
         // 2 cols wide, 1 row high.
         // 2 col gap for indicators.
-        xoff = (planes.get("bottom")->get_dim_x() - 4 * item_count) / 2;
-        yoff = planes.get("bottom")->get_y() + 2;
+        xoff = (planes->get("bottom")->get_dim_x() - 4 * item_count) / 2;
+        yoff = planes->get("bottom")->get_y() + 2;
         for (unsigned int x = 0; x < item_count; x++) {
-            planes.get(ITEM_NAME(x), x * 4 + xoff, yoff, 2, 1);
+            planes->get(ITEM_NAME(x), x * 4 + xoff, yoff, 2, 1);
         }
-        plane = planes.get("overlay", 0, 0, term_x, term_y);
+        plane = planes->get("overlay", 0, 0, term_x, term_y);
         plane->move_bottom();
 
-        plane = planes.get("inventory", 
+        plane = planes->get("inventory", 
             (term_x - 2 * INVENTORY_BOX_WIDTH - 1) / 2, 
             (term_y - 16 - DETAILS_HEIGHT) / 2, 
             DETAILS_WIDTH, 13 + DETAILS_HEIGHT);
         plane->move_bottom();
 
-        plane = planes.get("look", 
+        plane = planes->get("look", 
             (term_x - DETAILS_WIDTH) / 2, 
             term_y - 6 - DETAILS_HEIGHT, 
             DETAILS_WIDTH, DETAILS_HEIGHT);
         plane->move_bottom();
 
-        plane = planes.get("cheater", 
+        plane = planes->get("cheater", 
             (term_x - CHEATER_MENU_WIDTH) / 2, 
             (term_y - CHEATER_MENU_HEIGHT) / 2, 
             CHEATER_MENU_WIDTH, CHEATER_MENU_HEIGHT);
@@ -156,20 +156,26 @@ void Game::run() {
 
         run_internal();
     } catch (dungeon_exception &e) {
-        ex = new dungeon_exception(__PRETTY_FUNCTION__, e, "game loop failed");
+        planes->clear();
+        ResourceManager::destroy();
+        end_nc();
+        throw dungeon_exception(__PRETTY_FUNCTION__, e, "game loop failed");
     } catch (std::exception &e) {
-        ex = new dungeon_exception(__PRETTY_FUNCTION__, "game loop failed (" + std::string(e.what()) + ")");
+        planes->clear();
+        ResourceManager::destroy();
+        end_nc();
+        Logger::error(__FILE__, "unknown exception during game loop");
+        throw;
     } catch (...) {
-        ex = new dungeon_exception(__PRETTY_FUNCTION__, "game loop failed (unknown)");
+        planes->clear();
+        ResourceManager::destroy();
+        end_nc();
+        Logger::error(__FILE__, "unknown exception during game loop");
+        throw;
     }
-
-    planes.clear();
+    planes->clear();
     ResourceManager::destroy();
     end_nc();
-    if (ex) {
-        Logger::error(__FILE__, "rethrowing game loop exception");
-        throw *ex;
-    }
 }
 
 void Game::run_internal() {
@@ -183,7 +189,7 @@ void Game::run_internal() {
 
         if (result != GAME_RESULT_RUNNING) {
             // Print our beautiful images
-            ncpp::Plane *bsod_plane = planes.get("bsod", 0, 0, term_x, term_y);
+            ncpp::Plane *bsod_plane = planes->get("bsod", 0, 0, term_x, term_y);
             bsod_plane->move_top();
             if (result == GAME_RESULT_LOSE) {
                 NC_APPLY_COLOR((*bsod_plane), RGB_COLOR_WHITE, RGB_COLOR_BSOD);
@@ -282,7 +288,7 @@ void Game::run_until_pc() {
 
 void Game::render_frame(bool complete_redraw) {
     // Status message.
-    ncpp::Plane *top_plane = planes.get("top");
+    ncpp::Plane *top_plane = planes->get("top");
     top_plane->erase();
     if (teleport_mode) {
         if (MessageQueue::get()->empty())
@@ -304,7 +310,7 @@ void Game::render_frame(bool complete_redraw) {
         Logger::debug(__FILE__, "running complete redraw");
         for (x = 0; x < (int) cells_x; x++) {
             for (y = 0; y < (int) cells_y; y++) {
-                plane = planes.get(CELL_NAME(x, y));
+                plane = planes->get(CELL_NAME(x, y));
                 DRAW_TO_PLANE(plane, CELL_TYPES_TO_FLOOR_TEXTURES[CELL_TYPE_EMPTY]);
             }
         }
@@ -328,7 +334,6 @@ void Game::render_frame(bool complete_redraw) {
     Monster *monst;
     std::string cell_name;
     for (x = dungeon_x0; x < (int) (dungeon_x0 + cells_x); x++) {
-        if (x < 0 || x >= dungeon->width) continue;
         for (y = dungeon_y0; y < (int) (dungeon_y0 + cells_y); y++) {
             new_texture = "";
             if (x < 0 || x >= dungeon->width || y < 0 || y >= dungeon->height) {
@@ -379,8 +384,8 @@ void Game::render_frame(bool complete_redraw) {
             cell_x = x - dungeon_x0;
             cell_y = y - dungeon_y0;
             cell_name = CELL_NAME(cell_x, cell_y);
-            plane = planes.get(cell_name);
-            if (planes.cache_set(cell_name, new_texture) || complete_redraw) {
+            plane = planes->get(cell_name);
+            if (planes->cache_set(cell_name, new_texture) || complete_redraw) {
                 if (new_texture.length() == 0) new_texture = CELL_TYPES_TO_FLOOR_TEXTURES[CELL_TYPE_EMPTY];
                 DRAW_TO_PLANE(plane, new_texture);
             }
@@ -388,7 +393,7 @@ void Game::render_frame(bool complete_redraw) {
     }
 
     // The healthbar.
-    ncpp::Plane *bottom_plane = planes.get("bottom");
+    ncpp::Plane *bottom_plane = planes->get("bottom");
     bottom_plane->erase();
     NC_RESET(*bottom_plane);
     // Find the percentage of health left
@@ -400,15 +405,15 @@ void Game::render_frame(bool complete_redraw) {
     std::string plane_name;
     for (i = 0; i < hearts_filled; i++) {
         plane_name = HEART_NAME(i);
-        if (planes.cache_set(plane_name, "ui_heart")) {
-            plane = planes.get(plane_name);
+        if (planes->cache_set(plane_name, "ui_heart")) {
+            plane = planes->get(plane_name);
             DRAW_TO_PLANE(plane, "ui_heart");
         }
     }
     for (i = hearts_filled; i < HEARTS; i++) {
         plane_name = HEART_NAME(i);
-        if (planes.cache_set(plane_name, "ui_heart_dead")) {
-            plane = planes.get(plane_name);
+        if (planes->cache_set(plane_name, "ui_heart_dead")) {
+            plane = planes->get(plane_name);
             DRAW_TO_PLANE(plane, "ui_heart_dead");
         }
     }
@@ -418,27 +423,27 @@ void Game::render_frame(bool complete_redraw) {
     NC_APPLY_COLOR(*bottom_plane, RGB_COLOR_WHITE_DIM, RGB_COLOR_BLACK);
     for (i = 0; i < MAX_CARRY_SLOTS; i++) {
         plane_name = ITEM_NAME(i);
-        plane = planes.get(plane_name);
+        plane = planes->get(plane_name);
         item_texture = i < pc.inventory_size() ? pc.inventory_at(i)->definition->ui_texture : "items_empty";
 
-        if (planes.cache_set(plane_name, item_texture)) {
+        if (planes->cache_set(plane_name, item_texture)) {
             DRAW_TO_PLANE(plane, item_texture);
         }
         bottom_plane->putc(2, plane->get_x() - 1, i == 9 ? '0' : '1' + i);
     }
     for (i = 0; i < ARRAY_SIZE(pc.equipment); i++) {
         plane_name = ITEM_NAME(i + MAX_CARRY_SLOTS);
-        plane = planes.get(plane_name);
+        plane = planes->get(plane_name);
         item_texture = pc.equipment[i] ? pc.equipment[i]->definition->ui_texture : "items_empty";
 
-        if (planes.cache_set(plane_name, item_texture)) {
+        if (planes->cache_set(plane_name, item_texture)) {
             DRAW_TO_PLANE(plane, item_texture);
         }
-        bottom_plane->putc(2, plane->get_x() - 1, "asdfghjkl"[i]);
+        bottom_plane->putc(2, plane->get_x() - 1, "asdfghjk"[i]);
     }
 
     if (look_mode) {
-        plane = planes.get("look");
+        plane = planes->get("look");
         if (character_map[pointer.x][pointer.y] && character_map[pointer.x][pointer.y]->type() == CHARACTER_TYPE_MONSTER) {
             plane->move_top();
             render_monster_details(plane, (Monster *) character_map[pointer.x][pointer.y], 0, 0, DETAILS_WIDTH, DETAILS_HEIGHT);
@@ -447,7 +452,7 @@ void Game::render_frame(bool complete_redraw) {
             plane->move_top();
             render_inventory_details(plane, item_map[pointer.x][pointer.y], 0, 0, DETAILS_WIDTH, DETAILS_HEIGHT);
         } else {
-            plane->move_bottom();
+            NC_HIDE(nc, *plane);
         }
     }
 
@@ -457,7 +462,7 @@ void Game::render_frame(bool complete_redraw) {
 void Game::render_inventory_box(std::string title, std::string labels, std::string input_tip, unsigned int x0, unsigned int y0) {
     int height = labels.length() + 2;
     unsigned int i, x, y;
-    ncpp::Plane *plane = planes.get("inventory");
+    ncpp::Plane *plane = planes->get("inventory");
     // Clear out the area.
     NC_APPLY_COLOR(*plane, RGB_COLOR_BLACK, RGB_COLOR_WHITE);
     for (y = y0; y < y0 + labels.length() + 2; y++) {
@@ -477,13 +482,13 @@ void Game::render_inventory_box(std::string title, std::string labels, std::stri
 }
 
 void Game::render_inventory_item(Item *item, int i, bool selected, unsigned int x0, unsigned int y0) {
-    ncpp::Plane *plane = planes.get("inventory");
+    ncpp::Plane *plane = planes->get("inventory");
     // one of the most incredible macro expansions the world will ever see
     NC_APPLY_COLOR_BY_NUM(*plane, item ? item->current_color() : RGB_COLOR_BLACK, (selected ? RGB_COLOR_BLACK : RGB_COLOR_WHITE));
     std::string plane_name = INVENTORY_NAME(x0, y0 + i);
-    ncpp::Plane *item_plane = planes.get(plane_name, plane, x0 + 2, y0 + 1 + i, 2, 1);
+    ncpp::Plane *item_plane = planes->get(plane_name, plane, x0 + 2, y0 + 1 + i, 2, 1);
     item_plane->move_top();
-    if (planes.cache_set(plane_name, item ? item->definition->ui_texture : "none")) {
+    if (planes->cache_set(plane_name, item ? item->definition->ui_texture : "none")) {
         if (item) {
             DRAW_TO_PLANE(item_plane, item->definition->ui_texture);
         }
@@ -596,8 +601,8 @@ bool str_contains_char(std::string str, char ch) {
     return false;
 }
 
-void move_back(ncpp::Plane *plane) {
-    plane->move_bottom();
+void move_back(ncpp::NotCurses *nc, ncpp::Plane *plane) {
+    NC_HIDE(nc, *plane);
 }
 
 void Game::inventory_menu() {
@@ -611,8 +616,8 @@ void Game::inventory_menu() {
     int scroll_dir;
     int inv_count;
     int equip_count = ARRAY_SIZE(pc.equipment);
-    ncpp::Plane *plane = planes.get("inventory");
-    ncpp::Plane *top = planes.get("top");
+    ncpp::Plane *plane = planes->get("inventory");
+    ncpp::Plane *top = planes->get("top");
 
     NC_APPLY_COLOR(*plane, RGB_COLOR_BLACK, RGB_COLOR_WHITE);
     plane->styles_set(ncpp::CellStyle::Bold);
@@ -651,7 +656,7 @@ void Game::inventory_menu() {
             render_inventory_item(pc.inventory_at(i), i, inventory && i == menu_i, 0, 0);
         for (i = inv_count; i < MAX_CARRY_SLOTS; i++)
             render_inventory_item(nullptr, i, false, 0, 0);
-        render_inventory_box("EQUIPMENT", "asdfghjkl ", !inventory ? "^^^" : "", INVENTORY_BOX_WIDTH + 2, 0);
+        render_inventory_box("EQUIPMENT", "asdfghjk  ", !inventory ? "^^^" : "", INVENTORY_BOX_WIDTH + 2, 0);
         for (i = 0; i < equip_count; i++) {
             if (pc.equipment[i]) render_inventory_item(pc.equipment[i], i, !inventory && i == menu_i, INVENTORY_BOX_WIDTH + 2, 0);
             else render_inventory_item(nullptr, i, false, INVENTORY_BOX_WIDTH + 2, 0);
@@ -688,8 +693,8 @@ void Game::inventory_menu() {
             case 'i':
             case 'e':
             case NCKEY_ESC:
-                plane->move_bottom();
-                planes.for_each("inv_", move_back);
+                NC_HIDE(nc, *plane);
+                planes->for_each("inv_", move_back);
                 expunge_confirm = false;
                 return;
             case NCKEY_ENTER:
@@ -789,7 +794,7 @@ void Game::inventory_menu() {
                             break;
                         }
                     }
-                    else if (str_contains_char("asdfghjkl", inp.id)) {
+                    else if (str_contains_char("asdfghjk", inp.id)) {
                         inventory = false;
                         i = inp.id - 'a';
                     }
@@ -831,8 +836,8 @@ void Game::cheater_menu() {
     ncinput inp;
     int options = 3;
     unsigned int x, y;
-    ncpp::Plane *plane = planes.get("cheater");
-    ncpp::Plane *top = planes.get("top");
+    ncpp::Plane *plane = planes->get("cheater");
+    ncpp::Plane *top = planes->get("top");
 
     plane->erase();
     plane->move_top();
@@ -877,7 +882,7 @@ void Game::cheater_menu() {
                 break;
             case '`':
             case NCKEY_ESC:
-                plane->move_bottom();
+                NC_HIDE(nc, *plane);
                 return;
             case NCKEY_ENTER:
                 switch (menu_i) {
@@ -888,13 +893,13 @@ void Game::cheater_menu() {
                         teleport_mode = true;
                         pointer.x = pc.x;
                         pointer.y = pc.y;
-                        plane->move_bottom();
+                        NC_HIDE(nc, *plane);
                         return;
                     case 2:
                         look_mode = true;
                         pointer.x = pc.x;
                         pointer.y = pc.y;
-                        plane->move_bottom();
+                        NC_HIDE(nc, *plane);
                         return;
                 }
                 break;

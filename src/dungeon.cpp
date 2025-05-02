@@ -445,7 +445,7 @@ void Dungeon::place_staircases() {
     if (options->down_staircase.length() > 0) {
         yo = rand();
         done = false;
-        for (x = 2; x < width; x++) {
+        for (x = 1; x < width; x++) {
             for (yf = 0; yf < height; yf++) {
                 y = (yf + yo) % height;
                 if (cells[x][y].type == CELL_TYPE_ROOM) {
@@ -455,8 +455,8 @@ void Dungeon::place_staircases() {
             }
             if (done) break;
         }
-        cells[x + 1][y].type = CELL_TYPE_DOWN_STAIRCASE;
-        cells[x + 1][y].hardness = 0;
+        cells[x - 1][y].type = CELL_TYPE_DOWN_STAIRCASE;
+        cells[x - 1][y].hardness = 0;
     }
 }
 

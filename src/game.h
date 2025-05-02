@@ -25,6 +25,7 @@ class DungeonFloor {
     uint32_t **pathfinding_no_tunnel;
 
     DungeonFloor(std::string id, Dungeon *dungeon) {
+      this->id = id;
       int i, j;
       this->dungeon = dungeon;
       character_map = (Character ***) malloc(dungeon->width * sizeof (Character**));
@@ -107,7 +108,6 @@ class Game {
         uint32_t **pathfinding_tunnel;
         Character ***character_map;
         Item ***item_map;
-        bool is_initialized = false;
         int debug;
         Parser<MonsterDefinition> *monst_parser;
         Parser<ItemDefinition> *item_parser;
@@ -118,7 +118,7 @@ class Game {
         std::vector<DungeonFloor *> dungeons;
 
         ncpp::NotCurses *nc = nullptr;
-        PlaneManager planes;
+        PlaneManager *planes = nullptr;
         
         unsigned int term_x, term_y, cells_x, cells_y;
 
@@ -170,17 +170,6 @@ class Game {
         //void init_from_file(const char *path);
 
         void init_from_map(std::string map_name);
-
-        /**
-         * Adds randomized monsters, the count is the value of nummon (or random
-         *  if that hasn't been set).
-         */
-        void random_monsters();
-
-        /**
-         * Adds randomized items.
-         */
-        void random_items();
 
         void apply_dungeon(DungeonFloor &floor, IntPair pc_coords);
 
@@ -242,6 +231,17 @@ class Game {
          *  they represent a possible PC location.
          */
         void force_move(IntPair dest);
+
+        /**
+         * Adds randomized monsters, the count is the value of nummon (or random
+         *  if that hasn't been set).
+         */
+        void random_monsters(Dungeon *t_dungeon, Character ***t_cmap);
+
+        /**
+         * Adds randomized items.
+         */
+        void random_items(Dungeon *t_dungeon, Item ***t_imap);
 
         void render_inventory_box(std::string title, std::string labels, std::string input_tip, unsigned int x0, unsigned int y0);
         void render_inventory_item(Item *item, int i, bool selected, unsigned int x0, unsigned int y0);

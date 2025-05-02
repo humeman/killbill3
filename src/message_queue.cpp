@@ -1,5 +1,6 @@
 #include "message_queue.h"
 #include "macros.h"
+#include "logger.h"
 
 
 MessageQueue *MessageQueue::instance = nullptr;
@@ -53,7 +54,8 @@ void MessageQueue::emit(ncpp::Plane &plane, bool sticky) {
     // We know the length now -- find where on the screen that is.
     int x0 = (plane.get_dim_x() - count) / 2;
     if (x0 < 0) x0 = 0; // Overflow
-    plane.cursor_move(plane.get_y(), x0);
+    plane.cursor_move(0, x0);
+    Logger::debug(__FILE__, "Message queue center: " + std::to_string(x0) + " (plane dim x " + std::to_string(plane.get_dim_x()) + ")");
 
     NC_RESET(plane);
     int disp_i = 0;

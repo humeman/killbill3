@@ -30,10 +30,10 @@ void destroy_character(Character ***character_map, Character *ch) {
     delete ch;
 }
 
-int Monster::damage(int amount, game_result_t &result, Item ***item_map, Character ***character_map) {
+int Monster::damage(int amount, game_result_t &result, Dungeon *dungeon, Item ***item_map, Character ***character_map) {
     hp -= amount;
     if (hp <= 0) {
-        die(result, character_map, item_map);
+        die(result, dungeon, character_map, item_map);
     }
     return amount;
 }
@@ -57,10 +57,10 @@ void Character::move_to(IntPair to, Character ***character_map) {
 }
 
 bool Character::has_los(Dungeon *dungeon, IntPair to) {
-    uint8_t x0 = x;
-    uint8_t y0 = y;
-    uint8_t x1 = to.x;
-    uint8_t y1 = to.y;
+    unsigned int x0 = x;
+    unsigned int y0 = y;
+    unsigned int x1 = to.x;
+    unsigned int y1 = to.y;
     // Regular line equation (rounded to grid points).
     // The special case is if we have a slope > 1 or < -1 -- in that case we can iterate over Y instead of X.
     // Don't bother if the points are equal
@@ -70,8 +70,8 @@ bool Character::has_los(Dungeon *dungeon, IntPair to) {
     // y = mx + b
     float m, b;
     if (x_diff != 0) m = y_diff / (float) x_diff;
-    uint8_t x_new = x0;
-    uint8_t y_new = y0;
+    unsigned int x_new = x0;
+    unsigned int y_new = y0;
     int dir;
 
     if ((x_diff != 0) && m >= -1 && m <= 1) {
@@ -79,7 +79,7 @@ bool Character::has_los(Dungeon *dungeon, IntPair to) {
         b = y0 - m * x0;
         dir = (x_diff > 0 ? 1 : -1);
         for (x_new = x0; x_new != x1 + dir; x_new += dir) {
-            y_new = (uint8_t) round(m * x_new + b);
+            y_new = (unsigned int) round(m * x_new + b);
             if (dungeon->cells[x_new][y_new].type == CELL_TYPE_STONE) return false;
         }
     }
@@ -97,7 +97,7 @@ bool Character::has_los(Dungeon *dungeon, IntPair to) {
         b = x0 - m * y0;
         dir = (y_diff > 0 ? 1 : -1);
         for (y_new = y0; y_new != y1 + dir; y_new += dir) {
-            x_new = (uint8_t) round(m * y_new + b);
+            x_new = (unsigned int) round(m * y_new + b);
             if (dungeon->cells[x_new][y_new].type == CELL_TYPE_STONE) return false;
         }
     }
@@ -106,10 +106,10 @@ bool Character::has_los(Dungeon *dungeon, IntPair to) {
 
 IntPair Monster::next_xy(Dungeon *dungeon, IntPair to) {
     // Butchered version of has_los.
-    uint8_t x0 = x;
-    uint8_t y0 = y;
-    uint8_t x1 = to.x;
-    uint8_t y1 = to.y;
+    unsigned int x0 = x;
+    unsigned int y0 = y;
+    unsigned int x1 = to.x;
+    unsigned int y1 = to.y;
     float m, b;
     int x_diff, y_diff, dir;
     IntPair next;
@@ -125,7 +125,7 @@ IntPair Monster::next_xy(Dungeon *dungeon, IntPair to) {
         b = y0 - m * x0;
         dir = (x_diff > 0 ? 1 : -1);
         next.x = x0 + dir;
-        next.y = (uint8_t) round(m * next.x + b);
+        next.y = (unsigned int) round(m * next.x + b);
     }
     else {
         // Vertical line, iterate over Y.
@@ -141,14 +141,15 @@ IntPair Monster::next_xy(Dungeon *dungeon, IntPair to) {
         b = x0 - m * y0;
         dir = (y_diff > 0 ? 1 : -1);
         next.y = y0 + dir;
-        next.x = (uint8_t) round(m * next.y + b);
+        next.x = (unsigned int) round(m * next.y + b);
     }
     return next;
 }
 
 
-Monster::Monster(MonsterDefinition *definition) {
+Monster::Monster(MonsterDefinition *definition, ItemDefinition *key_drop) {
     this->definition = definition;
+    this->key_drop = key_drop;
     this->hp = definition->hp->roll();
     this->speed = (uint8_t) CLAMP(definition->speed->roll(), 1, 255);
     this->attributes = (uint16_t) definition->abilities;
@@ -332,7 +333,7 @@ void Monster::take_turn(Dungeon *dungeon, PC *pc, BinaryHeap<Character *> &turn_
                             escape_col(definition->name) +
                             "&r.");
                     } else {
-                        dam = pc->damage(definition->damage->roll(), result, item_map, character_map);
+                        dam = pc->damage(definition->damage->roll(), result, dungeon, item_map, character_map);
                         MessageQueue::get()->add(
                             "&" +
                             std::to_string(current_color()) +
@@ -376,7 +377,7 @@ void Monster::take_turn(Dungeon *dungeon, PC *pc, BinaryHeap<Character *> &turn_
     return;
 }
 
-void Monster::die(game_result_t &result, Character ***character_map, Item ***item_map) {
+void Monster::die(game_result_t &result, Dungeon *dungeon, Character ***character_map, Item ***item_map) {
     // If the monster has stuff in its inventory, drop it here.
     if (item != NULL) {
         if (item_map[x][y]) {
@@ -390,6 +391,31 @@ void Monster::die(game_result_t &result, Character ***character_map, Item ***ite
         character_map[x][y] = NULL;
     // Deleting is left to whatever called this.
     dead = true;
+
+    // We need to drop a keycard if:
+    // - This is the last monster in this character map
+    // - There is an up staircase
+    unsigned int x1, y1;
+    bool other_monster_found = false;
+    bool has_up_staircase = false;
+    if (key_drop) {
+        for (x1 = 0; x1 < dungeon->width; x1++) {
+            for (y1 = 0; y1 < dungeon->height; y1++) {
+                if (!other_monster_found && character_map[x1][y1] && character_map[x1][y1]->type() == CHARACTER_TYPE_MONSTER) {
+                    other_monster_found = true;
+                    break;
+                }
+                if (!has_up_staircase && dungeon->cells[x1][y1].type == CELL_TYPE_UP_STAIRCASE) has_up_staircase = true;
+            }
+        }
+        if (!other_monster_found && has_up_staircase) {
+            if (item_map[x][y]) {
+                item_map[x][y]->add_to_stack(new Item(key_drop));
+            } else {
+                item_map[x][y] = new Item(key_drop);
+            }
+        }
+    }
 
     if (definition->abilities & MONSTER_ATTRIBUTE_UNIQUE) definition->unique_slain = true;
     if (definition->abilities & MONSTER_ATTRIBUTE_BOSS) result = GAME_RESULT_WIN;
@@ -511,7 +537,7 @@ int PC::defense_bonus() {
     return def;
 }
 
-int PC::damage(int amount, game_result_t &result, Item ***item_map, Character ***character_map) {
+int PC::damage(int amount, game_result_t &result, Dungeon *dungeon, Item ***item_map, Character ***character_map) {
     amount -= defense_bonus();
     if (amount <= 0) return 0;
     hp -= amount;

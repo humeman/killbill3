@@ -97,6 +97,7 @@ class DungeonOptions {
         std::vector<std::string> monsters;
         std::vector<std::string> items;
         std::string boss = "";
+        std::string key = "";
         bool is_default = false;
 };
 

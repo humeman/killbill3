@@ -25,6 +25,8 @@ int main(int argc, char* argv[]) {
 
     Game game(args.debug);
 
+    game.init_monster_defs("assets/enemies.txt");
+    game.init_item_defs("assets/items.txt");
     game.init_maps("assets/maps");
     game.init_from_map("easy");
 
@@ -32,12 +34,6 @@ int main(int argc, char* argv[]) {
         game.dungeon->write_pgm();
         printf("debug: wrote hardness map to dungeon.pgm\n");
     }
-
-    game.init_monster_defs("assets/enemies.txt");
-    game.init_item_defs("assets/items.txt");
-    
-    game.random_monsters();
-    game.random_items();
 
     game.create_nc();
     ResourceManager::get()->load("assets/textures");

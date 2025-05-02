@@ -8,9 +8,12 @@ class PlaneManager {
     private:
         std::map<std::string, ncpp::Plane *> planes;
         std::map<std::string, std::string> visual_cache;
+        ncpp::NotCurses *nc;
 
     public:
-        PlaneManager() {}
+        PlaneManager(ncpp::NotCurses *nc) {
+            this->nc = nc;
+        }
         ~PlaneManager() {
             clear();
         }
@@ -20,7 +23,7 @@ class PlaneManager {
         ncpp::Plane *get(std::string name);
         bool cache_set(std::string name, std::string texture);
         void release(std::string name);
-        void for_each(std::string prefix, void (*action)(ncpp::Plane *));
+        void for_each(std::string prefix, void (*action)(ncpp::NotCurses *, ncpp::Plane *));
         void clear();
 };
 

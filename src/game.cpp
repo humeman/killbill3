@@ -30,7 +30,7 @@ parser_definition_t MONSTER_PARSE_RULES[] {
 parser_definition_t ITEM_PARSE_RULES[] {
     {.name = "NAME", .offset = offsetof(ItemDefinition, name), .type = PARSE_TYPE_STRING, .required = true},
     {.name = "DESC", .offset = offsetof(ItemDefinition, description), .type = PARSE_TYPE_LONG_STRING, .required = true},
-    {.name = "TYPE", .offset = offsetof(ItemDefinition, type), .type = PARSE_TYPE_ItemYPE, .required = true},
+    {.name = "TYPE", .offset = offsetof(ItemDefinition, type), .type = PARSE_TYPE_ITEM_TYPE, .required = true},
     {.name = "COLOR", .offset = offsetof(ItemDefinition, color), .type = PARSE_TYPE_COLOR, .required = true},
     {.name = "HIT", .offset = offsetof(ItemDefinition, hit_bonus), .type = PARSE_TYPE_DICE, .required = true},
     {.name = "DAM", .offset = offsetof(ItemDefinition, damage_bonus), .type = PARSE_TYPE_DICE, .required = true},
@@ -57,7 +57,8 @@ parser_definition_t DUNGEON_OPTIONS_PARSE_RULES[] {
     {.name = "ENEMIES", .offset = offsetof(DungeonOptions, monsters), .type = PARSE_TYPE_VECTOR_STRINGS, .required = true},
     {.name = "ITEMS", .offset = offsetof(DungeonOptions, items), .type = PARSE_TYPE_VECTOR_STRINGS, .required = true},
     {.name = "BOSS", .offset = offsetof(DungeonOptions, down_staircase), .type = PARSE_TYPE_STRING, .required = false},
-    {.name = "DEFAULT", .offset = offsetof(DungeonOptions, is_default), .type = PARSE_TYPE_BOOL, .required = false}
+    {.name = "DEFAULT", .offset = offsetof(DungeonOptions, is_default), .type = PARSE_TYPE_BOOL, .required = false},
+    {.name = "KEY", .offset = offsetof(DungeonOptions, key), .type = PARSE_TYPE_STRING, .required = false}
 };
 
 char CHARACTERS_BY_CELL_TYPE[CELL_TYPES] = {
@@ -235,22 +236,24 @@ void Game::apply_dungeon(DungeonFloor &floor, IntPair pc_coords) {
     item_map = floor.item_map;
     pathfinding_tunnel = floor.pathfinding_tunnel;
     pathfinding_no_tunnel = floor.pathfinding_no_tunnel;
-    
-    // Move the PC to its new location
-    pc.move_to(pc_coords, character_map);
 
-    // Update pathfinding
-    update_pathfinding(dungeon, pathfinding_no_tunnel, pathfinding_tunnel, &pc);
-
-    // And toss everyone back in the turn queue
+    // Toss everyone back in the turn queue
     unsigned int x, y;
-    for (x = 0; x < floor.dungeon->width; x++) {
-        for (y = 0; y < floor.dungeon->height; y++) {
+    for (x = 0; x < dungeon->width; x++) {
+        for (y = 0; y < dungeon->height; y++) {
             if (character_map[x][y]) {
                 turn_queue.insert(character_map[x][y], 1000 / character_map[x][y]->speed);
             }
         }
     }
+    turn_queue.insert(&pc, 0);
+    
+    // Move the PC to its new location
+    pc.location_initialized = false;
+    pc.move_to(pc_coords, character_map);
+
+    // And update pathfinding
+    update_pathfinding(dungeon, pathfinding_no_tunnel, pathfinding_tunnel, &pc);
 }
 
 void Game::init_from_map(std::string map_name) {
@@ -260,10 +263,16 @@ void Game::init_from_map(std::string map_name) {
     Dungeon *new_dungeon;
     bool default_found = false;
 
+    pc.dead = false;
+    pc.display = '@';
+    pc.speed = PC_SPEED;
+
     for (const auto &pair : map) {
         new_dungeon = new Dungeon(*(pair.second));
         new_dungeon->fill();
         dungeon_floor = new DungeonFloor(pair.first, new_dungeon);
+        random_monsters(new_dungeon, dungeon_floor->character_map);
+        random_items(new_dungeon, dungeon_floor->item_map);
 
         if (pair.second->is_default) {
             if (default_found) throw dungeon_exception(__PRETTY_FUNCTION__, "multiple default dungeons found");
@@ -275,10 +284,6 @@ void Game::init_from_map(std::string map_name) {
         dungeons.push_back(dungeon_floor);
     }
     if (!default_found) throw dungeon_exception(__PRETTY_FUNCTION__, "no default dungeon found");
-    pc.dead = false;
-    pc.display = '@';
-    pc.speed = PC_SPEED;
-    is_initialized = true;
 }
 
 // void Game::write_to_file(const char *path) {
@@ -298,12 +303,11 @@ void Game::init_from_map(std::string map_name) {
 //     fclose(f);
 // }
 
-void Game::random_monsters() {
-    if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
+void Game::random_monsters(Dungeon *t_dungeon, Character ***t_cmap) {
     if (monster_defs.size() == 0) throw dungeon_exception(__PRETTY_FUNCTION__, "no monster definitions are set");
 
     // Pick how many we want to generate.
-    int count = RAND_BETWEEN(dungeon->options->nummon.x, dungeon->options->nummon.y);
+    int count = RAND_BETWEEN(t_dungeon->options->nummon.x, t_dungeon->options->nummon.y);
 
     IntPair loc;
     int monster_i, attempts;
@@ -315,14 +319,14 @@ void Game::random_monsters() {
     for (i = 0; i < count; i++) {
         attempts = 0;
         while (attempts++ < MAX_GENERATION_ATTEMPTS) {
-            monster_i = rand() % dungeon->options->monsters.size();
-            mid = dungeon->options->monsters[monster_i];
+            monster_i = rand() % t_dungeon->options->monsters.size();
+            mid = t_dungeon->options->monsters[monster_i];
             if (monster_defs[mid]->abilities & MONSTER_ATTRIBUTE_UNIQUE) {
                 if (monster_defs[mid]->unique_slain) continue; // If we've already killed this type of unique monster
                 // Or, if there's already one in the dungeon.
                 allowed = true;
                 for (j = 0; j < turn_queue.size(); j++) {
-                    ch = turn_queue.at(i);
+                    ch = turn_queue.at(j);
                     if (ch == &pc) continue;
                     if (&(((Monster *) ch)->definition) == &(monster_defs[mid])) {
                         allowed = false;
@@ -339,36 +343,35 @@ void Game::random_monsters() {
             throw dungeon_exception(__PRETTY_FUNCTION__, "no available monster definitions to use after " STRING(MAX_GENERATION_ATTEMPTS) "rolls (all unique or really unlucky)");
 
         // Now we can make a monster from this definition.
-        monst = new Monster(monster_defs[mid]);
+        monst = new Monster(monster_defs[mid], t_dungeon->options->key.length() == 0 ? nullptr : item_defs[t_dungeon->options->key]);
         // Pick a location...
         try {
-            loc = random_location_no_kill(dungeon, character_map);
+            loc = random_location_no_kill(t_dungeon, t_cmap);
         } catch (dungeon_exception &e) {
             delete monst; // The rest of the ones in the queue already will be cleared out by the game destructor.
             throw dungeon_exception(__PRETTY_FUNCTION__, e, "no available space in dungeon for monster placement");
         }
-        monst->move_to(loc, character_map);
+        monst->move_to(loc, t_cmap);
     }
 
     // Insert boss, if one is chosen
-    if (dungeon->options->boss.length() > 0) {
-        monst = new Monster(monster_defs[dungeon->options->boss]);
+    if (t_dungeon->options->boss.length() > 0) {
+        monst = new Monster(monster_defs[t_dungeon->options->boss], nullptr);
         try {
             // TODO: Spawn on right side of map
-            loc = random_location_no_kill(dungeon, character_map);
+            loc = random_location_no_kill(t_dungeon, t_cmap);
         } catch (dungeon_exception &e) {
             throw dungeon_exception(__PRETTY_FUNCTION__, e, "no available space in dungeon for monster placement");
         }
-        monst->move_to(loc, character_map);
+        monst->move_to(loc, t_cmap);
     }
 }
 
-void Game::random_items() {
-    if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
+void Game::random_items(Dungeon *t_dungeon, Item ***t_imap) {
     if (item_defs.size() == 0) throw dungeon_exception(__PRETTY_FUNCTION__, "no item definitions are set");
     // Ripped for the most part from random_monsters().
     // Pick how many we want to generate.
-    int count = RAND_BETWEEN(dungeon->options->numitems.x, dungeon->options->numitems.y);
+    int count = RAND_BETWEEN(t_dungeon->options->numitems.x, t_dungeon->options->numitems.y);
 
     IntPair loc;
     int item_i, attempts;
@@ -377,8 +380,8 @@ void Game::random_items() {
     for (int i = 0; i < count; i++) {
         attempts = 0;
         while (attempts++ < MAX_GENERATION_ATTEMPTS) {
-            item_i = rand() % dungeon->options->items.size();
-            iid = dungeon->options->items[item_i];
+            item_i = rand() % t_dungeon->options->items.size();
+            iid = t_dungeon->options->items[item_i];
             if (item_defs[iid]->artifact && item_defs[iid]->artifact_created) continue;
             if (rand() % 100 >= item_defs[iid]->rarity) continue;
 
@@ -391,15 +394,15 @@ void Game::random_items() {
         item = new Item(item_defs[iid]);
         // Pick a location...
         try {
-            loc = dungeon->random_location();
+            loc = t_dungeon->random_location();
         } catch (dungeon_exception &e) {
             delete item; // The rest of the ones in the queue already will be cleared out by the game destructor.
             throw dungeon_exception(__PRETTY_FUNCTION__, e, "no available space in dungeon for item placement");
         }
-        if (item_map[loc.x][loc.y]) {
-            item_map[loc.x][loc.y]->add_to_stack(item);
+        if (t_imap[loc.x][loc.y]) {
+            t_imap[loc.x][loc.y]->add_to_stack(item);
         } else {
-            item_map[loc.x][loc.y] = item;
+            t_imap[loc.x][loc.y] = item;
         }
     }
 }
@@ -418,7 +421,8 @@ void Game::move_coords(IntPair &coords, int x_offset, int y_offset) {
 void Game::try_move(int x_offset, int y_offset) {
     int damage;
     Monster *monst;
-    if (!is_initialized) throw dungeon_exception(__PRETTY_FUNCTION__, "game is not yet initialized");
+    Item *keycard;
+    int i;
     int new_x = pc.x + x_offset;
     int new_y = pc.y + y_offset;
     if (new_x < 0) new_x = 0;
@@ -434,7 +438,7 @@ void Game::try_move(int x_offset, int y_offset) {
             // Attack the monster there
             damage = pc.damage_bonus();
             monst = (Monster *) (character_map[new_x][new_y]);
-            monst->damage(damage, result, item_map, character_map);
+            monst->damage(damage, result, dungeon, item_map, character_map);
             MessageQueue::get()->add(
                 "You hit &" +
                 std::to_string(monst->current_color()) +
@@ -444,13 +448,18 @@ void Game::try_move(int x_offset, int y_offset) {
     } else if (dungeon->cells[new_x][new_y].type == CELL_TYPE_UP_STAIRCASE) {
         // To go upstairs, they have to have a keycard
         if (!(dungeon->cells[new_x][new_y].attributes & CELL_ATTRIBUTE_UNLOCKED)) {
-            if (!pc.equipment[PC_SLOT_GLASSES]) {
+            keycard = nullptr;
+            for (i = 0; !keycard && i < pc.inventory_size(); i++) {
+                if (pc.inventory_at(i)->definition->type == ITEM_TYPE_KEY) {
+                    keycard = pc.remove_from_inventory(i);
+                }
+            }
+            if (!keycard) {
                 MessageQueue::get()->clear();
                 MessageQueue::get()->add("&0&bYou need a keycard to use these stairs!");
                 return;
             }
-            delete pc.equipment[PC_SLOT_GLASSES];
-            pc.equipment[PC_SLOT_GLASSES] = nullptr;
+            delete keycard;
             dungeon->cells[new_x][new_y].attributes |= CELL_ATTRIBUTE_UNLOCKED;
         }
         // Find the target dungeon floor
@@ -464,10 +473,11 @@ void Game::try_move(int x_offset, int y_offset) {
                 return;
             }
         }
+        throw dungeon_exception(__PRETTY_FUNCTION__, "no target floor with ID " + dungeon->options->up_staircase);
     } else if (dungeon->cells[new_x][new_y].type == CELL_TYPE_DOWN_STAIRCASE) {
         // Find the target dungeon floor
         for (const auto &new_dungeon : dungeons) {
-            if (new_dungeon->id == dungeon->options->up_staircase) {
+            if (new_dungeon->id == dungeon->options->down_staircase) {
                 // Swap to that dungeon
                 // FIXME: PC location
                 apply_dungeon(*new_dungeon, new_dungeon->dungeon->random_location());
@@ -476,6 +486,7 @@ void Game::try_move(int x_offset, int y_offset) {
                 return;
             }
         }
+        throw dungeon_exception(__PRETTY_FUNCTION__, "no target floor with ID " + dungeon->options->up_staircase);
     } else {
         pc.move_to((IntPair) {(uint8_t) new_x, (uint8_t) new_y}, character_map);
     }
@@ -491,7 +502,7 @@ void Game::force_move(IntPair dest) {
             std::to_string(monst->current_color()) +
             escape_col(monst->definition->name) +
             "&r, killing it instantly. Poor thing.");
-        monst->die(result, character_map, item_map);
+        monst->die(result, dungeon, character_map, item_map);
     }
     pc.move_to(dest, character_map);
 }

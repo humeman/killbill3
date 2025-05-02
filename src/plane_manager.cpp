@@ -51,10 +51,10 @@ void PlaneManager::release(std::string name) {
     }
 }
 
-void PlaneManager::for_each(std::string prefix, void (*action)(ncpp::Plane *)) {
+void PlaneManager::for_each(std::string prefix, void (*action)(ncpp::NotCurses *, ncpp::Plane *)) {
     for (const auto &pair : planes) {
         if (pair.first.substr(0, prefix.length()) == prefix) {
-            action(pair.second);
+            action(nc, pair.second);
         }
     }
 }

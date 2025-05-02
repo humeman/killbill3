@@ -20,3 +20,25 @@ ART FALSE
 TEXTURE items_keyboard
 UI_TEXTURE items_keyboard_ui
 END
+
+BEGIN ITEM key
+NAME a keycard
+TYPE KEY
+COLOR BLACK
+WEIGHT 1+0d1
+HIT 0+0d1
+DAM 0+0d1
+ATTR 0+0d1
+VAL 0+1d6
+DODGE 0+0d1
+DEF 0+0d1
+SPEED 0+0d1
+DESC
+Stolen off of a Michaelsoft employee, this keycard grants
+you access to more of Michaelsoft HQ.
+.
+RRTY 1
+ART FALSE
+TEXTURE items_key
+UI_TEXTURE items_key_ui
+END
