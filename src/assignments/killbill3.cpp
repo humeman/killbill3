@@ -23,20 +23,20 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    if (!args.debug) {
+        Logger::get()->off(LOG_LEVEL_DEBUG);
+    }
+
     Game game(args.debug);
 
     game.init_monster_defs("assets/enemies.txt");
     game.init_item_defs("assets/items.txt");
     game.init_maps("assets/maps");
-    game.init_from_map("easy");
-
-    if (args.debug) {
-        game.dungeon->write_pgm();
-        printf("debug: wrote hardness map to dungeon.pgm\n");
-    }
+    game.init_voice_lines("assets/lines");
 
     game.create_nc();
-    ResourceManager::get()->load("assets/textures");
+    ResourceManager::get()->load_visuals("assets/textures");
+    ResourceManager::get()->load_music("assets/music");
     game.run();
 
     return 0;

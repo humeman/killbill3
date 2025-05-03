@@ -48,6 +48,13 @@
 #define DEFAULT_MONSTER_PATH "assets/enemies.txt"
 #define DEFAULT_ITEM_PATH "assets/items.txt"
 
+#define HEARTS 15
+#define INVENTORY_BOX_WIDTH 29
+#define DETAILS_WIDTH 60
+#define DETAILS_HEIGHT 12
+#define CHEATER_MENU_WIDTH 40
+#define CHEATER_MENU_HEIGHT 10
+
 // The spec for generating items and monsters involves redrawing if the randomly chosen
 // monster/item is invalid. This specifies a number of attempts beyond which it is considered
 // impossible to get a valid definition. Could occur if, for example, we only have unique
@@ -65,8 +72,8 @@ typedef enum {
     RGB_COLOR_CYAN = 0x00FFFF,
     RGB_COLOR_WHITE = 0xFFFFFF,
     RGB_COLOR_BLACK = 0x00,
-    RGB_COLOR_GSOD = 0x55FF77,
-    RGB_COLOR_BSOD = 0x0033bb,
+    RGB_COLOR_GSOD = 0x62C554,
+    RGB_COLOR_BSOD = 0x4764DE,
     RGB_COLOR_RED_DIM = 0x7F0000,
     RGB_COLOR_GREEN_DIM = 0x007F00,
     RGB_COLOR_YELLOW_DIM = 0x7F7F00,
@@ -79,8 +86,8 @@ typedef enum {
 } color_codes_t;
 
 #define NC_APPLY_COLOR(plane, color_code, bg) { \
-    (plane).set_fg_rgb8(((color_code) >> 16) & 0xFF, ((color_code) >> 8) & 0xFF, (color_code) & 0xFF); \
-    if (bg >= 0) (plane).set_bg_rgb8(((bg) >> 16) & 0xFF, ((bg) >> 8) & 0xFF, ((bg) & 0xFF)); }
+    (plane).set_fg_rgb(color_code); \
+    if (bg >= 0) (plane).set_bg_rgb(bg); }
 
 #define NC_APPLY_COLOR_BY_NUM(plane, num, bg) { \
     switch (num) { \
@@ -116,7 +123,6 @@ typedef enum {
         } \
     }
 
-
 // This extra clear/render is because of a bug in either notcurses or my terminal.
 // Just moving the plane down is not enough -- in certain window sizes,
 // there are small gaps between lines that remain as the menu color.
@@ -130,6 +136,23 @@ typedef enum {
 #define NC_PRINT_CENTERED_AT(plane, x, y, msg, ...) { \
     int len = snprintf(NULL, 0, msg, ##__VA_ARGS__); \
     plane->printf(y, (x) - len / 2, msg, ##__VA_ARGS__); }
+
+#define CELL_PLANE_AT(this, x, y) this->cell_planes[x * this->cells_y + y]
+#define CELL_CACHE_FLOOR_AT(this, x, y) this->cell_cache[x * this->cells_y + y]
+#define CELL_CACHE_HEARTS_AT(this, i) this->cell_cache[this->cells_x * this->cells_y + i]
+#define CELL_CACHE_ITEMS_AT(this, i) this->cell_cache[this->cells_x * this->cells_y + HEARTS + i]
+#define NC_DRAW(plane, texture_name) { \
+    ncvisual_options vopts{}; \
+    vopts.flags |= NCVISUAL_OPTION_NOINTERPOLATE | NCVISUAL_OPTION_ADDALPHA; \
+    vopts.scaling = NCSCALE_STRETCH; \
+    vopts.blitter = NCBLIT_PIXEL; \
+    vopts.n = (plane)->to_ncplane(); \
+    ResourceManager::get()->get_visual(texture_name)->blit(&vopts); }
+
+#define CELL_NAME(x, y) "cell_" + std::to_string(x) + "_" + std::to_string(y)
+#define HEART_NAME(x) "heart_" + std::to_string(x)
+#define ITEM_NAME(x) "item_" + std::to_string(x)
+#define INVENTORY_NAME(x, y) "inv_" + std::to_string(x) + "_" + std::to_string(y)
 
 typedef enum colors {
     COLORS_FLOOR = 1,

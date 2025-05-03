@@ -1,5 +1,5 @@
 # ASSIGNMENT BINARIES
-killbill3: build/dungeon.o build/pathfinding.o build/character.o build/game.o build/game_loop.o build/game_controls.o build/parser.o build/item.o build/message_queue.o build/logger.o build/resource_manager.o build/plane_manager.o build/killbill3.o
+killbill3: build/dungeon.o build/pathfinding.o build/character.o build/game.o build/game_loop.o build/game_controls.o build/game_menu.o build/parser.o build/item.o build/message_queue.o build/logger.o build/resource_manager.o build/plane_manager.o build/killbill3.o
 	g++ -std=c++17 \
 		build/dungeon.o \
 		build/pathfinding.o \
@@ -7,6 +7,7 @@ killbill3: build/dungeon.o build/pathfinding.o build/character.o build/game.o bu
 		build/game.o \
 		build/game_loop.o \
 		build/game_controls.o \
+		build/game_menu.o \
 		build/parser.o \
 		build/item.o \
 		build/message_queue.o \
@@ -15,7 +16,7 @@ killbill3: build/dungeon.o build/pathfinding.o build/character.o build/game.o bu
 		build/plane_manager.o \
 		build/killbill3.o \
 		-o killbill3 \
-		-lm -lnotcurses-core -lnotcurses -lnotcurses++
+		-lm -lnotcurses-core -lnotcurses -lnotcurses++ -lsfml-audio -lsfml-system
 
 # OBJECT FILES
 build/killbill3.o: src/assignments/killbill3.cpp src/macros.h src/random.h src/ascii.h src/heap.h
@@ -33,6 +34,10 @@ build/game_loop.o: src/game_loop.cpp src/game.h src/macros.h src/random.h src/as
 build/game_controls.o: src/game_controls.cpp src/game.h src/macros.h src/random.h src/ascii.h src/heap.h
 	@ mkdir -p build
 	g++ -std=c++17 src/game_controls.cpp -o build/game_controls.o -Wall -Werror -c -g
+
+build/game_menu.o: src/game_menu.cpp src/game.h src/macros.h src/random.h src/ascii.h src/heap.h
+	@ mkdir -p build
+	g++ -std=c++17 src/game_menu.cpp -o build/game_menu.o -Wall -Werror -c -g
 
 build/dungeon.o: src/dungeon.cpp src/dungeon.h src/macros.h src/random.h src/ascii.h src/heap.h
 	@ mkdir -p build

@@ -330,8 +330,16 @@
           the user move all around the map with a pointer, and hovering over any
           item or monster gives a description at the bottom of the screen.
 5/1:
-    5p: Added a new map parsing format which describes various floors of the map.
+    5p:  Added a new map parsing format which describes various floors of the map.
           The dungeon now has multiple active dungeons (with items & characters).
           Stairs are re-added and link to another floor.
          Added keycards so players can't skip the game progression and go upstairs
           without killing all the monsters first.
+5/2:
+    1p:  Made floors work and swap properly. All state is retained, so the dungeon
+          looks the same when going up/down stairs.
+         Fixed a bunch of rendering bugs -- works better on strange terminals now.
+    4p:  Added the main menu. Includes a logo and intro voicelines.
+          This required adding a sound resource manager and player.
+          Allows the player to pick a map (which correspond to difficulties).
+         Added the new game-over screens, the BSOD and GSOD.

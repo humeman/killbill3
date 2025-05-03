@@ -6,6 +6,7 @@
 #define RESOURCE_MANAGER_H
 
 #include <ncpp/NotCurses.hh>
+#include <SFML/Audio.hpp>
 #include <string>
 #include <filesystem>
 #include <vector>
@@ -30,16 +31,21 @@ class ResourceManager {
 
     private:
         std::map<std::string, ncpp::Visual *> visuals;
+        std::map<std::string, sf::Music *> music;
         std::vector<std::string> errored_visuals;
+        std::vector<std::string> errored_music;
         bool loaded = false;
 
         ResourceManager();
         ~ResourceManager();
         void add_visual_path(const std::filesystem::path &dir, std::string prefix);
+        void add_music_path(const std::filesystem::path &dir, std::string prefix);
 
     public:
-        void load(std::string path);
+        void load_visuals(std::string path);
+        void load_music(std::string path);
         ncpp::Visual *get_visual(std::string name);
+        sf::Music *get_music(std::string name);
 };
 
 #endif

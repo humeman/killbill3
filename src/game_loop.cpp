@@ -15,23 +15,6 @@
 #include "logger.h"
 #include <bits/this_thread_sleep.h>
 
-#define CELL_PLANE_AT(this, x, y) this->cell_planes[x * this->cells_y + y]
-#define CELL_CACHE_FLOOR_AT(this, x, y) this->cell_cache[x * this->cells_y + y]
-#define CELL_CACHE_HEARTS_AT(this, i) this->cell_cache[this->cells_x * this->cells_y + i]
-#define CELL_CACHE_ITEMS_AT(this, i) this->cell_cache[this->cells_x * this->cells_y + HEARTS + i]
-#define DRAW_TO_PLANE(plane, texture_name) { \
-    ncvisual_options vopts{}; \
-    vopts.flags |= NCVISUAL_OPTION_NOINTERPOLATE | NCVISUAL_OPTION_BLEND; \
-    vopts.scaling = NCSCALE_STRETCH; \
-    vopts.blitter = NCBLIT_PIXEL; \
-    vopts.n = (plane)->to_ncplane(); \
-    ResourceManager::get()->get_visual(texture_name)->blit(&vopts); }
-
-#define CELL_NAME(x, y) "cell_" + std::to_string(x) + "_" + std::to_string(y)
-#define HEART_NAME(x) "heart_" + std::to_string(x)
-#define ITEM_NAME(x) "item_" + std::to_string(x)
-#define INVENTORY_NAME(x, y) "inv_" + std::to_string(x) + "_" + std::to_string(y)
-
 const std::string CELL_TYPES_TO_FLOOR_TEXTURES[] = {
     "floor_stone",
     "floor_room",
@@ -42,14 +25,6 @@ const std::string CELL_TYPES_TO_FLOOR_TEXTURES[] = {
     "floor_stone",
     "floor_stone"
 };
-
-#define HEARTS 15
-
-#define INVENTORY_BOX_WIDTH 29
-#define DETAILS_WIDTH 60
-#define DETAILS_HEIGHT 12
-#define CHEATER_MENU_WIDTH 40
-#define CHEATER_MENU_HEIGHT 10
 
 void Game::create_nc() {
     Logger::get()->off();
@@ -65,163 +40,64 @@ void Game::end_nc() {
     Logger::get()->on();
 }
 
-/**
- * The new fancy sixel interface will let the camera follow the PC around.
- * We'll have a fixed frame with the usual status message, health, and inventory,
- * then the middle of the screen will be the game itself (now with 4x2 cells, since that's approximately square).
- * 
- * Our problem is guestimating how big that middle interface should be. I think it's better to use the entire terminal
- * window we're given rather than sticking to just 80x24. But, we need to keep the PC centered within that and fit 
- * as many cells within there as possible, and the game drawing loop will need to reflect that dynamic area within
- * the dungeon.
- * 
- * To start, we need our Notcurses planes -- one for the top status message, one for the health/inventory, and then
- * the game window itself (where each cell gets a plane).
- */
-void Game::run() {
-    if (!nc)
-        throw dungeon_exception(__PRETTY_FUNCTION__, "run Game::create_nc()");
-    ncpp::Plane *plane;
-    try {
-        // Dimensioning stuff...
-        Logger::debug(__FILE__, "dimensioning terminal");
-        nc->get_term_dim(term_y, term_x);
-        if (term_x < 60 || term_y < 20) {
-            throw dungeon_exception(__PRETTY_FUNCTION__, "terminal is too small (minimum 60x20)");
-        }
-        Logger::debug(__FILE__, "size is (" + std::to_string(term_x) + "x" + std::to_string(term_y) + ")");
-    
-        // Reserve 4 rows on the bottom, a line of gap, and a row on the top.
-        unsigned int cell_rows = term_y - 5;
-        // 3 rows, 6 cols each.
-        cells_y = cell_rows / 3;
-        cells_x = term_x / 6;
-    
-        // We'd like to center these on the X if there's more cells available.
-        // Don't care as much about Y.
-        unsigned int xoff = (term_x - cells_x * 6) / 2;
-
-        /*
-        Now we'll make the planes->
-        This uses a 'plane manager', a simple key-value caching map from names to planes->
-        Planes have been a bit annoying to deal with (and it's quite possible there's a better recommended way,
-        but I did not spend the time to study the user manual and find out). If they're destroyed (go out of 
-        scope), they do not appear when calling nc.render(). I also haven't found a way to just blit a
-        visual to part of a plane, so I've had to make one for each possible image location/dimension.
-        I had previously done this with a bunch of instance variables and arrays of planes, but with the number
-        of UI elements this seemed very unsustainable. 
-         */
-        planes->get("top", 0, 0, term_x, 1);
-        planes->get("bottom", 0, term_y - 4, term_x, 4);
-        // These are dynamically allocated, so we should always use term_x/y and never refresh them.
-        for (unsigned int x = 0; x < cells_x; x++) {
-            for (unsigned int y = 0; y < cells_y; y++) {
-                planes->get(CELL_NAME(x, y), x * 6 + xoff, y * 3 + 1, 6, 3);
-            }
-        }
-        // 4 cols wide, 2 rows high. Center in the middle
-        xoff = (planes->get("bottom")->get_dim_x() - 4 * HEARTS) / 2;
-        unsigned int yoff = planes->get("bottom")->get_y();
-        for (unsigned int x = 0; x < HEARTS; x++) {
-            planes->get(HEART_NAME(x), x * 4 + xoff, yoff, 4, 2);
-        }
-        unsigned long item_count = ARRAY_SIZE(pc.equipment) + MAX_CARRY_SLOTS;
-        // 2 cols wide, 1 row high.
-        // 2 col gap for indicators.
-        xoff = (planes->get("bottom")->get_dim_x() - 4 * item_count) / 2;
-        yoff = planes->get("bottom")->get_y() + 2;
-        for (unsigned int x = 0; x < item_count; x++) {
-            planes->get(ITEM_NAME(x), x * 4 + xoff, yoff, 2, 1);
-        }
-        plane = planes->get("overlay", 0, 0, term_x, term_y);
-        plane->move_bottom();
-
-        plane = planes->get("inventory", 
-            (term_x - 2 * INVENTORY_BOX_WIDTH - 1) / 2, 
-            (term_y - 16 - DETAILS_HEIGHT) / 2, 
-            DETAILS_WIDTH, 13 + DETAILS_HEIGHT);
-        plane->move_bottom();
-
-        plane = planes->get("look", 
-            (term_x - DETAILS_WIDTH) / 2, 
-            term_y - 6 - DETAILS_HEIGHT, 
-            DETAILS_WIDTH, DETAILS_HEIGHT);
-        plane->move_bottom();
-
-        plane = planes->get("cheater", 
-            (term_x - CHEATER_MENU_WIDTH) / 2, 
-            (term_y - CHEATER_MENU_HEIGHT) / 2, 
-            CHEATER_MENU_WIDTH, CHEATER_MENU_HEIGHT);
-        plane->move_bottom();
-
-        run_internal();
-    } catch (dungeon_exception &e) {
-        planes->clear();
-        ResourceManager::destroy();
-        end_nc();
-        throw dungeon_exception(__PRETTY_FUNCTION__, e, "game loop failed");
-    } catch (std::exception &e) {
-        planes->clear();
-        ResourceManager::destroy();
-        end_nc();
-        Logger::error(__FILE__, "unknown exception during game loop");
-        throw;
-    } catch (...) {
-        planes->clear();
-        ResourceManager::destroy();
-        end_nc();
-        Logger::error(__FILE__, "unknown exception during game loop");
-        throw;
-    }
-    planes->clear();
-    ResourceManager::destroy();
-    end_nc();
-}
-
-void Game::run_internal() {
+void Game::run_game() {
     ncinput inp;
     MessageQueue::get()->add("--- &0&bKILL BILL 3&r ---");
-    unsigned int x, y;
+    unsigned int x;
     render_frame(true);
     while (true) {
         render_frame(false);
         nc->get(true, &inp);
 
         if (result != GAME_RESULT_RUNNING) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(2000));
             // Print our beautiful images
             ncpp::Plane *bsod_plane = planes->get("bsod", 0, 0, term_x, term_y);
+            std::string frown, qr, stop;
+            unsigned long frown_size = term_y / 4;
+            unsigned long qr_size = MAX(5, term_y / 6);
+            unsigned long y_start = (term_y - (2 * frown_size + 7)) / 2;
             bsod_plane->move_top();
             if (result == GAME_RESULT_LOSE) {
                 NC_APPLY_COLOR((*bsod_plane), RGB_COLOR_WHITE, RGB_COLOR_BSOD);
-                bsod_plane->styles_set(ncpp::CellStyle::Bold);
-                for (y = 0; y < term_y; y++) {
-                    for (x = 0; x < term_x; x++) {
-                        bsod_plane->putc(y, x, ' ');
-                    }
-                }
-                bsod_plane->printf(10, 2, "Your PC ran into a problem and needs to restart. We're");
-                bsod_plane->printf(11, 2, "just collecting some error info, and then we'll restart for");
-                bsod_plane->printf(12, 2, "you.");
+                bsod_plane->set_fg_rgb(RGB_COLOR_WHITE);
+                NC_CLEAR(*bsod_plane);
+                bsod_plane->printf(y_start + frown_size + 1, 5, "Your PC ran into a problem and needs to restart. We're");
+                bsod_plane->printf(y_start + frown_size + 2, 5, "just collecting some error info, and then we'll restart for");
+                bsod_plane->printf(y_start + frown_size + 3, 5, "you.");
+                frown = "ui_bsod_frown";
+                qr = "ui_qr_bsod";
+                stop = "YUO_LOOSED";
             }
             else {
                 NC_APPLY_COLOR((*bsod_plane), RGB_COLOR_WHITE, RGB_COLOR_GSOD)
-                for (y = 0; y < term_y; y++) {
-                    for (x = 0; x < term_x; x++) {
-                        bsod_plane->putc(y, x, ' ');
-                    }
-                }
-                bsod_plane->printf(10, 2, "Your PC didn't run into a problem and doesn't need to");
-                bsod_plane->printf(11, 2, "restart. We aren't collecting any error info, but you'll");
-                bsod_plane->printf(12, 2, "have to sit through this loading bar anyway.");
+                NC_CLEAR(*bsod_plane);
+                bsod_plane->set_fg_rgb(RGB_COLOR_WHITE);
+                bsod_plane->printf(y_start + frown_size + 1, 5, "Your PC didn't run into a problem and doesn't need to");
+                bsod_plane->printf(y_start + frown_size + 2, 5, "restart. We aren't collecting any error info, but you'll");
+                bsod_plane->printf(y_start + frown_size + 3, 5, "have to sit through this loading bar anyway.");
+                frown = "ui_bsod_smile";
+                qr = "ui_qr_gsod";
+                stop = "BILL_DIED";
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+            ncpp::Plane *frown_plane = planes->get("bsod_frown", 5, y_start, 3 * frown_size / 4, frown_size);
+            frown_plane->move_top();
+            NC_DRAW(frown_plane, frown);
+            ncpp::Plane *qr_plane = planes->get("qr_code", 5, y_start + frown_size + 8, qr_size * 2, qr_size);
+            qr_plane->move_top();
+            NC_DRAW(qr_plane, qr);
+            bsod_plane->printf(y_start + frown_size + 8, 6 + qr_size * 2, "For more information about this issue and");
+            bsod_plane->printf(y_start + frown_size + 9, 6 + qr_size * 2, "possible fixes, visit https://tecktip.today.");
+            bsod_plane->printf(y_start + frown_size + 8 + qr_size - 2, 6 + qr_size * 2, "If you call a support person, give them this info:");
+            bsod_plane->printf(y_start + frown_size + 8 + qr_size - 1, 6 + qr_size * 2, "%s", stop.c_str());
             x = 0;
             while (x <= 100) {
                 x += rand() % 31;
-                bsod_plane->printf(14, 2, "%d%% complete", x > 100 ? 100 : x);
+                bsod_plane->printf(y_start + frown_size + 5, 5, "%d%% complete", x > 100 ? 100 : x);
                 nc->render();
                 std::this_thread::sleep_for(std::chrono::milliseconds(500 + rand() % 1501));
             }
+
             std::this_thread::sleep_for(std::chrono::milliseconds(2000));
             return;
         }
@@ -311,7 +187,7 @@ void Game::render_frame(bool complete_redraw) {
         for (x = 0; x < (int) cells_x; x++) {
             for (y = 0; y < (int) cells_y; y++) {
                 plane = planes->get(CELL_NAME(x, y));
-                DRAW_TO_PLANE(plane, CELL_TYPES_TO_FLOOR_TEXTURES[CELL_TYPE_EMPTY]);
+                NC_DRAW(plane, CELL_TYPES_TO_FLOOR_TEXTURES[CELL_TYPE_EMPTY]);
             }
         }
     }
@@ -387,7 +263,7 @@ void Game::render_frame(bool complete_redraw) {
             plane = planes->get(cell_name);
             if (planes->cache_set(cell_name, new_texture) || complete_redraw) {
                 if (new_texture.length() == 0) new_texture = CELL_TYPES_TO_FLOOR_TEXTURES[CELL_TYPE_EMPTY];
-                DRAW_TO_PLANE(plane, new_texture);
+                NC_DRAW(plane, new_texture);
             }
         }
     }
@@ -407,14 +283,14 @@ void Game::render_frame(bool complete_redraw) {
         plane_name = HEART_NAME(i);
         if (planes->cache_set(plane_name, "ui_heart")) {
             plane = planes->get(plane_name);
-            DRAW_TO_PLANE(plane, "ui_heart");
+            NC_DRAW(plane, "ui_heart");
         }
     }
     for (i = hearts_filled; i < HEARTS; i++) {
         plane_name = HEART_NAME(i);
         if (planes->cache_set(plane_name, "ui_heart_dead")) {
             plane = planes->get(plane_name);
-            DRAW_TO_PLANE(plane, "ui_heart_dead");
+            NC_DRAW(plane, "ui_heart_dead");
         }
     }
 
@@ -427,7 +303,7 @@ void Game::render_frame(bool complete_redraw) {
         item_texture = i < pc.inventory_size() ? pc.inventory_at(i)->definition->ui_texture : "items_empty";
 
         if (planes->cache_set(plane_name, item_texture)) {
-            DRAW_TO_PLANE(plane, item_texture);
+            NC_DRAW(plane, item_texture);
         }
         bottom_plane->putc(2, plane->get_x() - 1, i == 9 ? '0' : '1' + i);
     }
@@ -437,7 +313,7 @@ void Game::render_frame(bool complete_redraw) {
         item_texture = pc.equipment[i] ? pc.equipment[i]->definition->ui_texture : "items_empty";
 
         if (planes->cache_set(plane_name, item_texture)) {
-            DRAW_TO_PLANE(plane, item_texture);
+            NC_DRAW(plane, item_texture);
         }
         bottom_plane->putc(2, plane->get_x() - 1, "asdfghjk"[i]);
     }
@@ -490,13 +366,16 @@ void Game::render_inventory_item(Item *item, int i, bool selected, unsigned int 
     item_plane->move_top();
     if (planes->cache_set(plane_name, item ? item->definition->ui_texture : "none")) {
         if (item) {
-            DRAW_TO_PLANE(item_plane, item->definition->ui_texture);
+            NC_DRAW(item_plane, item->definition->ui_texture);
         }
         else {
             NC_APPLY_COLOR(*item_plane, RGB_COLOR_BLACK, RGB_COLOR_WHITE);
             item_plane->erase();
             item_plane->putstr(0, 0, "  ");
         }
+    } else {
+        NC_APPLY_COLOR(*item_plane, RGB_COLOR_BLACK, RGB_COLOR_WHITE);
+        NC_CLEAR(*item_plane);
     }
     if (item)
         plane->printf(y0 + 1 + i, x0 + 5, "%s", item->definition->name.c_str());
@@ -834,7 +713,7 @@ void Game::inventory_menu() {
 void Game::cheater_menu() {
     int menu_i = 0;
     ncinput inp;
-    int options = 3;
+    int options = 4;
     unsigned int x, y;
     ncpp::Plane *plane = planes->get("cheater");
     ncpp::Plane *top = planes->get("top");
@@ -868,6 +747,9 @@ void Game::cheater_menu() {
         CHEATER_OPT_PRINT(plane, "look", 2, menu_i);
         NC_APPLY_COLOR(*plane, RGB_COLOR_BLACK_DIM, RGB_COLOR_WHITE);
         plane->printf(3, ncpp::NCAlign::Right, "->");
+        CHEATER_OPT_PRINT(plane, "teleport to boss", 3, menu_i);
+        NC_APPLY_COLOR(*plane, RGB_COLOR_BLACK_DIM, RGB_COLOR_WHITE);
+        plane->printf(4, ncpp::NCAlign::Right, "->");
 
         nc->render();
         nc->get(true, &inp);
@@ -901,6 +783,18 @@ void Game::cheater_menu() {
                         pointer.y = pc.y;
                         NC_HIDE(nc, *plane);
                         return;
+                    case 3:
+                        for (auto &f : dungeons) {
+                            if (f->dungeon->options->boss.length() > 0) {
+                                // FIXME: pc spawn
+                                apply_dungeon(*f, f->dungeon->random_location());
+                                MessageQueue::get()->clear();
+                                MessageQueue::get()->add("You magically teleport to &b" + f->dungeon->options->name + "&r.");
+                                NC_HIDE(nc, *plane);
+                                return;
+                            }
+                        }
+                        throw dungeon_exception(__PRETTY_FUNCTION__, "no boss dungeon in map");
                 }
                 break;
         }

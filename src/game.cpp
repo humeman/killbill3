@@ -56,9 +56,15 @@ parser_definition_t DUNGEON_OPTIONS_PARSE_RULES[] {
     {.name = "DOWN", .offset = offsetof(DungeonOptions, down_staircase), .type = PARSE_TYPE_STRING, .required = false},
     {.name = "ENEMIES", .offset = offsetof(DungeonOptions, monsters), .type = PARSE_TYPE_VECTOR_STRINGS, .required = true},
     {.name = "ITEMS", .offset = offsetof(DungeonOptions, items), .type = PARSE_TYPE_VECTOR_STRINGS, .required = true},
-    {.name = "BOSS", .offset = offsetof(DungeonOptions, down_staircase), .type = PARSE_TYPE_STRING, .required = false},
+    {.name = "BOSS", .offset = offsetof(DungeonOptions, boss), .type = PARSE_TYPE_STRING, .required = false},
     {.name = "DEFAULT", .offset = offsetof(DungeonOptions, is_default), .type = PARSE_TYPE_BOOL, .required = false},
     {.name = "KEY", .offset = offsetof(DungeonOptions, key), .type = PARSE_TYPE_STRING, .required = false}
+};
+
+parser_definition_t VOICE_LINES_PARSE_RULES[] {
+    {.name = "VALUE", .offset = offsetof(VoiceLines, value), .type = PARSE_TYPE_LONG_STRING, .required = true},
+    {.name = "DURATION", .offset = offsetof(VoiceLines, duration), .type = PARSE_TYPE_INT, .required = true},
+    {.name = "MUSIC", .offset = offsetof(VoiceLines, music), .type = PARSE_TYPE_STRING, .required = true}
 };
 
 char CHARACTERS_BY_CELL_TYPE[CELL_TYPES] = {
@@ -91,15 +97,17 @@ std::string ITEM_TYPE_STRINGS[ITEM_TYPE_UNKNOWN + 1] = {
     "shoes",
     "glasses",
     "pocket",
+    "keycard",
     "stack",
     "mysterious object"
 };
 
 Game::Game(int debug) {
-    this->debug = debug;
+    this->debug = debug; 
     monst_parser = new Parser<MonsterDefinition>(MONSTER_PARSE_RULES, sizeof (MONSTER_PARSE_RULES) / sizeof (MONSTER_PARSE_RULES[0]), "KILL BILL 3 ENEMY DESCRIPTION 1", "ENEMY", false);
     item_parser = new Parser<ItemDefinition>(ITEM_PARSE_RULES, sizeof (ITEM_PARSE_RULES) / sizeof (ITEM_PARSE_RULES[0]), "KILL BILL 3 ITEM DESCRIPTION 1", "ITEM", false);
     map_parser = new Parser<DungeonOptions>(DUNGEON_OPTIONS_PARSE_RULES, sizeof (DUNGEON_OPTIONS_PARSE_RULES) / sizeof (DUNGEON_OPTIONS_PARSE_RULES[0]), "KILL BILL 3 MAP DESCRIPTION 1", "MAP", false);
+    vl_parser = new Parser<VoiceLines>(VOICE_LINES_PARSE_RULES, sizeof (VOICE_LINES_PARSE_RULES) / sizeof (VOICE_LINES_PARSE_RULES[0]), "KILL BILL 3 VOICELINE DESCRIPTION 1", "LINE", false);
     init_controls();
 }
 
@@ -182,6 +190,21 @@ void Game::init_maps(const char *path) {
         }
     }
 }
+
+void Game::init_voice_lines(const char *path) {
+    for (const auto &entry : std::filesystem::directory_iterator(path)) {
+        if (entry.is_regular_file()) {
+            std::ifstream file(entry.path());
+            if (file.fail()) {
+                throw dungeon_exception(__PRETTY_FUNCTION__, "failed to open file: " + entry.path().string());
+            }
+            std::string filename = entry.path().filename().string();
+            std::string vl_name = filename.substr(0, filename.find_last_of('.'));
+            vl_parser->parse(vl_defs[vl_name], file);
+        }
+    }
+}
+
 
 // void Game::init_from_file(const char *path) {
 //     IntPair pc_coords;
@@ -482,7 +505,7 @@ void Game::try_move(int x_offset, int y_offset) {
                 // FIXME: PC location
                 apply_dungeon(*new_dungeon, new_dungeon->dungeon->random_location());
                 MessageQueue::get()->clear();
-                MessageQueue::get()->add("You go up the stairs to &b" + new_dungeon->dungeon->options->name + "&r.");
+                MessageQueue::get()->add("You go down the stairs to &b" + new_dungeon->dungeon->options->name + "&r.");
                 return;
             }
         }

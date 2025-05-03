@@ -95,6 +95,11 @@ void Game::ctrl_esc() {
     }
 }
 
+void Game::ctrl_refresh() {
+    unsigned int x, y;
+    nc->refresh(x, y);
+}
+
 void Game::init_controls() {
     controls['w'] = &Game::ctrl_move_n;
     controls['d'] = &Game::ctrl_move_e;
@@ -107,4 +112,5 @@ void Game::init_controls() {
     controls['`'] = &Game::ctrl_cheater;
     controls[NCKEY_ENTER] = &Game::ctrl_ptr_confirm;
     controls[NCKEY_ESC] = &Game::ctrl_esc;
+    controls['r'] = &Game::ctrl_refresh;
 }

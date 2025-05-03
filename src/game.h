@@ -13,6 +13,15 @@ extern char CHARACTERS_BY_CELL_TYPE[CELL_TYPES];
 extern int COLORS_BY_CELL_TYPE[CELL_TYPES];
 extern std::string ITEM_TYPE_STRINGS[ITEM_TYPE_UNKNOWN + 1];
 
+
+
+class VoiceLines {
+    public:
+        std::string value;
+        int duration;
+        std::string music;
+};
+
 class DungeonFloor {
   public:
     Dungeon *dungeon;
@@ -112,9 +121,11 @@ class Game {
         Parser<MonsterDefinition> *monst_parser;
         Parser<ItemDefinition> *item_parser;
         Parser<DungeonOptions> *map_parser;
+        Parser<VoiceLines> *vl_parser;
         std::map<std::string, MonsterDefinition *> monster_defs;
         std::map<std::string, ItemDefinition *> item_defs;
         std::map<std::string, std::map<std::string, DungeonOptions *>> map_defs;
+        std::map<std::string, std::map<std::string, VoiceLines *>> vl_defs;
         std::vector<DungeonFloor *> dungeons;
 
         ncpp::NotCurses *nc = nullptr;
@@ -159,6 +170,7 @@ class Game {
         void init_item_defs(const char *path);
 
         void init_maps(const char *path);
+        void init_voice_lines(const char *path);
 
 
         /**
@@ -191,7 +203,8 @@ class Game {
          * The internal game loop. This is wrapped by run() to handle ncurses
          *  initialization and cleanup.
          */
-        void run_internal();
+        std::string run_menu();
+        void run_game();
 
         /**
           * Takes the turns of everything in the turn queue until the PC's turn (or
@@ -262,6 +275,7 @@ class Game {
         void ctrl_cheater();
         void ctrl_ptr_confirm();
         void ctrl_esc();
+        void ctrl_refresh();
 
 };
 
