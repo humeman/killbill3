@@ -343,3 +343,9 @@
           This required adding a sound resource manager and player.
           Allows the player to pick a map (which correspond to difficulties).
          Added the new game-over screens, the BSOD and GSOD.
+5/4:
+    3p:  Added walls to the game in an isometric style. This was significantly
+          more difficult to do automatically than I could have ever imagined.
+         Added a bunch of items and monsters, and made the maps different from
+          each other.
+         Some fixes to improve dungeon generation resiliency.
