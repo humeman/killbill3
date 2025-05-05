@@ -4,8 +4,8 @@ BEGIN ENEMY employee_a
 NAME Michaelsoft Employee
 COLOR RED
 DESC
-A loyal servant of Bill and the wonderful, neverending, 
-inerrant Michealsoft, Inc.
+Possesses the thousand-yard stare of someone who's seen the
+'Blue Screen of Death' one too many times."
 .
 SPEED 15+1d4
 DAM 10+1d4
@@ -17,6 +17,82 @@ TEXTURE_E characters_employee_a_e
 TEXTURE_W characters_employee_a_w
 TEXTURE_S characters_employee_a_s
 UI_TEXTURE characters_employee_a_ui
+END
+
+BEGIN ENEMY employee_b
+NAME Michaelsoft Employee
+COLOR RED
+DESC
+Fueled by lukewarm coffee and the quiet hum of existential
+dread.
+.
+SPEED 15+1d4
+DAM 10+1d4
+HP 12+2d6
+ABIL SMART
+RRTY 100
+TEXTURE_N characters_employee_b_n
+TEXTURE_E characters_employee_b_e
+TEXTURE_W characters_employee_b_w
+TEXTURE_S characters_employee_b_s
+UI_TEXTURE characters_employee_b_ui
+END
+
+BEGIN ENEMY employee_c
+NAME Michaelsoft Employee
+COLOR RED
+DESC
+Proficient in at least three coding languages, none of
+which are useful in a sword fight.
+.
+SPEED 15+1d4
+DAM 10+1d4
+HP 12+2d6
+ABIL SMART
+RRTY 100
+TEXTURE_N characters_employee_c_n
+TEXTURE_E characters_employee_c_e
+TEXTURE_W characters_employee_c_w
+TEXTURE_S characters_employee_c_s
+UI_TEXTURE characters_employee_c_ui
+END
+
+BEGIN ENEMY employee_d
+NAME Michaelsoft Employee
+COLOR RED
+DESC
+Less 'deadly assassin,' more 'soul-crushing spreadsheet
+jockey.' Still, probably knows where the server room is.
+.
+SPEED 15+1d4
+DAM 10+1d4
+HP 12+2d6
+ABIL SMART
+RRTY 100
+TEXTURE_N characters_employee_d_n
+TEXTURE_E characters_employee_d_e
+TEXTURE_W characters_employee_d_w
+TEXTURE_S characters_employee_d_s
+UI_TEXTURE characters_employee_d_ui
+END
+
+BEGIN ENEMY employee_e
+NAME Michaelsoft Employee
+COLOR RED
+DESC
+Has a 401(k) and a surprising knowledge of optimal
+cubicle-based combat.
+.
+SPEED 15+1d4
+DAM 10+1d4
+HP 12+2d6
+ABIL SMART
+RRTY 100
+TEXTURE_N characters_employee_e_n
+TEXTURE_E characters_employee_e_e
+TEXTURE_W characters_employee_e_w
+TEXTURE_S characters_employee_e_s
+UI_TEXTURE characters_employee_e_ui
 END
 
 BEGIN ENEMY bill

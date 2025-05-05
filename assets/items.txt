@@ -4,32 +4,255 @@ BEGIN ITEM keyboard
 NAME a Dell(tm) keyboard
 TYPE WEAPON
 COLOR BLACK
-WEIGHT 1+0d1
-HIT 0+0d1
-DAM 2+0d1
-ATTR 0+0d1
-VAL 9+1d6
+DAM 1+1d2
 DODGE 10+0d1
 DEF 0+0d1
 SPEED 0+0d1
 DESC
 Avoid. Deny. Defend.
 .
-RRTY 90
+RRTY 100
 ART FALSE
 TEXTURE items_keyboard
 UI_TEXTURE items_keyboard_ui
+END
+
+BEGIN ITEM hololens
+NAME Michaelsoft HoloLenz
+TYPE GLASSES
+COLOR BLACK
+DAM 0+0d1
+DODGE 10+1d10
+DEF 0+0d1
+SPEED 0+0d1
+DESC
+These futuristic glasses let you see your enemies' attacks
+before they happen.
+.
+RRTY 30
+ART FALSE
+TEXTURE items_hololens
+UI_TEXTURE items_hololens_ui
+END
+
+
+BEGIN ITEM hololens2
+NAME Michaelsoft HoloLenz 2
+TYPE GLASSES
+COLOR WHITE
+DAM 0+0d1
+DODGE 25+1d10
+DEF 0+0d1
+SPEED 0+0d1
+DESC
+Michaelsoft's newest iteration of the HoloLenz. They're
+apparently better than the last ones.
+.
+RRTY 20
+ART TRUE
+TEXTURE items_hololens_2
+UI_TEXTURE items_hololens_2_ui
+END
+
+BEGIN ITEM glasspanes
+NAME a Glasspanes 12 License
+TYPE POCKET
+COLOR BLUE
+DAM 2+1d2
+DODGE 0+0d1
+DEF 0+0d1
+SPEED -5+0d1
+DESC
+Your very own license key for the new-and-improved
+Michaelsoft (tm) Glasspanes 12, now featuring more AI! 
+.
+RRTY 45
+ART FALSE
+TEXTURE items_glasspanes
+UI_TEXTURE items_glasspanes
+END
+
+BEGIN ITEM minecoins
+NAME 500 Minecoins
+TYPE POCKET
+COLOR RED
+DAM 1+1d2
+DODGE 3+1d5
+DEF 0+0d1
+SPEED 0+0d1
+DESC
+A bundle of Minecoins. Maybe they'd hurt if you threw them?
+.
+RRTY 40
+ART FALSE
+TEXTURE items_minecoins
+UI_TEXTURE items_minecoins_ui
+END
+
+BEGIN ITEM word
+NAME Michaelsoft Word
+TYPE WEAPON
+COLOR BLUE
+DAM 3+1d2
+DODGE 0+0d1
+DEF 0+0d1
+SPEED 0+0d1
+DESC
+Words hurt, you know.
+.
+RRTY 50
+ART FALSE
+TEXTURE items_word
+UI_TEXTURE items_word_ui
+END
+
+BEGIN ITEM sword
+NAME a diamond sword
+TYPE WEAPON
+COLOR CYAN
+DAM 10+1d10
+DODGE 0+0d1
+DEF 5+1d3
+SPEED 0+0d1
+DESC
+Do you like my sword, sword, sword, my diamond sword?
+.
+RRTY 30
+ART FALSE
+TEXTURE items_sword
+UI_TEXTURE items_sword_ui
+END
+
+BEGIN ITEM xboxctrl
+NAME an Xbox controller
+TYPE WEAPON
+COLOR CYAN
+DAM 3+1d10
+DODGE 0+0d1
+DEF 0+1d2
+SPEED 0+0d1
+DESC
+The original one. It's pretty hefty.
+.
+RRTY 60
+ART FALSE
+TEXTURE items_xboxctrl
+UI_TEXTURE items_xboxctrl_ui
+END
+
+BEGIN ITEM tshirt
+NAME a Michaelsoft T-shirt
+TYPE SHIRT
+COLOR RED
+DAM 0+0d1
+DODGE 0+0d1
+DEF 1+1d2
+SPEED 0+0d1
+DESC
+Lightweight. Stylish. Ineffective as a defense against the
+attacks of deranged Michaelsoft employees. What more could
+you want?
+.
+RRTY 70
+ART FALSE
+TEXTURE items_tshirt
+UI_TEXTURE items_tshirt_ui
+END
+
+BEGIN ITEM armoredsuit
+NAME an armored business suit
+TYPE SHIRT
+COLOR BLACK
+DAM 0+0d1
+DODGE 0+0d1
+DEF 3+1d2
+SPEED 0+0d1
+DESC
+Guaranteed to intimidate those beholden to the
+shareholders. Actual combat effectiveness may vary.
+.
+RRTY 25
+ART FALSE
+TEXTURE items_armoredsuit
+UI_TEXTURE items_armoredsuit_ui
+END
+
+BEGIN ITEM hat
+NAME a Michaelsoft hat
+TYPE HAT
+COLOR BLACK
+DAM 0+0d1
+DODGE 0+0d1
+DEF 1+1d2
+SPEED 0+0d1
+DESC
+Warning: Wearing this hat might make you explain blockchain
+to someone who didn't ask.
+.
+RRTY 60
+ART FALSE
+TEXTURE items_hat
+UI_TEXTURE items_hat_ui
+END
+
+BEGIN ITEM khakis
+NAME stylish khakis
+TYPE PANTS
+COLOR YELLOW
+DAM 0+0d1
+DODGE 0+0d1
+DEF 1+1d2
+SPEED 0+0d1
+DESC
+Features an ergonomic fit for maximum comfort during
+mandatory fun exercises.
+.
+RRTY 60
+ART FALSE
+TEXTURE items_khakis
+UI_TEXTURE items_khakis_ui
+END
+
+BEGIN ITEM frictionlessshoes
+NAME frictionless shoes
+TYPE SHOES
+COLOR GREEN
+DAM 0+0d1
+DODGE 0+0d1
+DEF 0+0d1
+SPEED 10+1d5
+DESC
+Wheeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee!
+.
+RRTY 30
+ART TRUE
+TEXTURE items_frictionlessshoes
+UI_TEXTURE items_frictionlessshoes_ui
+END
+
+BEGIN ITEM sandals
+NAME socks and sandals
+TYPE SHOES
+COLOR YELLOW
+DAM 0+0d1
+DODGE 0+0d1
+DEF 1+0d1
+SPEED 3+1d2
+DESC
+There has never been a more stylish combination of
+footwear.
+.
+RRTY 60
+ART FALSE
+TEXTURE items_sandals
+UI_TEXTURE items_sandals_ui
 END
 
 BEGIN ITEM key
 NAME a keycard
 TYPE KEY
 COLOR BLACK
-WEIGHT 1+0d1
-HIT 0+0d1
 DAM 0+0d1
-ATTR 0+0d1
-VAL 0+1d6
 DODGE 0+0d1
 DEF 0+0d1
 SPEED 0+0d1

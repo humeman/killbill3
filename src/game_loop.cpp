@@ -26,6 +26,27 @@ const std::string CELL_TYPES_TO_FLOOR_TEXTURES[] = {
     "floor_stone"
 };
 
+const std::string WALL_TYPES_TO_FLOOR_TEXTURES[] = {
+    "floor_wall_t",
+    "floor_wall_l",
+    "floor_wall_r",
+    "floor_wall_b",
+    "floor_wall_tl",
+    "floor_wall_tr",
+    "floor_wall_bl",
+    "floor_wall_br",
+    "floor_wall_endl",
+    "floor_wall_endr",
+    "floor_wall_endt",
+    "floor_wall_endb",
+    "floor_wall_t_l_l",
+    "floor_wall_t_l_r",
+    "floor_wall_t_b_t",
+    "floor_wall_t_b_b",
+    "floor_wall_single",
+    "floor_wall_quad"
+};
+
 void Game::create_nc() {
     Logger::get()->off();
     nc = new ncpp::NotCurses();
@@ -165,6 +186,7 @@ void Game::run_until_pc() {
 void Game::render_frame(bool complete_redraw) {
     // Status message.
     ncpp::Plane *top_plane = planes->get("top");
+    std::vector<std::string> dupes;
     top_plane->erase();
     if (teleport_mode) {
         if (MessageQueue::get()->empty())
@@ -221,9 +243,9 @@ void Game::render_frame(bool complete_redraw) {
                 if ((teleport_mode || look_mode) && pointer.x == x && pointer.y == y) {
                     new_texture = "characters_pointer";
                 }
-                else if (!teleport_mode && !look_mode && !seethrough && !pc.has_los(dungeon, (IntPair) {(unsigned char) x, (unsigned char) y})) {
-                    new_texture = CELL_TYPES_TO_FLOOR_TEXTURES[CELL_TYPE_STONE];
-                }
+                // else if (!teleport_mode && !look_mode && !seethrough && !pc.has_los(dungeon, (IntPair) {(unsigned char) x, (unsigned char) y})) {
+                //     new_texture = CELL_TYPES_TO_FLOOR_TEXTURES[CELL_TYPE_STONE];
+                // }
                 // Characters get first priority.
                 else if (character_map[x][y]) {
                     if (character_map[x][y]->type() == CHARACTER_TYPE_PC) {
@@ -253,7 +275,11 @@ void Game::render_frame(bool complete_redraw) {
                 }
                 // Then regular cells.
                 else {
-                    new_texture = CELL_TYPES_TO_FLOOR_TEXTURES[dungeon->cells[x][y].type];
+                    if (dungeon->cells[x][y].wall_type != WALL_TYPE_NONE) {
+                        new_texture = WALL_TYPES_TO_FLOOR_TEXTURES[dungeon->cells[x][y].wall_type];
+                    } else {
+                        new_texture = CELL_TYPES_TO_FLOOR_TEXTURES[dungeon->cells[x][y].type];
+                    }
                 }
             }
             
@@ -419,12 +445,9 @@ void Game::render_inventory_details(ncpp::Plane *plane, Item *item, unsigned int
     if (item->definition->artifact) res += "*ARTIFACT* ";
     c = item->definition->damage_bonus;
     if (c->base != 0 || c->dice != 0) res += "dmg: " + c->str() + " "; 
-    c = item->definition->defense_bonus;
-    if (c->base != 0 || c->dice != 0) res += "def: " + c->str() + " "; 
-    c = item->definition->speed_bonus;
-    if (c->base != 0 || c->dice != 0) res += "speed: " + c->str() + " "; 
-    c = item->definition->dodge_bonus;
-    if (c->base != 0 || c->dice != 0) res += "dodge: " + c->str() + " "; 
+    if (item->defense_bonus != 0) res += "def: " + std::to_string(item->defense_bonus) + " "; 
+    if (item->dodge_bonus != 0) res += "dodge: " + std::to_string(item->dodge_bonus) + " "; 
+    if (item->speed_bonus != 0) res += "speed: " + std::to_string(item->speed_bonus) + " "; 
     if (res[res.length() - 1] == ' ') res = res.substr(0, res.length() - 1);
     NC_PRINT_CENTERED_AT(plane, x0 + width / 2, y0 + height - 1, "%s", res.c_str());
 }

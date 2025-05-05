@@ -78,7 +78,7 @@ bool Character::has_los(Dungeon *dungeon, IntPair to) {
         // Regular case, iterate over X.
         b = y0 - m * x0;
         dir = (x_diff > 0 ? 1 : -1);
-        for (x_new = x0; x_new != x1 + dir; x_new += dir) {
+        for (x_new = x0; x_new != x1; x_new += dir) {
             y_new = (unsigned int) round(m * x_new + b);
             if (dungeon->cells[x_new][y_new].type == CELL_TYPE_STONE) return false;
         }
@@ -96,7 +96,7 @@ bool Character::has_los(Dungeon *dungeon, IntPair to) {
         }
         b = x0 - m * y0;
         dir = (y_diff > 0 ? 1 : -1);
-        for (y_new = y0; y_new != y1 + dir; y_new += dir) {
+        for (y_new = y0; y_new != y1; y_new += dir) {
             x_new = (unsigned int) round(m * y_new + b);
             if (dungeon->cells[x_new][y_new].type == CELL_TYPE_STONE) return false;
         }

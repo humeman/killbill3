@@ -61,6 +61,8 @@
 // monsters and eventually run out.
 #define MAX_GENERATION_ATTEMPTS 500
 
+#define MAX_DUNGEON_GENERATION_ATTEMPTS 25
+
 #define STRING(x) #x
 
 typedef enum {

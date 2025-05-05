@@ -4,15 +4,24 @@ BEGIN MAP 1
 DEFAULT TRUE
 NAME The Lobby
 UP 2
-SIZE 25 25
-NUMENEMIES 3 4
-NUMROOMS 3 4
-NUMITEMS 3 5
+SIZE 25 35
+NUMENEMIES 5 7
+NUMROOMS 5 6
+NUMITEMS 4 6
 ENEMIES
 employee_a
+employee_b
+employee_c
+employee_d
+employee_e
 .
 ITEMS
 keyboard
+glasspanes
+word
+xboxctrl
+tshirt
+hat
 .
 KEY key
 END
@@ -22,34 +31,89 @@ DEFAULT FALSE
 NAME The Office
 UP 3
 DOWN 1
-SIZE 20 20
-NUMENEMIES 5 8
-NUMROOMS 2 3
-NUMITEMS 3 5
+SIZE 20 30
+NUMENEMIES 7 10
+NUMROOMS 3 4
+NUMITEMS 5 6
 ENEMIES
 employee_a
+employee_b
+employee_c
+employee_d
+employee_e
 robot
 .
 ITEMS
-keyboard
+glasspanes
+word
+xboxctrl
+tshirt
+hat
+sandals
+frictionlessshoes
+sword
+minecoins
+hololens
+armoredsuit
 .
 KEY key
 END
 
 BEGIN MAP 3
 DEFAULT FALSE
-NAME Bill's Office
+NAME The Server Room
+UP 4
 DOWN 2
-SIZE 20 20
-NUMENEMIES 3 6
-NUMROOMS 2 3
-NUMITEMS 3 5
+SIZE 50 60
+NUMENEMIES 8 11
+NUMROOMS 8 10
+NUMITEMS 5 6
 ENEMIES
 employee_a
+employee_b
+employee_c
+employee_d
+employee_e
 robot
 .
 ITEMS
-keyboard
+glasspanes
+word
+xboxctrl
+tshirt
+hat
+sandals
+frictionlessshoes
+sword
+minecoins
+hololens
+armoredsuit
+.
+KEY key
+END
+
+BEGIN MAP 4
+DEFAULT FALSE
+NAME Bill's Office
+DOWN 3
+SIZE 20 30
+NUMENEMIES 3 6
+NUMROOMS 3 4
+NUMITEMS 5 10
+ENEMIES
+employee_a
+employee_b
+employee_c
+employee_d
+employee_e
+robot
+.
+ITEMS
+xboxctrl
+frictionlessshoes
+sword
+hololens2
+armoredsuit
 .
 BOSS bill
 END

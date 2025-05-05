@@ -10,13 +10,9 @@ Item::Item(ItemDefinition *definition) {
     }
 
     this->definition = definition;
-    this->hit_bonus = definition->hit_bonus->roll();
     this->dodge_bonus = definition->dodge_bonus->roll();
     this->defense_bonus = definition->defense_bonus->roll();
-    this->weight = definition->weight->roll();
     this->speed_bonus = definition->speed_bonus->roll();
-    this->attributes = definition->attributes->roll();
-    this->value = definition->value->roll();
     this->next = NULL;
     color_count = 0;
     int i;

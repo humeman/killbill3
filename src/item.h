@@ -25,14 +25,10 @@ class ItemDefinition {
         std::string description;
         item_type_t type;
         int color;
-        Dice *hit_bonus;
         Dice *damage_bonus;
         Dice *dodge_bonus;
         Dice *defense_bonus;
-        Dice *weight;
         Dice *speed_bonus;
-        Dice *attributes;
-        Dice *value;
         bool artifact;
         bool artifact_created = false;
         int rarity;
@@ -48,7 +44,7 @@ class Item {
 
     public:
         ItemDefinition *definition;
-        int hit_bonus, dodge_bonus, defense_bonus, weight, speed_bonus, attributes, value;
+        int dodge_bonus, defense_bonus, speed_bonus;
 
         Item(ItemDefinition *definition);
         ~Item();

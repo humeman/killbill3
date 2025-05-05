@@ -196,14 +196,14 @@ class Game {
         /**
          * Runs the game.
          */
-        void run();
+        void run(bool skip_intro);
 
     private:
         /**
          * The internal game loop. This is wrapped by run() to handle ncurses
          *  initialization and cleanup.
          */
-        std::string run_menu();
+        std::string run_menu(bool skip_intro);
         void run_game();
 
         /**

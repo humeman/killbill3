@@ -11,6 +11,7 @@
 
 typedef struct {
     bool debug;
+    bool skip;
 } game_args_t;
 
 int prepare_args(int argc, char* argv[], game_args_t &args);
@@ -18,7 +19,7 @@ int prepare_args(int argc, char* argv[], game_args_t &args);
 int main(int argc, char* argv[]) {
     srand(time(NULL));
 
-    game_args_t args = {.debug = false};
+    game_args_t args = {.debug = false, .skip = false};
     if (prepare_args(argc, argv, args)) {
         return 1;
     }
@@ -37,7 +38,7 @@ int main(int argc, char* argv[]) {
     game.create_nc();
     ResourceManager::get()->load_visuals("assets/textures");
     ResourceManager::get()->load_music("assets/music");
-    game.run();
+    game.run(args.skip);
 
     return 0;
 }
@@ -46,9 +47,10 @@ int prepare_args(int argc, char* argv[], game_args_t &args) {
     int i;
     for (i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--debug") == 0) args.debug = true;
+        else if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--skip") == 0) args.skip = true;
         else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             printf("usage: %s [-d]\n", argv[0]);
-            printf("  -d/--debug: enable debugging features\n  -h/--help: display this message\n");
+            printf("  -d/--debug: enable debugging features\n  -h/--help: display this message\n  -s/--skip: skip the intro\n");
             return 1;
         }
         else {

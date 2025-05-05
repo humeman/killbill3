@@ -25,6 +25,29 @@ typedef enum { // if modified, sync with CELL_TYPES_TO_FLOOR_TEXTURES, game_loop
     CELL_TYPE_HIDDEN
 } cell_type_t;
 
+// Separate to avoid having to rewrite a bunch of game logic to check for different varieties of stone
+typedef enum {
+    WALL_TYPE_T,
+    WALL_TYPE_L,
+    WALL_TYPE_R,
+    WALL_TYPE_B,
+    WALL_TYPE_TL,
+    WALL_TYPE_TR,
+    WALL_TYPE_BL,
+    WALL_TYPE_BR,
+    WALL_TYPE_ENDL,
+    WALL_TYPE_ENDR,
+    WALL_TYPE_ENDT,
+    WALL_TYPE_ENDB,
+    WALL_TYPE_T_L_L,
+    WALL_TYPE_T_L_R,
+    WALL_TYPE_T_B_T,
+    WALL_TYPE_T_B_B,
+    WALL_TYPE_SINGLE,
+    WALL_TYPE_QUAD,
+    WALL_TYPE_NONE
+} wall_type_t;
+
 class Room {
     public:
         uint8_t x0;
@@ -48,12 +71,14 @@ class Cell {
         cell_type_t type;
         uint8_t hardness;
         uint8_t attributes;
+        wall_type_t wall_type;
 
 };
 
 typedef enum {
     CELL_ATTRIBUTE_IMMUTABLE = 0x01,
-    CELL_ATTRIBUTE_UNLOCKED = 0x02
+    CELL_ATTRIBUTE_UNLOCKED = 0x02,
+    CELL_ATTRIBUTE_WALL = 0x04
 } cell_attributes_t;
 
 class QueueNode {
@@ -66,9 +91,9 @@ class QueueNode {
 
 class IntPair {
     public:
-        uint8_t x;
-        uint8_t y;
-        IntPair(uint8_t x, uint8_t y) {
+        int x;
+        int y;
+        IntPair(int x, int y) {
             this->x = x;
             this->y = y;
         }
@@ -100,6 +125,8 @@ class DungeonOptions {
         std::string key = "";
         bool is_default = false;
 };
+
+#define IS_FLOOR(cell_type) (cell_type == CELL_TYPE_ROOM || cell_type == CELL_TYPE_HALL || cell_type == CELL_TYPE_UP_STAIRCASE || cell_type == CELL_TYPE_DOWN_STAIRCASE)
 
 typedef enum {
     GAME_RESULT_RUNNING = 0,
@@ -180,6 +207,8 @@ class Dungeon {
          */
         void save_to_file(FILE *f, int debug, IntPair *pc_coords);
 
+        void apply_walls();
+
     private:
         /**
          * Fills the dungeon with randomly-generated stone. Overwrites everything
@@ -252,6 +281,51 @@ class Dungeon {
          * Returns: coordinates to location of placed material
          */
         IntPair place_in_room(Room *room, cell_type_t material);
+};
+
+
+// Texture direction to coordinates that must be set to coordinates that must be unset
+// In order of priority
+class WallTileIdentifier {
+    public:
+        std::vector<IntPair> floor;
+        std::vector<IntPair> wall;
+        std::vector<IntPair> stone;
+        wall_type_t type;
+
+        WallTileIdentifier(wall_type_t type, std::vector<IntPair> floor, std::vector<IntPair> wall, std::vector<IntPair> stone) {
+            this->type = type;
+            this->floor = floor;
+            this->wall = wall;
+            this->stone = stone;
+        }
+
+        bool applies(Dungeon *dungeon, IntPair coords) const {
+            int x, y;
+            Cell *cell;
+            for (auto &offset : floor) {
+                x = coords.x + offset.x;
+                y = coords.y + offset.y;
+                if (x < 0 || x >= dungeon->width || y < 0 || y >= dungeon->height) return false;
+                cell = &dungeon->cells[x][y];
+                if (!IS_FLOOR(cell->type)) return false;
+            }
+            for (auto &offset : wall) {
+                x = coords.x + offset.x;
+                y = coords.y + offset.y;
+                if (x < 0 || x >= dungeon->width || y < 0 || y >= dungeon->height) return false;
+                cell = &dungeon->cells[x][y];
+                if (!(cell->attributes & CELL_ATTRIBUTE_WALL)) return false;
+            }
+            for (auto &offset : stone) {
+                x = coords.x + offset.x;
+                y = coords.y + offset.y;
+                if (x < 0 || x >= dungeon->width || y < 0 || y >= dungeon->height) continue;
+                cell = &dungeon->cells[x][y];
+                if (IS_FLOOR(cell->type)) return false;
+            }
+            return true;
+        }
 };
 
 #endif

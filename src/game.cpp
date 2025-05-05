@@ -32,14 +32,10 @@ parser_definition_t ITEM_PARSE_RULES[] {
     {.name = "DESC", .offset = offsetof(ItemDefinition, description), .type = PARSE_TYPE_LONG_STRING, .required = true},
     {.name = "TYPE", .offset = offsetof(ItemDefinition, type), .type = PARSE_TYPE_ITEM_TYPE, .required = true},
     {.name = "COLOR", .offset = offsetof(ItemDefinition, color), .type = PARSE_TYPE_COLOR, .required = true},
-    {.name = "HIT", .offset = offsetof(ItemDefinition, hit_bonus), .type = PARSE_TYPE_DICE, .required = true},
     {.name = "DAM", .offset = offsetof(ItemDefinition, damage_bonus), .type = PARSE_TYPE_DICE, .required = true},
     {.name = "DODGE", .offset = offsetof(ItemDefinition, dodge_bonus), .type = PARSE_TYPE_DICE, .required = true},
     {.name = "DEF", .offset = offsetof(ItemDefinition, defense_bonus), .type = PARSE_TYPE_DICE, .required = true},
-    {.name = "WEIGHT", .offset = offsetof(ItemDefinition, weight), .type = PARSE_TYPE_DICE, .required = true},
     {.name = "SPEED", .offset = offsetof(ItemDefinition, speed_bonus), .type = PARSE_TYPE_DICE, .required = true},
-    {.name = "ATTR", .offset = offsetof(ItemDefinition, attributes), .type = PARSE_TYPE_DICE, .required = true},
-    {.name = "VAL", .offset = offsetof(ItemDefinition, value), .type = PARSE_TYPE_DICE, .required = true},
     {.name = "ART", .offset = offsetof(ItemDefinition, artifact), .type = PARSE_TYPE_BOOL, .required = true},
     {.name = "RRTY", .offset = offsetof(ItemDefinition, rarity), .type = PARSE_TYPE_RARITY, .required = true},
     {.name = "TEXTURE", .offset = offsetof(ItemDefinition, floor_texture), .type = PARSE_TYPE_STRING, .required = true},
@@ -147,14 +143,10 @@ Game::~Game() {
         delete e.second;
     }
     for (const auto &e : item_defs) {
-        delete e.second->hit_bonus;
         delete e.second->damage_bonus;
         delete e.second->dodge_bonus;
         delete e.second->defense_bonus;
-        delete e.second->weight;
         delete e.second->speed_bonus;
-        delete e.second->attributes;
-        delete e.second->value;
         delete e.second;
     }
     delete monst_parser;
@@ -285,14 +277,31 @@ void Game::init_from_map(std::string map_name) {
     DungeonFloor *dungeon_floor;
     Dungeon *new_dungeon;
     bool default_found = false;
+    unsigned int i;
 
     pc.dead = false;
     pc.display = '@';
     pc.speed = PC_SPEED;
 
     for (const auto &pair : map) {
-        new_dungeon = new Dungeon(*(pair.second));
-        new_dungeon->fill();
+        // This is pretty bad, but the dungeons are randomly generated.
+        // There's always a possibility that we get really unlucky, and some
+        // placement is impossible, so this will get retried if so rather
+        // than crashing.
+        for (i = 0; i < MAX_DUNGEON_GENERATION_ATTEMPTS; i++) {
+            try {
+                new_dungeon = new Dungeon(*(pair.second));
+                new_dungeon->fill();
+                break;
+            } catch (dungeon_exception &e) {
+                delete new_dungeon;
+                new_dungeon = nullptr;
+                Logger::debug(__FILE__, "failed to generate dungeon (attempt " + std::to_string(i) + "): " + std::string(e.what()));
+            }
+        }
+        if (!new_dungeon) {
+            throw dungeon_exception(__PRETTY_FUNCTION__, "failed to generate dungeon after " STRING(MAX_DUNGEON_GENERATION_ATTEMPTS) " attempts");
+        }
         dungeon_floor = new DungeonFloor(pair.first, new_dungeon);
         random_monsters(new_dungeon, dungeon_floor->character_map);
         random_items(new_dungeon, dungeon_floor->item_map);

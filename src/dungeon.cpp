@@ -37,6 +37,7 @@ Dungeon::Dungeon(DungeonOptions &options) {
             cells[i][j].type = CELL_TYPE_EMPTY;
             cells[i][j].hardness = 0;
             cells[i][j].attributes = 0;
+            cells[i][j].wall_type = WALL_TYPE_NONE;
         }
     }
 
@@ -114,6 +115,7 @@ void Dungeon::fill() {
     connect_rooms();
     fill_outside();
     place_staircases();
+    apply_walls();
     is_initalized = true;
 }
 
@@ -417,46 +419,55 @@ void Dungeon::connect_points(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1) {
 }
 
 void Dungeon::place_staircases() {
-    unsigned int x, y, yf, yo;
-    bool done;
+    unsigned int x, yi, y, ro, yo, i;
+    Room *room;
     if (rooms.size() < 1) throw dungeon_exception(__PRETTY_FUNCTION__, "attempted to place but no rooms exist");
 
     // Pick a random location in a room for the up staircase.
     if (options->up_staircase.length() > 0) {
-        // We want to place these on the rightmost side of the map.
-        // This is an inefficient algorithm for that, but I don't see an obvious easier one.
-        yo = rand();
-        done = false;
-        for (x = width - 2; x >= 0; x--) {
-            for (yf = 0; yf < height; yf++) {
-                y = (yf + yo) % height;
-                if (cells[x][y].type == CELL_TYPE_ROOM) {
-                    done = true;
-                    break;
+        // We want to place these on the rightmost side of any room.
+        // The spot must have stone above and below.
+        // The spots to the right of it must not be out of bounds.
+        ro = rand();
+        for (i = 0; i < rooms.size(); i++) {
+            room = &rooms[(i + ro) % rooms.size()];
+            // Now, iterate over the entire right side to check for an open space.
+            if (room->x1 + 2 >= width) continue;
+            x = room->x1 + 1;
+            yo = rand();
+            for (yi = 0; yi < (unsigned int) (room->y1 - room->y0 - 2); yi++) {
+                y = 1 + room->y0 + (yo + yi) % (room->y1 - room->y0);
+                // Screw it
+                if (cells[x][y - 1].type == CELL_TYPE_STONE && cells[x][y].type == CELL_TYPE_STONE && cells[x][y + 1].type == CELL_TYPE_STONE &&
+                    cells[x + 1][y - 1].type == CELL_TYPE_STONE && cells[x + 1][y].type == CELL_TYPE_STONE && cells[x + 1][y + 1].type == CELL_TYPE_STONE) {
+                    cells[x][y].type = CELL_TYPE_UP_STAIRCASE;
+                    cells[x][y].hardness = 0;
+                    return;
                 }
             }
-            if (done) break;
         }
-        cells[x + 1][y].type = CELL_TYPE_UP_STAIRCASE;
-        cells[x + 1][y].hardness = 0;
+        throw dungeon_exception(__PRETTY_FUNCTION__, "no suitable location for up staircase");
     }
 
     // And again for down...
     if (options->down_staircase.length() > 0) {
-        yo = rand();
-        done = false;
-        for (x = 1; x < width; x++) {
-            for (yf = 0; yf < height; yf++) {
-                y = (yf + yo) % height;
-                if (cells[x][y].type == CELL_TYPE_ROOM) {
-                    done = true;
-                    break;
+        ro = rand();
+        for (i = 0; i < rooms.size(); i++) {
+            room = &rooms[(i + ro) % rooms.size()];
+            if ((int) room->x0 - 2 < 0) continue;
+            x = room->x0 - 1;
+            yo = rand();
+            for (yi = 0; yi < (unsigned int) (room->y1 - room->y0 - 2); yi++) {
+                y = 1 + room->y0 + (yo + yi) % (room->y1 - room->y0);
+                if (cells[x][y - 1].type == CELL_TYPE_STONE && cells[x][y].type == CELL_TYPE_STONE && cells[x][y + 1].type == CELL_TYPE_STONE &&
+                    cells[x - 1][y - 1].type == CELL_TYPE_STONE && cells[x - 1][y].type == CELL_TYPE_STONE && cells[x - 1][y + 1].type == CELL_TYPE_STONE) {
+                    cells[x][y].type = CELL_TYPE_UP_STAIRCASE;
+                    cells[x][y].hardness = 0;
+                    return;
                 }
             }
-            if (done) break;
         }
-        cells[x - 1][y].type = CELL_TYPE_DOWN_STAIRCASE;
-        cells[x - 1][y].hardness = 0;
+        throw dungeon_exception(__PRETTY_FUNCTION__, "no suitable location for down staircase");
     }
 }
 
@@ -514,6 +525,74 @@ IntPair Dungeon::random_location() {
         } catch (dungeon_exception &e) {}
     }
     throw dungeon_exception(__PRETTY_FUNCTION__, "no available space in dungeon");
+}
+
+const std::vector<WallTileIdentifier> WALL_TILES = {
+    WallTileIdentifier(WALL_TYPE_SINGLE, {{1, -1}, {1, 0}, {1, 1}, {-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}}, {}, {}),
+    WallTileIdentifier(WALL_TYPE_QUAD, {}, {{0, -1}, {0, 1}, {1, 0}, {-1, 0}}, {}),
+    WallTileIdentifier(WALL_TYPE_ENDL, {{0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}}, {}, {}),
+    WallTileIdentifier(WALL_TYPE_ENDR, {{0, -1}, {-1, -1}, {-1, 0}, {-1, 1}, {0, 1}}, {}, {}),
+    WallTileIdentifier(WALL_TYPE_ENDB, {{-1, 0}, {-1, -1}, {0, -1}, {1, -1}, {1, 0}}, {}, {}),
+    WallTileIdentifier(WALL_TYPE_ENDT, {{-1, 0}, {-1, 1}, {0, 1}, {1, 1}, {1, 0}}, {}, {}),
+    WallTileIdentifier(WALL_TYPE_T_L_L, {}, {{0, -1}, {-1, 0}, {0, 1}},    {}), // {{1, -1}}),
+    WallTileIdentifier(WALL_TYPE_T_L_R, {}, {{0, -1}, {1, 0}, {0, 1}},  {}), // {{-1, -1}}),
+    WallTileIdentifier(WALL_TYPE_T_B_T, {}, {{-1, 0}, {0, -1}, {1, 0}},  {}), // {{1, -1}}),
+    WallTileIdentifier(WALL_TYPE_T_B_B, {}, {{-1, 0}, {0, 1}, {1, 0}},   {}), // {{1, 1}}),
+    WallTileIdentifier(WALL_TYPE_TL, {{-1, 0}, {-1, -1}, {0, -1}}, {{0, 1}, {1, 0}}, {}),
+    WallTileIdentifier(WALL_TYPE_TR, {{0, -1}, {1, -1}, {1, 0}}, {{-1, 0}, {0, 1}}, {}),
+    WallTileIdentifier(WALL_TYPE_BL, {{-1, 0}, {-1, 1}, {0, 1}}, {{0, -1}, {1, 0}}, {}),
+    WallTileIdentifier(WALL_TYPE_BR, {{0, 1}, {1, 1}, {1, 0}}, {{-1, 0}, {0, -1}}, {}),
+    WallTileIdentifier(WALL_TYPE_TL, {{1, 1}}, {{1, 0}, {0, 1}}, {}),
+    WallTileIdentifier(WALL_TYPE_TR, {{-1, 1}}, {{-1, 0}, {0, 1}}, {}),
+    WallTileIdentifier(WALL_TYPE_BL, {{1, -1}}, {{1, 0}, {0, -1}}, {}),
+    WallTileIdentifier(WALL_TYPE_BR, {{-1, -1}}, {{-1, 0}, {0, -1}}, {}),
+    WallTileIdentifier(WALL_TYPE_L, {{1, 0}}, {}, {}),
+    WallTileIdentifier(WALL_TYPE_R, {{-1, 0}}, {}, {}),
+    WallTileIdentifier(WALL_TYPE_T, {{0, 1}}, {}, {}),
+    WallTileIdentifier(WALL_TYPE_B, {{0, -1}}, {}, {})
+};
+
+void Dungeon::apply_walls() {
+    // This could be made more efficient, but it's rarely called and I'm running out of time to
+    // finish this game. :)
+    unsigned int x, y;
+    int x1, y1;
+    bool set;
+    for (x = 0; x < width; x++) {
+        for (y = 0; y < height; y++) {
+            // If there's a non-stone cell within 1 cell of here, this is going to be a wall.
+            // We need to know that to identify T-type walls.
+            cells[x][y].attributes &= ~CELL_ATTRIBUTE_WALL;
+            if (IS_FLOOR(cells[x][y].type)) {
+                continue;
+            }
+            set = false;
+            for (x1 = x - 1; !set && x1 <= (int) x + 1; x1++) {
+                for (y1 = y - 1; y1 <= (int) y + 1; y1++) {
+                    if (x1 < 0 || x1 >= width || y1 < 0 || y1 >= height) continue;
+                    if (IS_FLOOR(cells[x1][y1].type)) {
+                        cells[x][y].attributes |= CELL_ATTRIBUTE_WALL;
+                        set = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    for (x = 0; x < width; x++) {
+        for (y = 0; y < height; y++) {
+            if (cells[x][y].type == CELL_TYPE_STONE && cells[x][y].attributes & CELL_ATTRIBUTE_WALL) {
+                // Candidate!
+                for (const WallTileIdentifier &ident : WALL_TILES) {
+                    if (ident.applies(this, IntPair(x, y))) {
+                        cells[x][y].wall_type = ident.type;
+                        break;
+                    }
+                }
+            }
+        }
+    }
 }
 
 

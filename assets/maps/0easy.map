@@ -4,15 +4,24 @@ BEGIN MAP 1
 DEFAULT TRUE
 NAME The Lobby
 UP 2
-SIZE 25 25
+SIZE 30 35
 NUMENEMIES 3 4
-NUMROOMS 3 4
+NUMROOMS 3 5
 NUMITEMS 3 5
 ENEMIES
 employee_a
+employee_b
+employee_c
+employee_d
+employee_e
 .
 ITEMS
 keyboard
+glasspanes
+word
+xboxctrl
+tshirt
+hat
 .
 KEY key
 END
@@ -28,10 +37,24 @@ NUMROOMS 2 3
 NUMITEMS 3 5
 ENEMIES
 employee_a
+employee_b
+employee_c
+employee_d
+employee_e
 robot
 .
 ITEMS
-keyboard
+glasspanes
+word
+xboxctrl
+tshirt
+hat
+sandals
+frictionlessshoes
+sword
+minecoins
+hololens
+armoredsuit
 .
 KEY key
 END
@@ -46,10 +69,18 @@ NUMROOMS 2 3
 NUMITEMS 3 5
 ENEMIES
 employee_a
+employee_b
+employee_c
+employee_d
+employee_e
 robot
 .
 ITEMS
-keyboard
+xboxctrl
+frictionlessshoes
+sword
+hololens2
+armoredsuit
 .
 BOSS bill
 END
