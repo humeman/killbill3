@@ -4,8 +4,6 @@
 
 Item::Item(ItemDefinition *definition) {
     if (definition->artifact) {
-        if (definition->artifact_created)
-            throw dungeon_exception(__PRETTY_FUNCTION__, "artifact already exists");
         definition->artifact_created = true;
     }
 

@@ -349,3 +349,12 @@
          Added a bunch of items and monsters, and made the maps different from
           each other.
          Some fixes to improve dungeon generation resiliency.
+5/5:
+    12p: Added decorations and decoration schemes. These are applied to rooms
+          based on the map definition and add a bunch of decorative objects.
+         Fixed inventory rendering, which was broken in quite a few ways.
+         Added more items.
+         Added the shareholder.
+         Played the game a bunch, fixed bugs and balanced everything.
+         Completed the medium/expert maps.
+         Added sound effects.

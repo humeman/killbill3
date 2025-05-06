@@ -48,7 +48,7 @@
 #define DEFAULT_MONSTER_PATH "assets/enemies.txt"
 #define DEFAULT_ITEM_PATH "assets/items.txt"
 
-#define HEARTS 15
+#define HEARTS 10
 #define INVENTORY_BOX_WIDTH 29
 #define DETAILS_WIDTH 60
 #define DETAILS_HEIGHT 12
@@ -209,7 +209,7 @@ class dungeon_exception : public std::exception {
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define CLAMP(a, low, high) ((a < low) ? low : ((a > high) ? high : a))
 
-#define RAND_BETWEEN(low, high) (low) + (rand() % ((high) - (low))) 
+#define RAND_BETWEEN(low, high) (low) + (rand() % ((high) - (low) + 1)) 
 
 #define ARRAY_SIZE(x) ((int) (sizeof(x) / sizeof(x[0])))
 

@@ -40,6 +40,7 @@ class MonsterDefinition {
         std::string floor_texture_w;
         std::string floor_texture_s;
         std::string ui_texture;
+        std::string ambiance;
 };
 
 void verify_monster_definition(MonsterDefinition *def);
@@ -130,7 +131,7 @@ class PC : public Character {
         Dice base_damage = Dice(1, 1, 4);
 
         PC();
-        ~PC() {};
+        ~PC();
         CHARACTER_TYPE type() override;
         int damage(int amount, game_result_t &result, Dungeon *dungeon, Item ***item_map, Character ***character_map) override;
         int speed_bonus();
@@ -152,7 +153,7 @@ class Monster : public Character {
     public:
         MonsterDefinition *definition;
         Monster(MonsterDefinition *definition, ItemDefinition *key_drop);
-        ~Monster() {};
+        ~Monster();
         /**
          * Finds the next coordinate to move to on a direct line to a
          *  coordinate pair.

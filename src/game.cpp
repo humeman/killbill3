@@ -10,6 +10,8 @@
 #include "message_queue.h"
 #include "pathfinding.h"
 #include "logger.h"
+#include "decorations.h"
+#include "resource_manager.h"
 
 parser_definition_t MONSTER_PARSE_RULES[] {
     {.name = "NAME", .offset = offsetof(MonsterDefinition, name), .type = PARSE_TYPE_STRING, .required = true},
@@ -23,6 +25,7 @@ parser_definition_t MONSTER_PARSE_RULES[] {
     {.name = "TEXTURE_E", .offset = offsetof(MonsterDefinition, floor_texture_e), .type = PARSE_TYPE_STRING, .required = true},
     {.name = "TEXTURE_W", .offset = offsetof(MonsterDefinition, floor_texture_w), .type = PARSE_TYPE_STRING, .required = true},
     {.name = "TEXTURE_S", .offset = offsetof(MonsterDefinition, floor_texture_s), .type = PARSE_TYPE_STRING, .required = true},
+    {.name = "AMBIANCE", .offset = offsetof(MonsterDefinition, ambiance), .type = PARSE_TYPE_STRING, .required = false},
     {.name = "UI_TEXTURE", .offset = offsetof(MonsterDefinition, ui_texture), .type = PARSE_TYPE_STRING, .required = true},
     {.name = "RRTY", .offset = offsetof(MonsterDefinition, rarity), .type = PARSE_TYPE_RARITY, .required = true}
 };
@@ -54,35 +57,14 @@ parser_definition_t DUNGEON_OPTIONS_PARSE_RULES[] {
     {.name = "ITEMS", .offset = offsetof(DungeonOptions, items), .type = PARSE_TYPE_VECTOR_STRINGS, .required = true},
     {.name = "BOSS", .offset = offsetof(DungeonOptions, boss), .type = PARSE_TYPE_STRING, .required = false},
     {.name = "DEFAULT", .offset = offsetof(DungeonOptions, is_default), .type = PARSE_TYPE_BOOL, .required = false},
-    {.name = "KEY", .offset = offsetof(DungeonOptions, key), .type = PARSE_TYPE_STRING, .required = false}
+    {.name = "KEY", .offset = offsetof(DungeonOptions, key), .type = PARSE_TYPE_STRING, .required = false},
+    {.name = "DECORATIONS", .offset = offsetof(DungeonOptions, decorations), .type = PARSE_TYPE_VECTOR_STRINGS, .required = true}
 };
 
 parser_definition_t VOICE_LINES_PARSE_RULES[] {
     {.name = "VALUE", .offset = offsetof(VoiceLines, value), .type = PARSE_TYPE_LONG_STRING, .required = true},
     {.name = "DURATION", .offset = offsetof(VoiceLines, duration), .type = PARSE_TYPE_INT, .required = true},
     {.name = "MUSIC", .offset = offsetof(VoiceLines, music), .type = PARSE_TYPE_STRING, .required = true}
-};
-
-char CHARACTERS_BY_CELL_TYPE[CELL_TYPES] = {
-    [CELL_TYPE_STONE] = ' ',
-    [CELL_TYPE_ROOM] = '.',
-    [CELL_TYPE_HALL] = '#',
-    [CELL_TYPE_UP_STAIRCASE] = '<',
-    [CELL_TYPE_DOWN_STAIRCASE] = '>',
-    [CELL_TYPE_EMPTY] = '!',
-    [CELL_TYPE_DEBUG] = 'X',
-    [CELL_TYPE_HIDDEN] = ' '
-};
-
-int COLORS_BY_CELL_TYPE[CELL_TYPES] = {
-    [CELL_TYPE_STONE] = COLORS_STONE,
-    [CELL_TYPE_ROOM] = COLORS_FLOOR,
-    [CELL_TYPE_HALL] = COLORS_FLOOR,
-    [CELL_TYPE_UP_STAIRCASE] = COLORS_OBJECT,
-    [CELL_TYPE_DOWN_STAIRCASE] = COLORS_OBJECT,
-    [CELL_TYPE_EMPTY] = COLORS_OBJECT,
-    [CELL_TYPE_DEBUG] = COLORS_OBJECT,
-    [CELL_TYPE_HIDDEN] = COLORS_STONE
 };
 
 std::string ITEM_TYPE_STRINGS[ITEM_TYPE_UNKNOWN + 1] = {
@@ -108,34 +90,6 @@ Game::Game(int debug) {
 }
 
 Game::~Game() {
-    Character *character;
-    while (turn_queue.size() > 0) {
-        try {
-            character = turn_queue.remove();
-         } catch (std::exception &e) {
-            // Nothing we can do here :shrug:
-            Logger::error(__FILE__, "catastrophe: failed to remove from heap while destroying game");
-        }
-        if (character == &pc) continue;
-        destroy_character(character_map, character);
-    }
-
-    int x, y;
-    for (x = 0; x < dungeon->width; x++)
-        for (y = 0; y < dungeon->height; y++)
-            if (item_map[x][y]) delete item_map[x][y];
-
-    int i;
-    for (i = 0; i < dungeon->width; i++) free(character_map[i]);
-    free(character_map);
-    for (i = 0; i < dungeon->width; i++) free(item_map[i]);
-    free(item_map);
-    for (i = 0; i < dungeon->width; i++) free(pathfinding_tunnel[i]);
-    free(pathfinding_tunnel);
-    for (i = 0; i < dungeon->width; i++) free(pathfinding_no_tunnel[i]);
-    free(pathfinding_no_tunnel);
-    delete dungeon;
-
     for (const auto &e : monster_defs) {
         delete e.second->speed;
         delete e.second->damage;
@@ -149,8 +103,25 @@ Game::~Game() {
         delete e.second->speed_bonus;
         delete e.second;
     }
+    for (const auto &e : vl_defs) {
+        for (const auto &f : e.second) {
+            delete f.second;
+        }
+    }
+    for (const auto &e : map_defs) {
+        for (const auto &f : e.second) {
+            delete f.second;
+        }
+    }
     delete monst_parser;
     delete item_parser;
+    delete map_parser;
+    delete vl_parser;
+    delete planes;
+    for (const auto &e : dungeons) {
+        delete e;
+    }
+    if (nc) delete nc;
 }
 
 void Game::init_monster_defs(const char *path) {
@@ -268,8 +239,10 @@ void Game::apply_dungeon(DungeonFloor &floor, IntPair pc_coords) {
     pc.move_to(pc_coords, character_map);
 
     // And update pathfinding
-    update_pathfinding(dungeon, pathfinding_no_tunnel, pathfinding_tunnel, &pc);
+    update_pathfinding(dungeon, pathfinding_no_tunnel, pathfinding_tunnel, IntPair{(int) pc.x, (int) pc.y});
 }
+
+#define MUST_BE_PATHABLE(cell_type) (cell_type == CELL_TYPE_ROOM || cell_type == CELL_TYPE_HALL || cell_type == CELL_TYPE_UP_STAIRCASE || cell_type == CELL_TYPE_DOWN_STAIRCASE)
 
 void Game::init_from_map(std::string map_name) {
     std::map<std::string, DungeonOptions *> map = map_defs[map_name];
@@ -277,7 +250,8 @@ void Game::init_from_map(std::string map_name) {
     DungeonFloor *dungeon_floor;
     Dungeon *new_dungeon;
     bool default_found = false;
-    unsigned int i;
+    unsigned int i, dec_i, dec_a, dec_c, x, y;
+    cell_type_t type;
 
     pc.dead = false;
     pc.display = '@';
@@ -292,6 +266,34 @@ void Game::init_from_map(std::string map_name) {
             try {
                 new_dungeon = new Dungeon(*(pair.second));
                 new_dungeon->fill();
+                dec_c = new_dungeon->options->decorations.size();
+
+                dec_i = 0;
+                for (Room &room : new_dungeon->rooms) {
+                    dec_a = 0;
+                    while (dec_a < MAX_DUNGEON_GENERATION_ATTEMPTS && !apply_scheme(parse_scheme(new_dungeon->options->decorations[dec_i]), new_dungeon, &room)) {
+                        dec_a++;   
+                        dec_i = (dec_i + 1) % dec_c;
+                    }
+                    if (dec_a == MAX_DUNGEON_GENERATION_ATTEMPTS) throw dungeon_exception(__PRETTY_FUNCTION__, "failed to apply any decoration scheme to room");
+                    dec_i = (dec_i + 1) % dec_c;
+                }
+
+                dungeon_floor = new DungeonFloor(pair.first, new_dungeon);
+
+                // I've tried to design every algorithm to be resilient to this, but if they were strict enough to completely avoid it
+                // the rooms would be sparse. It's possible that there are areas of the map that are inaccessible. If so, we need to
+                // toss it out. We can test that with a pathfinding run.
+                update_pathfinding(new_dungeon, dungeon_floor->pathfinding_no_tunnel, dungeon_floor->pathfinding_tunnel, new_dungeon->random_location());
+                for (x = 0; x < new_dungeon->width; x++) {
+                    for (y = 0; y < new_dungeon->height; y++) {
+                        type = new_dungeon->cells[x][y].type;
+                        if (MUST_BE_PATHABLE(type) && dungeon_floor->pathfinding_no_tunnel[x][y] == UINT32_MAX) {
+                            throw dungeon_exception(__PRETTY_FUNCTION__, "map generated with unreachable areas");
+                        }
+                    }
+                }
+
                 break;
             } catch (dungeon_exception &e) {
                 delete new_dungeon;
@@ -302,15 +304,13 @@ void Game::init_from_map(std::string map_name) {
         if (!new_dungeon) {
             throw dungeon_exception(__PRETTY_FUNCTION__, "failed to generate dungeon after " STRING(MAX_DUNGEON_GENERATION_ATTEMPTS) " attempts");
         }
-        dungeon_floor = new DungeonFloor(pair.first, new_dungeon);
         random_monsters(new_dungeon, dungeon_floor->character_map);
         random_items(new_dungeon, dungeon_floor->item_map);
 
         if (pair.second->is_default) {
             if (default_found) throw dungeon_exception(__PRETTY_FUNCTION__, "multiple default dungeons found");
             default_found = true;
-            // TODO: Place the PC on the left side of the room
-            apply_dungeon(*dungeon_floor, new_dungeon->random_location());
+            apply_dungeon(*dungeon_floor, random_location_no_kill(new_dungeon, dungeon_floor->character_map));
         }
 
         dungeons.push_back(dungeon_floor);
@@ -390,7 +390,6 @@ void Game::random_monsters(Dungeon *t_dungeon, Character ***t_cmap) {
     if (t_dungeon->options->boss.length() > 0) {
         monst = new Monster(monster_defs[t_dungeon->options->boss], nullptr);
         try {
-            // TODO: Spawn on right side of map
             loc = random_location_no_kill(t_dungeon, t_cmap);
         } catch (dungeon_exception &e) {
             throw dungeon_exception(__PRETTY_FUNCTION__, e, "no available space in dungeon for monster placement");
@@ -419,7 +418,7 @@ void Game::random_items(Dungeon *t_dungeon, Item ***t_imap) {
 
             break;
         }
-        if (attempts == MAX_GENERATION_ATTEMPTS)
+        if (attempts >= MAX_GENERATION_ATTEMPTS)
             throw dungeon_exception(__PRETTY_FUNCTION__, "no available item definitions to use after " STRING(MAX_GENERATION_ATTEMPTS) "rolls (all unique or really unlucky)");
 
         // Now we can make a monster from this definition.
@@ -455,6 +454,8 @@ void Game::try_move(int x_offset, int y_offset) {
     Monster *monst;
     Item *keycard;
     int i;
+    unsigned int x, y;
+    IntPair loc;
     int new_x = pc.x + x_offset;
     int new_y = pc.y + y_offset;
     if (new_x < 0) new_x = 0;
@@ -463,7 +464,11 @@ void Game::try_move(int x_offset, int y_offset) {
     if (new_y >= dungeon->height) new_y = dungeon->height - 1;
     if (dungeon->cells[new_x][new_y].type == CELL_TYPE_STONE) {
         MessageQueue::get()->clear();
-        MessageQueue::get()->add("&0&bThere's stone in the way!");
+        MessageQueue::get()->add("&0&bThere's a wall in the way!");
+    }
+    else if (dungeon->cells[new_x][new_y].type == CELL_TYPE_DECORATION) {
+        MessageQueue::get()->clear();
+        MessageQueue::get()->add("&0&bThere's something in the way!");
     }
     else if (character_map[new_x][new_y] && character_map[new_x][new_y]->type() == CHARACTER_TYPE_MONSTER) {
             // If that second condition didn't hit, we're moving to our own location (or there are two PCs somehow).
@@ -497,12 +502,19 @@ void Game::try_move(int x_offset, int y_offset) {
         // Find the target dungeon floor
         for (const auto &new_dungeon : dungeons) {
             if (new_dungeon->id == dungeon->options->up_staircase) {
-                // Swap to that dungeon
-                // FIXME: PC location
-                apply_dungeon(*new_dungeon, new_dungeon->dungeon->random_location());
+                loc = random_location_no_kill(new_dungeon->dungeon, new_dungeon->character_map);
+                for (x = 0; x < new_dungeon->dungeon->width; x++) {
+                    for (y = 0; y < new_dungeon->dungeon->height; y++) {
+                        if (new_dungeon->dungeon->cells[x][y].type == CELL_TYPE_DOWN_STAIRCASE) {
+                            loc = IntPair{(int) (x + 1), (int) y};
+                        }
+                    }
+                }
+                apply_dungeon(*new_dungeon, loc);
                 MessageQueue::get()->clear();
                 MessageQueue::get()->add("You go up the stairs to &b" + new_dungeon->dungeon->options->name + "&r.");
                 return;
+
             }
         }
         throw dungeon_exception(__PRETTY_FUNCTION__, "no target floor with ID " + dungeon->options->up_staircase);
@@ -510,9 +522,15 @@ void Game::try_move(int x_offset, int y_offset) {
         // Find the target dungeon floor
         for (const auto &new_dungeon : dungeons) {
             if (new_dungeon->id == dungeon->options->down_staircase) {
-                // Swap to that dungeon
-                // FIXME: PC location
-                apply_dungeon(*new_dungeon, new_dungeon->dungeon->random_location());
+                loc = random_location_no_kill(new_dungeon->dungeon, new_dungeon->character_map);
+                for (x = 0; x < new_dungeon->dungeon->width; x++) {
+                    for (y = 0; y < new_dungeon->dungeon->height; y++) {
+                        if (new_dungeon->dungeon->cells[x][y].type == CELL_TYPE_UP_STAIRCASE) {
+                            loc = IntPair{(int) (x) - 1, (int) y};
+                        }
+                    }
+                }
+                apply_dungeon(*new_dungeon, loc);
                 MessageQueue::get()->clear();
                 MessageQueue::get()->add("You go down the stairs to &b" + new_dungeon->dungeon->options->name + "&r.");
                 return;
@@ -520,6 +538,7 @@ void Game::try_move(int x_offset, int y_offset) {
         }
         throw dungeon_exception(__PRETTY_FUNCTION__, "no target floor with ID " + dungeon->options->up_staircase);
     } else {
+        ResourceManager::get()->get_music("effects_step")->play();
         pc.move_to((IntPair) {(uint8_t) new_x, (uint8_t) new_y}, character_map);
     }
 }

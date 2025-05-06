@@ -20,78 +20,33 @@ Dungeon::Dungeon(DungeonOptions &options) {
     this->width = options.size.x;
     this->height = options.size.y;
     this->options = &options;
-    cells = (Cell **) malloc(width * sizeof (Cell *));
-    if (cells == NULL) {
-        goto init_free;
-    }
+    Cell cell;
     for (i = 0; i < width; i++) {
-        cells[i] = (Cell *) malloc(height * sizeof (Cell));
-        if (cells[i] == NULL) {
-            for (j = 0; j < i; j++) free(cells[j]);
-            goto init_free_cells;
-        }
-    }
-
-    for (i = 0; i < width; i++) {
+        cells.push_back({});
         for (j = 0; j < height; j++) {
-            cells[i][j].type = CELL_TYPE_EMPTY;
-            cells[i][j].hardness = 0;
-            cells[i][j].attributes = 0;
-            cells[i][j].wall_type = WALL_TYPE_NONE;
+            cells[i].push_back(cell);
         }
     }
 
     is_initalized = false;
-
-    return;
-
-    init_free_cells:
-    free(cells);
-    init_free:
-    throw dungeon_exception(__PRETTY_FUNCTION__, "failed to allocate dungeon");
 }
 
 Dungeon::Dungeon(uint8_t width, uint8_t height, int max_rooms) {
     int i, j;
     this->width = width;
     this->height = height;
-    cells = (Cell **) malloc(width * sizeof (Cell *));
-    if (cells == NULL) {
-        goto  init_free;
-    }
+    Cell cell;
     for (i = 0; i < width; i++) {
-        cells[i] = (Cell *) malloc(height * sizeof (Cell));
-        if (cells[i] == NULL) {
-            for (j = 0; j < i; j++) free(cells[j]);
-            goto init_free_cells;
-        }
-    }
-
-    for (i = 0; i < width; i++) {
+        cells.push_back({});
         for (j = 0; j < height; j++) {
-            cells[i][j].type = CELL_TYPE_EMPTY;
-            cells[i][j].hardness = 0;
-            cells[i][j].attributes = 0;
+            cells[i].push_back(cell);
         }
     }
 
     is_initalized = false;
-
-    return;
-
-    init_free_cells:
-    free(cells);
-    init_free:
-    throw dungeon_exception(__PRETTY_FUNCTION__, "failed to allocate dungeon");
 }
 
-Dungeon::~Dungeon() {
-    int i;
-    for (i = 0; i < width; i++) {
-        free(cells[i]);
-    }
-    free(cells);
-}
+Dungeon::~Dungeon() {}
 
 void Dungeon::write_pgm() {
     ENSURE_INITIALIZED;
@@ -421,6 +376,7 @@ void Dungeon::connect_points(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1) {
 void Dungeon::place_staircases() {
     unsigned int x, yi, y, ro, yo, i;
     Room *room;
+    bool done;
     if (rooms.size() < 1) throw dungeon_exception(__PRETTY_FUNCTION__, "attempted to place but no rooms exist");
 
     // Pick a random location in a room for the up staircase.
@@ -429,7 +385,8 @@ void Dungeon::place_staircases() {
         // The spot must have stone above and below.
         // The spots to the right of it must not be out of bounds.
         ro = rand();
-        for (i = 0; i < rooms.size(); i++) {
+        done = false;
+        for (i = 0; !done && i < rooms.size(); i++) {
             room = &rooms[(i + ro) % rooms.size()];
             // Now, iterate over the entire right side to check for an open space.
             if (room->x1 + 2 >= width) continue;
@@ -442,11 +399,12 @@ void Dungeon::place_staircases() {
                     cells[x + 1][y - 1].type == CELL_TYPE_STONE && cells[x + 1][y].type == CELL_TYPE_STONE && cells[x + 1][y + 1].type == CELL_TYPE_STONE) {
                     cells[x][y].type = CELL_TYPE_UP_STAIRCASE;
                     cells[x][y].hardness = 0;
-                    return;
+                    done = 1;
+                    break;
                 }
             }
         }
-        throw dungeon_exception(__PRETTY_FUNCTION__, "no suitable location for up staircase");
+        if (!done) throw dungeon_exception(__PRETTY_FUNCTION__, "no suitable location for up staircase");
     }
 
     // And again for down...
@@ -461,7 +419,7 @@ void Dungeon::place_staircases() {
                 y = 1 + room->y0 + (yo + yi) % (room->y1 - room->y0);
                 if (cells[x][y - 1].type == CELL_TYPE_STONE && cells[x][y].type == CELL_TYPE_STONE && cells[x][y + 1].type == CELL_TYPE_STONE &&
                     cells[x - 1][y - 1].type == CELL_TYPE_STONE && cells[x - 1][y].type == CELL_TYPE_STONE && cells[x - 1][y + 1].type == CELL_TYPE_STONE) {
-                    cells[x][y].type = CELL_TYPE_UP_STAIRCASE;
+                    cells[x][y].type = CELL_TYPE_DOWN_STAIRCASE;
                     cells[x][y].hardness = 0;
                     return;
                 }
@@ -527,25 +485,112 @@ IntPair Dungeon::random_location() {
     throw dungeon_exception(__PRETTY_FUNCTION__, "no available space in dungeon");
 }
 
+
+IntPair Dungeon::random_area_in_room(Room *room, int width, int height) {
+    // Same algorithm as usual -- we'll iterate over the room's area from a random starting point,
+    // but now check that the entire area is clear.
+    // This could be made more efficient, but world gen happens only once, so I'm not too worried.
+    unsigned int x, y, xi, yi, xj, yj, xo, yo;
+    xo = rand();
+    yo = rand();
+    unsigned int room_width = room->x1 - room->x0;
+    unsigned int room_height = room->y1 - room->y0;
+    bool valid;
+
+    for (xi = 0; xi < room_width - width; xi++) {
+        x = room->x0 + (xo + xi) % (room_width - width);
+        for (yi = 0; yi < room_height - height; yi++) {
+            y = room->y0 + (yo + yi) % (room_height - height);
+
+            valid = true;
+            for (xj = x - 1; valid && xj < x + width + 1; xj++) {
+                for (yj = y - 1; yj < y + height + 1; yj++) {
+                    // If this area's within the room, we just want to make sure it's empty.
+                    // Outside, we can't have any hallways.
+                    if (xj < x || xj > x + width || yj < y || yj > y + height) {
+                        // We don't care about corners, we'd never be able to obstruct that way.
+                        if (xj == x - 1 && (yj == y - 1 || yj == y + height)) {
+                            continue;
+                        }
+                        if (yj == y - 1 && (xj == x - 1 || xj == x + width)) {
+                            continue;
+                        }
+                        if (cells[xj][yj].type == CELL_TYPE_HALL) {
+                            valid = false;
+                            break;
+                        }
+                    } else {
+                        // Inside room -- needs to be CELL_TYPE_ROOM
+                        if (cells[xj][yj].type != CELL_TYPE_ROOM) {
+                            valid = false;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (valid) return IntPair{(int) x, (int) y};
+        }
+    }
+    throw dungeon_exception(__PRETTY_FUNCTION__, "no suitable area in room for " + std::to_string(width) + "x" + std::to_string(height) + " area");
+}
+
+#define OBSTRUCTION(cell_type) (cell_type == CELL_TYPE_HALL || cell_type == CELL_TYPE_UP_STAIRCASE || cell_type == CELL_TYPE_DOWN_STAIRCASE || cell_type == CELL_TYPE_DECORATION)
+
+IntPair Dungeon::random_location_along_edge(Room *room) {
+    unsigned int x, y;
+
+    // I don't love pushing all these to a vector, but I'm not sure of a good way
+    // to check everything while starting randomly without this becoming a mess otherwise.
+    std::vector<IntPair> edge;
+    for (x = room->x0; x <= room->x1; x++) {
+        if (cells[x][room->y0].type == CELL_TYPE_ROOM)
+            edge.push_back(IntPair{(int) x, (int) room->y0});
+        if (cells[x][room->y1].type == CELL_TYPE_ROOM)
+            edge.push_back(IntPair{(int) x, (int) room->y1});
+    }
+    for (y = room->y0 + 1; y <= (unsigned int) (room->y1 - 1); y++) {
+        if (cells[room->x0][y].type == CELL_TYPE_ROOM)
+            edge.push_back(IntPair{(int) room->x0, (int) y});
+        if (cells[room->x1][y].type == CELL_TYPE_ROOM)
+            edge.push_back(IntPair{(int) room->x1, (int) y});
+    }
+
+    int o = rand();
+    unsigned int i, j;
+    for (i = 0; i < edge.size(); i++) {
+        j = (i + o) % edge.size();
+        x = edge[j].x;
+        y = edge[j].y;
+        
+        if (OBSTRUCTION(cells[x + 1][y].type)) continue;
+        if (OBSTRUCTION(cells[x + 1][y + 1].type)) continue;
+        if (OBSTRUCTION(cells[x][y].type)) continue;
+        if (OBSTRUCTION(cells[x][y + 1].type)) continue;
+        return edge[j];
+    }
+
+    throw dungeon_exception(__PRETTY_FUNCTION__, "no suitable locations along edge of room");
+}
+
 const std::vector<WallTileIdentifier> WALL_TILES = {
-    WallTileIdentifier(WALL_TYPE_SINGLE, {{1, -1}, {1, 0}, {1, 1}, {-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}}, {}, {}),
+    WallTileIdentifier(WALL_TYPE_SINGLE, {{1, 0}, {-1, 0}, {0, -1}, {0, 1}}, {}, {}),
     WallTileIdentifier(WALL_TYPE_QUAD, {}, {{0, -1}, {0, 1}, {1, 0}, {-1, 0}}, {}),
-    WallTileIdentifier(WALL_TYPE_ENDL, {{0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}}, {}, {}),
-    WallTileIdentifier(WALL_TYPE_ENDR, {{0, -1}, {-1, -1}, {-1, 0}, {-1, 1}, {0, 1}}, {}, {}),
-    WallTileIdentifier(WALL_TYPE_ENDB, {{-1, 0}, {-1, -1}, {0, -1}, {1, -1}, {1, 0}}, {}, {}),
-    WallTileIdentifier(WALL_TYPE_ENDT, {{-1, 0}, {-1, 1}, {0, 1}, {1, 1}, {1, 0}}, {}, {}),
+    WallTileIdentifier(WALL_TYPE_ENDL, {{0, -1}, {1, 0}, {0, 1}}, {}, {}),
+    WallTileIdentifier(WALL_TYPE_ENDR, {{0, -1}, {-1, 0}, {0, 1}}, {}, {}),
+    WallTileIdentifier(WALL_TYPE_ENDB, {{-1, 0}, {0, -1}, {1, 0}}, {}, {}),
+    WallTileIdentifier(WALL_TYPE_ENDT, {{-1, 0}, {0, 1}, {1, 0}}, {}, {}),
     WallTileIdentifier(WALL_TYPE_T_L_L, {}, {{0, -1}, {-1, 0}, {0, 1}},    {}), // {{1, -1}}),
     WallTileIdentifier(WALL_TYPE_T_L_R, {}, {{0, -1}, {1, 0}, {0, 1}},  {}), // {{-1, -1}}),
     WallTileIdentifier(WALL_TYPE_T_B_T, {}, {{-1, 0}, {0, -1}, {1, 0}},  {}), // {{1, -1}}),
     WallTileIdentifier(WALL_TYPE_T_B_B, {}, {{-1, 0}, {0, 1}, {1, 0}},   {}), // {{1, 1}}),
-    WallTileIdentifier(WALL_TYPE_TL, {{-1, 0}, {-1, -1}, {0, -1}}, {{0, 1}, {1, 0}}, {}),
-    WallTileIdentifier(WALL_TYPE_TR, {{0, -1}, {1, -1}, {1, 0}}, {{-1, 0}, {0, 1}}, {}),
-    WallTileIdentifier(WALL_TYPE_BL, {{-1, 0}, {-1, 1}, {0, 1}}, {{0, -1}, {1, 0}}, {}),
-    WallTileIdentifier(WALL_TYPE_BR, {{0, 1}, {1, 1}, {1, 0}}, {{-1, 0}, {0, -1}}, {}),
-    WallTileIdentifier(WALL_TYPE_TL, {{1, 1}}, {{1, 0}, {0, 1}}, {}),
-    WallTileIdentifier(WALL_TYPE_TR, {{-1, 1}}, {{-1, 0}, {0, 1}}, {}),
-    WallTileIdentifier(WALL_TYPE_BL, {{1, -1}}, {{1, 0}, {0, -1}}, {}),
-    WallTileIdentifier(WALL_TYPE_BR, {{-1, -1}}, {{-1, 0}, {0, -1}}, {}),
+    WallTileIdentifier(WALL_TYPE_TL, {{-1, 0}, {0, -1}}, {{0, 1}, {1, 0}}, {}),
+    WallTileIdentifier(WALL_TYPE_TR, {{0, -1}, {1, 0}}, {{-1, 0}, {0, 1}}, {}),
+    WallTileIdentifier(WALL_TYPE_BL, {{-1, 0}, {0, 1}}, {{0, -1}, {1, 0}}, {}),
+    WallTileIdentifier(WALL_TYPE_BR, {{0, 1}, {1, 0}}, {{-1, 0}, {0, -1}}, {}),
+    WallTileIdentifier(WALL_TYPE_TL, {}, {{1, 0}, {0, 1}}, {}),
+    WallTileIdentifier(WALL_TYPE_TR, {}, {{-1, 0}, {0, 1}}, {}),
+    WallTileIdentifier(WALL_TYPE_BL, {}, {{1, 0}, {0, -1}}, {}),
+    WallTileIdentifier(WALL_TYPE_BR, {}, {{-1, 0}, {0, -1}}, {}),
     WallTileIdentifier(WALL_TYPE_L, {{1, 0}}, {}, {}),
     WallTileIdentifier(WALL_TYPE_R, {{-1, 0}}, {}, {}),
     WallTileIdentifier(WALL_TYPE_T, {{0, 1}}, {}, {}),
@@ -563,6 +608,7 @@ void Dungeon::apply_walls() {
             // If there's a non-stone cell within 1 cell of here, this is going to be a wall.
             // We need to know that to identify T-type walls.
             cells[x][y].attributes &= ~CELL_ATTRIBUTE_WALL;
+            cells[x][y].wall_type = WALL_TYPE_NONE;
             if (IS_FLOOR(cells[x][y].type)) {
                 continue;
             }

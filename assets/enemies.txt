@@ -8,8 +8,8 @@ Possesses the thousand-yard stare of someone who's seen the
 'Blue Screen of Death' one too many times."
 .
 SPEED 15+1d4
-DAM 10+1d4
-HP 12+2d6
+DAM 7+1d6
+HP 15+2d6
 ABIL SMART
 RRTY 100
 TEXTURE_N characters_employee_a_n
@@ -17,6 +17,7 @@ TEXTURE_E characters_employee_a_e
 TEXTURE_W characters_employee_a_w
 TEXTURE_S characters_employee_a_s
 UI_TEXTURE characters_employee_a_ui
+AMBIANCE effects_microsoft1
 END
 
 BEGIN ENEMY employee_b
@@ -27,8 +28,8 @@ Fueled by lukewarm coffee and the quiet hum of existential
 dread.
 .
 SPEED 15+1d4
-DAM 10+1d4
-HP 12+2d6
+DAM 7+1d6
+HP 15+2d6
 ABIL SMART
 RRTY 100
 TEXTURE_N characters_employee_b_n
@@ -36,6 +37,7 @@ TEXTURE_E characters_employee_b_e
 TEXTURE_W characters_employee_b_w
 TEXTURE_S characters_employee_b_s
 UI_TEXTURE characters_employee_b_ui
+AMBIANCE effects_microsoft2
 END
 
 BEGIN ENEMY employee_c
@@ -46,8 +48,8 @@ Proficient in at least three coding languages, none of
 which are useful in a sword fight.
 .
 SPEED 15+1d4
-DAM 10+1d4
-HP 12+2d6
+DAM 7+1d6
+HP 15+2d6
 ABIL SMART
 RRTY 100
 TEXTURE_N characters_employee_c_n
@@ -55,6 +57,7 @@ TEXTURE_E characters_employee_c_e
 TEXTURE_W characters_employee_c_w
 TEXTURE_S characters_employee_c_s
 UI_TEXTURE characters_employee_c_ui
+AMBIANCE effects_microsoft3
 END
 
 BEGIN ENEMY employee_d
@@ -65,8 +68,8 @@ Less 'deadly assassin,' more 'soul-crushing spreadsheet
 jockey.' Still, probably knows where the server room is.
 .
 SPEED 15+1d4
-DAM 10+1d4
-HP 12+2d6
+DAM 7+1d6
+HP 15+2d6
 ABIL SMART
 RRTY 100
 TEXTURE_N characters_employee_d_n
@@ -74,6 +77,7 @@ TEXTURE_E characters_employee_d_e
 TEXTURE_W characters_employee_d_w
 TEXTURE_S characters_employee_d_s
 UI_TEXTURE characters_employee_d_ui
+AMBIANCE effects_microsoft4
 END
 
 BEGIN ENEMY employee_e
@@ -84,8 +88,8 @@ Has a 401(k) and a surprising knowledge of optimal
 cubicle-based combat.
 .
 SPEED 15+1d4
-DAM 10+1d4
-HP 12+2d6
+DAM 7+1d6
+HP 15+2d6
 ABIL SMART
 RRTY 100
 TEXTURE_N characters_employee_e_n
@@ -93,6 +97,7 @@ TEXTURE_E characters_employee_e_e
 TEXTURE_W characters_employee_e_w
 TEXTURE_S characters_employee_e_s
 UI_TEXTURE characters_employee_e_ui
+AMBIANCE effects_microsoft5
 END
 
 BEGIN ENEMY bill
@@ -107,16 +112,17 @@ to put an end to the worthless scum that would dare
 challenge Michaelsoft's goal of world technological 
 domination.
 .
-ABIL UNIQ ERRATIC DESTROY TUNNEL BOSS
+ABIL DESTROY TUNNEL BOSS TELE
 SPEED 80+0d1
-HP 500+0d1
-DAM 20+1d10
+HP 200+0d1
+DAM 30+1d10
 RRTY 1
 TEXTURE_N characters_bill_n
 TEXTURE_E characters_bill_e
 TEXTURE_W characters_bill_w
 TEXTURE_S characters_bill_s
 UI_TEXTURE characters_bill_ui
+AMBIANCE effects_bill
 END
 
 BEGIN ENEMY robot
@@ -129,14 +135,134 @@ specially built by Bill's loyal employees. They immediately
 sense the thoughts of those who reject Michaelsoft's
 wonderful ideals, putting a swift end to them.
 .
-ABIL DESTROY TELE UNIQ TUNNEL
+ABIL DESTROY TELE TUNNEL
 SPEED 25+0d1
 HP 50+0d1
-DAM 0+1d4
-RRTY 20
+DAM 10+1d5
+RRTY 90
 TEXTURE_N characters_robot_n
 TEXTURE_E characters_robot_e
 TEXTURE_W characters_robot_w
 TEXTURE_S characters_robot_s
 UI_TEXTURE characters_robot_ui
+AMBIANCE effects_robot1
+END
+
+BEGIN ENEMY shareholder_a
+NAME Shareholder
+COLOR GREEN
+DESC
+More afraid of a bad earnings call than he is of you.
+.
+SPEED 7+1d4
+DAM 7+1d5
+HP 20+2d6
+ABIL SMART
+RRTY 70
+TEXTURE_N  characters_shareholder_a_n
+TEXTURE_E  characters_shareholder_a_e
+TEXTURE_W  characters_shareholder_a_w
+TEXTURE_S  characters_shareholder_a_s
+UI_TEXTURE characters_shareholder_a_ui
+AMBIANCE effects_shareholder1
+END
+
+BEGIN ENEMY shareholder_b
+NAME Shareholder
+COLOR GREEN
+DESC
+"Can someone explain how this attack impacts our P/E
+ratio?"
+.
+SPEED 7+1d4
+DAM 7+1d5
+HP 20+2d6
+ABIL SMART
+RRTY 70
+TEXTURE_N  characters_shareholder_b_n
+TEXTURE_E  characters_shareholder_b_e
+TEXTURE_W  characters_shareholder_b_w
+TEXTURE_S  characters_shareholder_b_s
+UI_TEXTURE characters_shareholder_b_ui
+AMBIANCE effects_shareholder2
+END
+
+BEGIN ENEMY shareholder_c
+NAME Shareholder
+COLOR GREEN
+DESC
+Primarily concerned with Q3 profits, even when surrounded
+by flying limbs.
+.
+SPEED 7+1d4
+DAM 7+1d5
+HP 20+2d6
+ABIL SMART
+RRTY 70
+TEXTURE_N  characters_shareholder_c_n
+TEXTURE_E  characters_shareholder_c_e
+TEXTURE_W  characters_shareholder_c_w
+TEXTURE_S  characters_shareholder_c_s
+UI_TEXTURE characters_shareholder_c_ui
+AMBIANCE effects_shareholder3
+END
+
+BEGIN ENEMY shareholder_d
+NAME Shareholder
+COLOR GREEN
+DESC
+"As long as the synergy translates to profit, frankly,
+I don't care if the breakroom is a battlefield now."
+.
+SPEED 7+1d4
+DAM 7+1d5
+HP 20+2d6
+ABIL SMART
+RRTY 70
+TEXTURE_N  characters_shareholder_d_n
+TEXTURE_E  characters_shareholder_d_e
+TEXTURE_W  characters_shareholder_d_w
+TEXTURE_S  characters_shareholder_d_s
+UI_TEXTURE characters_shareholder_d_ui
+AMBIANCE effects_shareholder4
+END
+
+BEGIN ENEMY shareholder_e
+NAME Shareholder
+COLOR GREEN
+DESC
+Protected by a solid gold parachute and a complete lack of
+understanding of what actually happens here daily.
+.
+SPEED 7+1d4
+DAM 7+1d5
+HP 20+2d6
+ABIL SMART
+RRTY 70
+TEXTURE_N  characters_shareholder_e_n
+TEXTURE_E  characters_shareholder_e_e
+TEXTURE_W  characters_shareholder_e_w
+TEXTURE_S  characters_shareholder_e_s
+UI_TEXTURE characters_shareholder_e_ui
+AMBIANCE effects_shareholder5
+END
+
+BEGIN ENEMY shareholder_f
+NAME Shareholder
+COLOR GREEN
+DESC
+His most dangerous weapon is the hostile takeover, though
+he might try a golf swing in a pinch.
+.
+SPEED 7+1d4
+DAM 7+1d5
+HP 20+2d6
+ABIL SMART
+RRTY 70
+TEXTURE_N  characters_shareholder_f_n
+TEXTURE_E  characters_shareholder_f_e
+TEXTURE_W  characters_shareholder_f_w
+TEXTURE_S  characters_shareholder_f_s
+UI_TEXTURE characters_shareholder_f_ui
+AMBIANCE effects_shareholder6
 END

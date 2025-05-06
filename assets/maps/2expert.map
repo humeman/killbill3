@@ -4,17 +4,33 @@ BEGIN MAP 1
 DEFAULT TRUE
 NAME The Lobby
 UP 2
-SIZE 25 25
-NUMENEMIES 3 4
-NUMROOMS 3 4
-NUMITEMS 3 5
+SIZE 35 45
+NUMENEMIES 6 8
+NUMROOMS 4 6
+NUMITEMS 4 6
 ENEMIES
 employee_a
+employee_b
+employee_c
+employee_d
+employee_e
 .
 ITEMS
 keyboard
+glasspanes
+word
+xboxctrl
+tshirt
+khakis
+hat
 .
 KEY key
+DECORATIONS
+lobby
+lobby
+lobby
+conference_room
+.
 END
 
 BEGIN MAP 2
@@ -22,34 +38,106 @@ DEFAULT FALSE
 NAME The Office
 UP 3
 DOWN 1
-SIZE 20 20
-NUMENEMIES 5 8
-NUMROOMS 2 3
-NUMITEMS 3 5
+SIZE 35 40
+NUMENEMIES 7 10
+NUMROOMS 5 6
+NUMITEMS 4 6
 ENEMIES
 employee_a
+employee_b
+employee_c
+employee_d
+employee_e
 robot
 .
 ITEMS
-keyboard
+glasspanes
+word
+xboxctrl
+tshirt
+khakis
+hat
+sandals
+frictionlessshoes
+minecoins
+hololens
+armoredsuit
 .
 KEY key
+DECORATIONS
+lobby
+conference_room
+.
 END
 
 BEGIN MAP 3
 DEFAULT FALSE
-NAME Bill's Office
+NAME The Server Room
+UP 4
 DOWN 2
-SIZE 20 20
-NUMENEMIES 3 6
-NUMROOMS 2 3
-NUMITEMS 3 5
+SIZE 40 50
+NUMENEMIES 8 10
+NUMROOMS 7 9
+NUMITEMS 7 10
 ENEMIES
 employee_a
+employee_b
+employee_c
+employee_d
+employee_e
 robot
 .
 ITEMS
-keyboard
+glasspanes
+word
+xboxctrl
+tshirt
+khakis
+hat
+sandals
+frictionlessshoes
+sword
+minecoins
+hololens
+armoredsuit
+penguin
+.
+KEY key
+DECORATIONS
+server_room
+computer_room
+lobby
+.
+END
+
+BEGIN MAP 4
+DEFAULT FALSE
+NAME The Executive Office
+DOWN 3
+SIZE 30 40
+NUMENEMIES 6 8
+NUMROOMS 4 5
+NUMITEMS 5 8
+ENEMIES
+shareholder_a
+shareholder_b
+shareholder_c
+shareholder_d
+shareholder_e
+shareholder_f
+robot
+.
+ITEMS
+xboxctrl
+frictionlessshoes
+sword
+hololens2
+armoredsuit
+penguin
 .
 BOSS bill
+DECORATIONS
+money_room
+computer_room
+.
 END

@@ -1,5 +1,5 @@
 # ASSIGNMENT BINARIES
-killbill3: build/dungeon.o build/pathfinding.o build/character.o build/game.o build/game_loop.o build/game_controls.o build/game_menu.o build/parser.o build/item.o build/message_queue.o build/logger.o build/resource_manager.o build/plane_manager.o build/killbill3.o
+killbill3: build/dungeon.o build/pathfinding.o build/character.o build/game.o build/game_loop.o build/game_controls.o build/game_menu.o build/parser.o build/item.o build/message_queue.o build/logger.o build/resource_manager.o build/plane_manager.o build/decorations.o build/killbill3.o
 	g++ -std=c++17 \
 		build/dungeon.o \
 		build/pathfinding.o \
@@ -14,6 +14,7 @@ killbill3: build/dungeon.o build/pathfinding.o build/character.o build/game.o bu
 		build/logger.o \
 		build/resource_manager.o \
 		build/plane_manager.o \
+		build/decorations.o \
 		build/killbill3.o \
 		-o killbill3 \
 		-lm -lnotcurses-core -lnotcurses -lnotcurses++ -lsfml-audio -lsfml-system
@@ -74,6 +75,10 @@ build/resource_manager.o: src/resource_manager.cpp src/resource_manager.h src/ma
 build/plane_manager.o: src/plane_manager.cpp src/plane_manager.h src/macros.h src/random.h src/ascii.h src/heap.h
 	@ mkdir -p build
 	g++ -std=c++17 src/plane_manager.cpp -o build/plane_manager.o -Wall -Werror -c -g
+
+build/decorations.o: src/decorations.cpp src/decorations.h src/macros.h src/random.h src/ascii.h src/heap.h
+	@ mkdir -p build
+	g++ -std=c++17 src/decorations.cpp -o build/decorations.o -Wall -Werror -c -g
 
 # PHONY TARGETS
 clean:

@@ -101,19 +101,20 @@ void Game::run(bool skip_intro) {
         ResourceManager::destroy();
         end_nc();
         throw dungeon_exception(__PRETTY_FUNCTION__, e, "game loop failed");
-    } catch (std::exception &e) {
-        planes->clear();
-        ResourceManager::destroy();
-        end_nc();
-        Logger::error(__FILE__, "unknown exception during game loop");
-        throw;
-    } catch (...) {
-        planes->clear();
-        ResourceManager::destroy();
-        end_nc();
-        Logger::error(__FILE__, "unknown exception during game loop");
-        throw;
     }
+    // } catch (std::exception &e) {
+    //     planes->clear();
+    //     ResourceManager::destroy();
+    //     end_nc();
+    //     Logger::error(__FILE__, "unknown exception during game loop");
+    //     throw;
+    // } catch (...) {
+    //     planes->clear();
+    //     ResourceManager::destroy();
+    //     end_nc();
+    //     Logger::error(__FILE__, "unknown exception during game loop");
+    //     throw;
+    // }
     planes->clear();
     ResourceManager::destroy();
     end_nc();

@@ -18,6 +18,7 @@
 const std::string CELL_TYPES_TO_FLOOR_TEXTURES[] = {
     "floor_stone",
     "floor_room",
+    "", // overridden (decoration)
     "floor_hall",
     "floor_up_staircase",
     "floor_down_staircase",
@@ -64,11 +65,30 @@ void Game::end_nc() {
 void Game::run_game() {
     ncinput inp;
     MessageQueue::get()->add("--- &0&bKILL BILL 3&r ---");
-    unsigned int x;
+    unsigned int x, i, io, ii;
+    timespec ts;
+    Monster *monst;
     render_frame(true);
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    ts.tv_sec += rand() % 3 + 1;
     while (true) {
         render_frame(false);
-        nc->get(true, &inp);
+        while (!nc->get(&ts, &inp)) {
+            // Pick a random monster to play some ambiance for :)
+            io = rand();
+            for (ii = 0; ii < (unsigned int) turn_queue.size(); ii++) {
+                i = (io + ii) % turn_queue.size();
+                if (turn_queue.at(i)->type() == CHARACTER_TYPE_MONSTER) {
+                    monst = (Monster *) turn_queue.at(i);
+                    if (monst->definition->ambiance.length() > 0) {
+                        ResourceManager::get()->get_music(monst->definition->ambiance)->play();
+                        break;
+                    }
+                }
+            }
+            clock_gettime(CLOCK_MONOTONIC, &ts);
+            ts.tv_sec += rand() % 7 + 2;
+        }
 
         if (result != GAME_RESULT_RUNNING) {
             std::this_thread::sleep_for(std::chrono::milliseconds(2000));
@@ -131,12 +151,11 @@ void Game::run_game() {
         if (game_exit) return;
 
         if (result == GAME_RESULT_RUNNING && next_turn_ready) {
-            update_pathfinding(dungeon, pathfinding_no_tunnel, pathfinding_tunnel, &pc);
+            update_pathfinding(dungeon, pathfinding_no_tunnel, pathfinding_tunnel, IntPair{pc.x, pc.y});
             // Run the game until the PC's turn comes up again (or it dies)
             run_until_pc();
         }
         if (result != GAME_RESULT_RUNNING) {
-            seethrough = true;
             MessageQueue::get()->clear();
             MessageQueue::get()->add("&bGame over. Press any key to continue.");
         }
@@ -178,6 +197,10 @@ void Game::run_until_pc() {
         monster = (Monster *) ch;
         result = GAME_RESULT_RUNNING;
         monster->take_turn(dungeon, &pc, turn_queue, character_map, item_map, pathfinding_tunnel, pathfinding_no_tunnel, priority, result);
+        if (antidmg) {
+            pc.hp = pc.base_hp;
+            pc.dead = false;
+        }
         if (pc.dead) result = GAME_RESULT_LOSE;
         return;
     }
@@ -277,6 +300,8 @@ void Game::render_frame(bool complete_redraw) {
                 else {
                     if (dungeon->cells[x][y].wall_type != WALL_TYPE_NONE) {
                         new_texture = WALL_TYPES_TO_FLOOR_TEXTURES[dungeon->cells[x][y].wall_type];
+                    } else if (dungeon->cells[x][y].type == CELL_TYPE_DECORATION) {
+                        new_texture = *dungeon->cells[x][y].decoration_texture;  
                     } else {
                         new_texture = CELL_TYPES_TO_FLOOR_TEXTURES[dungeon->cells[x][y].type];
                     }
@@ -388,28 +413,22 @@ void Game::render_inventory_item(Item *item, int i, bool selected, unsigned int 
     // one of the most incredible macro expansions the world will ever see
     NC_APPLY_COLOR_BY_NUM(*plane, item ? item->current_color() : RGB_COLOR_BLACK, (selected ? RGB_COLOR_BLACK : RGB_COLOR_WHITE));
     std::string plane_name = INVENTORY_NAME(x0, y0 + i);
-    ncpp::Plane *item_plane = planes->get(plane_name, plane, x0 + 2, y0 + 1 + i, 2, 1);
-    item_plane->move_top();
-    if (planes->cache_set(plane_name, item ? item->definition->ui_texture : "none")) {
-        if (item) {
-            NC_DRAW(item_plane, item->definition->ui_texture);
-        }
-        else {
-            NC_APPLY_COLOR(*item_plane, RGB_COLOR_BLACK, RGB_COLOR_WHITE);
-            item_plane->erase();
-            item_plane->putstr(0, 0, "  ");
-        }
-    } else {
+    planes->release(plane_name); // I have no clue why I have to do this, but rendering completely craps out if we re-use these planes.
+    if (item) {
+        Logger::debug(__FILE__, "plane: " + plane_name);
+        ncpp::Plane *item_plane = planes->get(plane_name, plane, x0 + 2, y0 + 1 + i, 2, 1);
+        item_plane->move_top();
         NC_APPLY_COLOR(*item_plane, RGB_COLOR_BLACK, RGB_COLOR_WHITE);
-        NC_CLEAR(*item_plane);
-    }
-    if (item)
+        item_plane->printf(0, 0, "  ");
+        nc->render();
+        NC_DRAW(item_plane, item->definition->ui_texture);
+        nc->render();
         plane->printf(y0 + 1 + i, x0 + 5, "%s", item->definition->name.c_str());
+    }
 }
 
 void Game::render_inventory_details(ncpp::Plane *plane, Item *item, unsigned int x0, unsigned int y0, unsigned int width, unsigned int height) {
     unsigned int i, x, y;
-    std::string desc;
     // Draw out a box, taking up the whole width of the screen at y0.
     // This determines how many lines of description we get until it cuts off.
     NC_APPLY_COLOR(*plane, RGB_COLOR_BLACK, RGB_COLOR_WHITE);
@@ -429,8 +448,8 @@ void Game::render_inventory_details(ncpp::Plane *plane, Item *item, unsigned int
     // by hand.
     x = 0;
     y = y0 + 1;
-    desc = item->definition->description;
-    for (i = 0; y < height - 2 && desc[i]; i++) {
+    std::string &desc = item->definition->description;
+    for (i = 0; y < y0 + height - 2 && desc[i]; i++) {
         if (desc[i] == '\n') {
             x = 0;
             y++;
@@ -595,8 +614,8 @@ void Game::inventory_menu() {
             case 'i':
             case 'e':
             case NCKEY_ESC:
-                NC_HIDE(nc, *plane);
                 planes->for_each("inv_", move_back);
+                NC_HIDE(nc, *plane);
                 expunge_confirm = false;
                 return;
             case NCKEY_ENTER:
@@ -736,7 +755,7 @@ void Game::inventory_menu() {
 void Game::cheater_menu() {
     int menu_i = 0;
     ncinput inp;
-    int options = 4;
+    int options = 7;
     unsigned int x, y;
     ncpp::Plane *plane = planes->get("cheater");
     ncpp::Plane *top = planes->get("top");
@@ -760,19 +779,35 @@ void Game::cheater_menu() {
         plane->printf(0, ncpp::NCAlign::Center, "CHEATS");
         plane->styles_off(ncpp::CellStyle::Bold);
 
-        CHEATER_OPT_PRINT(plane, "seethrough", 0, menu_i);
-        if (seethrough) NC_APPLY_COLOR(*plane, RGB_COLOR_GREEN, RGB_COLOR_WHITE)
+        CHEATER_OPT_PRINT(plane, "look", 0, menu_i);
+        NC_APPLY_COLOR(*plane, RGB_COLOR_BLACK_DIM, RGB_COLOR_WHITE);
+        plane->printf(1, ncpp::NCAlign::Right, "->");
+
+        CHEATER_OPT_PRINT(plane, "speed", 1, menu_i);
+        if (speed) NC_APPLY_COLOR(*plane, RGB_COLOR_GREEN, RGB_COLOR_WHITE)
         else NC_APPLY_COLOR(*plane, RGB_COLOR_RED, RGB_COLOR_WHITE);
-        plane->printf(1, ncpp::NCAlign::Right, seethrough ? "on" : "off");
-        CHEATER_OPT_PRINT(plane, "teleport", 1, menu_i);
-        NC_APPLY_COLOR(*plane, RGB_COLOR_BLACK_DIM, RGB_COLOR_WHITE);
-        plane->printf(2, ncpp::NCAlign::Right, "->");
-        CHEATER_OPT_PRINT(plane, "look", 2, menu_i);
-        NC_APPLY_COLOR(*plane, RGB_COLOR_BLACK_DIM, RGB_COLOR_WHITE);
-        plane->printf(3, ncpp::NCAlign::Right, "->");
-        CHEATER_OPT_PRINT(plane, "teleport to boss", 3, menu_i);
+        plane->printf(2, ncpp::NCAlign::Right, speed ? "on" : "off");
+
+        CHEATER_OPT_PRINT(plane, "anti-damage", 2, menu_i);
+        if (antidmg) NC_APPLY_COLOR(*plane, RGB_COLOR_GREEN, RGB_COLOR_WHITE)
+        else NC_APPLY_COLOR(*plane, RGB_COLOR_RED, RGB_COLOR_WHITE);
+        plane->printf(3, ncpp::NCAlign::Right, antidmg ? "on" : "off");
+
+        CHEATER_OPT_PRINT(plane, "give linux penguin", 3, menu_i);
         NC_APPLY_COLOR(*plane, RGB_COLOR_BLACK_DIM, RGB_COLOR_WHITE);
         plane->printf(4, ncpp::NCAlign::Right, "->");
+
+        CHEATER_OPT_PRINT(plane, "teleport", 4, menu_i);
+        NC_APPLY_COLOR(*plane, RGB_COLOR_BLACK_DIM, RGB_COLOR_WHITE);
+        plane->printf(5, ncpp::NCAlign::Right, "->");
+
+        CHEATER_OPT_PRINT(plane, "go upstairs", 5, menu_i);
+        NC_APPLY_COLOR(*plane, RGB_COLOR_BLACK_DIM, RGB_COLOR_WHITE);
+        plane->printf(6, ncpp::NCAlign::Right, "->");
+
+        CHEATER_OPT_PRINT(plane, "replenish health", 6, menu_i);
+        NC_APPLY_COLOR(*plane, RGB_COLOR_BLACK_DIM, RGB_COLOR_WHITE);
+        plane->printf(7, ncpp::NCAlign::Right, "->");
 
         nc->render();
         nc->get(true, &inp);
@@ -792,32 +827,48 @@ void Game::cheater_menu() {
             case NCKEY_ENTER:
                 switch (menu_i) {
                     case 0:
-                        seethrough = !seethrough;
-                        break;
-                    case 1:
-                        teleport_mode = true;
-                        pointer.x = pc.x;
-                        pointer.y = pc.y;
-                        NC_HIDE(nc, *plane);
-                        return;
-                    case 2:
                         look_mode = true;
                         pointer.x = pc.x;
                         pointer.y = pc.y;
                         NC_HIDE(nc, *plane);
                         return;
+                    case 1:
+                        if (speed) {
+                            pc.speed -= 100;
+                        } else {
+                            pc.speed += 100;
+                        }
+                        speed = !speed;
+                        break;
+                    case 2:
+                        antidmg = !antidmg;
+                        break;
                     case 3:
+                        if (pc.equipment[PC_SLOT_WEAPON]) {
+                            delete pc.equipment[PC_SLOT_WEAPON];
+                        }
+                        pc.equipment[PC_SLOT_WEAPON] = new Item(item_defs["penguin"]);
+                        break;
+                    case 4:
+                        teleport_mode = true;
+                        pointer.x = pc.x;
+                        pointer.y = pc.y;
+                        NC_HIDE(nc, *plane);
+                        return;
+                    case 5:
                         for (auto &f : dungeons) {
-                            if (f->dungeon->options->boss.length() > 0) {
-                                // FIXME: pc spawn
-                                apply_dungeon(*f, f->dungeon->random_location());
+                            if (dungeon->options->up_staircase == f->id) {
+                                apply_dungeon(*f, random_location_no_kill(f->dungeon, f->character_map));
                                 MessageQueue::get()->clear();
                                 MessageQueue::get()->add("You magically teleport to &b" + f->dungeon->options->name + "&r.");
                                 NC_HIDE(nc, *plane);
                                 return;
                             }
                         }
-                        throw dungeon_exception(__PRETTY_FUNCTION__, "no boss dungeon in map");
+                        break;
+                    case 6:
+                        pc.hp = pc.base_hp;
+                        break;
                 }
                 break;
         }

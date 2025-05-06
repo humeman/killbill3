@@ -80,6 +80,8 @@ void Game::ctrl_ptr_confirm() {
         teleport_mode = false;
     }
     else if (look_mode) {
+        ncpp::Plane *plane = planes->get("look");
+        NC_HIDE(nc, *plane);
         look_mode = false;
     }
 }

@@ -105,6 +105,36 @@ class DungeonFloor {
       init_free:
       throw dungeon_exception(__PRETTY_FUNCTION__, "memory allocation failed");
     }
+
+    ~DungeonFloor() {
+        unsigned int j;
+        for (j = 0; j < dungeon->width; j++) free(pathfinding_tunnel[j]);
+        free(pathfinding_tunnel);
+        for (j = 0; j < dungeon->width; j++) free(pathfinding_no_tunnel[j]);
+        free(pathfinding_no_tunnel);
+
+        Character *character;
+        unsigned int x, y;
+        for (x = 0; x < dungeon->width; x++) {
+            for (y = 0; y < dungeon->height; y++) {
+                character = character_map[x][y];
+                if (!character) continue;
+                if (character->type() == CHARACTER_TYPE_PC) continue;
+                destroy_character(character_map, character);
+            }
+        }
+        for (x = 0; x < dungeon->width; x++) {
+            for (y = 0; y < dungeon->height; y++) {
+                if (item_map[x][y])
+                    delete item_map[x][y];
+            }
+        }
+        for (j = 0; j < dungeon->width; j++) free(item_map[j]);
+        free(item_map);
+        for (j = 0; j < dungeon->width; j++) free(character_map[j]);
+        free(character_map);
+        delete dungeon;
+    }
 };
 
 // To split up the dungeon from the game controls and such, this class
@@ -139,7 +169,8 @@ class Game {
         bool look_mode = false;
         bool game_exit = false;
         bool needs_redraw = false;
-        bool seethrough = false;
+        bool speed = false;
+        bool antidmg = false;
         IntPair pointer;
         game_result_t result = GAME_RESULT_RUNNING;
 

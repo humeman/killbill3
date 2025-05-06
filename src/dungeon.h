@@ -17,6 +17,7 @@
 typedef enum { // if modified, sync with CELL_TYPES_TO_FLOOR_TEXTURES, game_loop.cpp
     CELL_TYPE_STONE,
     CELL_TYPE_ROOM,
+    CELL_TYPE_DECORATION,
     CELL_TYPE_HALL,
     CELL_TYPE_UP_STAIRCASE,
     CELL_TYPE_DOWN_STAIRCASE,
@@ -68,11 +69,15 @@ class Room {
 
 class Cell {
     public:
-        cell_type_t type;
-        uint8_t hardness;
-        uint8_t attributes;
-        wall_type_t wall_type;
+        cell_type_t type = CELL_TYPE_EMPTY;
+        uint8_t hardness = 0;
+        uint8_t attributes = 0;
+        wall_type_t wall_type = WALL_TYPE_NONE;
+        std::string *decoration_texture = nullptr;
 
+        ~Cell() {
+            if (decoration_texture) delete decoration_texture;
+        }
 };
 
 typedef enum {
@@ -121,12 +126,13 @@ class DungeonOptions {
         std::string down_staircase = "";
         std::vector<std::string> monsters;
         std::vector<std::string> items;
+        std::vector<std::string> decorations;
         std::string boss = "";
         std::string key = "";
         bool is_default = false;
 };
 
-#define IS_FLOOR(cell_type) (cell_type == CELL_TYPE_ROOM || cell_type == CELL_TYPE_HALL || cell_type == CELL_TYPE_UP_STAIRCASE || cell_type == CELL_TYPE_DOWN_STAIRCASE)
+#define IS_FLOOR(cell_type) (cell_type == CELL_TYPE_ROOM || cell_type == CELL_TYPE_HALL || cell_type == CELL_TYPE_UP_STAIRCASE || cell_type == CELL_TYPE_DOWN_STAIRCASE || cell_type == CELL_TYPE_DECORATION)
 
 typedef enum {
     GAME_RESULT_RUNNING = 0,
@@ -143,7 +149,7 @@ class Dungeon {
         uint8_t width;
         uint8_t height;
         std::vector<Room> rooms;
-        Cell **cells;
+        std::vector<std::vector<Cell>> cells;
 
         /**
          * Allocates memory for a dungeon. It still must be filled after creation
@@ -187,6 +193,22 @@ class Dungeon {
         IntPair random_location();
 
         /**
+         * Picks a random, unobstructed location within a room of a given size.
+         * Guaranteed to not block off hallways.
+         * 
+         * Returns: The top left corner of the area.
+         */
+        IntPair random_area_in_room(Room *room, int width, int height);
+
+        /**
+         * Picks a random, unobstructed location along the edge of a room.
+         * Guaranteed to not block off hallways.
+         * 
+         * Returns: The selected area.
+         */
+        IntPair random_location_along_edge(Room *room);
+
+        /**
          * Fills this dungeon with the data read from an RLG327 file.
          *
          * Params:
@@ -194,7 +216,7 @@ class Dungeon {
          * - debug: If true, debug messages will be printed
          * - pc_coords: A pointer to coordinates that contain the PC's location
          */
-        void fill_from_file(FILE *f, int debug, IntPair *pc_coords);
+        // void fill_from_file(FILE *f, int debug, IntPair *pc_coords);
 
         /**
          * Saves this dungeon to an RLG327 file.
@@ -205,7 +227,7 @@ class Dungeon {
          * - pc_coords: A pointer to coordinates that will be updated with
          *      the PC's location
          */
-        void save_to_file(FILE *f, int debug, IntPair *pc_coords);
+        // void save_to_file(FILE *f, int debug, IntPair *pc_coords);
 
         void apply_walls();
 

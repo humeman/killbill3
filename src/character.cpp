@@ -3,6 +3,7 @@
 #include "macros.h"
 #include "heap.h"
 #include "message_queue.h"
+#include "resource_manager.h"
 
 #include <cstdint>
 #include <cstdio>
@@ -35,6 +36,7 @@ int Monster::damage(int amount, game_result_t &result, Dungeon *dungeon, Item **
     if (hp <= 0) {
         die(result, dungeon, character_map, item_map);
     }
+    ResourceManager::get()->get_music("effects_damage1")->play();
     return amount;
 }
 
@@ -259,6 +261,11 @@ void Monster::take_turn(Dungeon *dungeon, PC *pc, BinaryHeap<Character *> &turn_
         // Otherwise, we'll go in a straight line.
         else {
             next = next_xy(dungeon, (IntPair) {target_x, target_y});
+            // If the next move is diagonal, pick one.
+            if (next.x != x && next.y != y) {
+                if (rand() % 2) next.x = x;
+                else next.y = y;
+            }
             // Can't if it's non-tunneling and going towards stone.
             if (!(attributes & (MONSTER_ATTRIBUTE_TUNNELING | MONSTER_ATTRIBUTE_GHOST)) && dungeon->cells[next.x][next.y].type == CELL_TYPE_STONE) {
                 can_move = 0;
@@ -279,7 +286,7 @@ void Monster::take_turn(Dungeon *dungeon, PC *pc, BinaryHeap<Character *> &turn_
             if (y1 < 0 || y1 >= dungeon->height) continue;
             if (x1 == x && y1 == y) continue;
             if (dungeon->cells[x1][y1].attributes & CELL_ATTRIBUTE_IMMUTABLE) continue;
-            if (dungeon->cells[x1][y1].type == CELL_TYPE_STONE && !(attributes & (MONSTER_ATTRIBUTE_TUNNELING | MONSTER_ATTRIBUTE_GHOST))) continue;
+            if ((dungeon->cells[x1][y1].type == CELL_TYPE_STONE || dungeon->cells[x1][y1].type == CELL_TYPE_DECORATION) && !(attributes & (MONSTER_ATTRIBUTE_TUNNELING | MONSTER_ATTRIBUTE_GHOST))) continue;
             // This cell is open
             next.x = x1;
             next.y = y1;
@@ -298,11 +305,16 @@ void Monster::take_turn(Dungeon *dungeon, PC *pc, BinaryHeap<Character *> &turn_
         // Our next coordinates are in next_x and next_y.
         // If that's open space, just go there.
         next_cell = &(dungeon->cells[next.x][next.y]);
-        if (next_cell->type == CELL_TYPE_STONE) {
-            if (attributes & MONSTER_ATTRIBUTE_TUNNELING) {
+        if (next_cell->type != CELL_TYPE_HALL && next_cell->type != CELL_TYPE_ROOM) {
+            if (next_cell->type == CELL_TYPE_STONE && attributes & MONSTER_ATTRIBUTE_TUNNELING) {
                 next_cell->hardness -= MIN(next_cell->hardness, 85);
                 if (next_cell->hardness > 0) can_move = 0;
-                else next_cell->type = CELL_TYPE_HALL;
+                else {
+                    next_cell->type = CELL_TYPE_HALL;
+                    dungeon->apply_walls();
+                }
+            } else {
+                can_move = 0;
             }
         }
         // This use of can_move is separate from the can_move that brought us into this loop.
@@ -546,5 +558,16 @@ int PC::damage(int amount, game_result_t &result, Dungeon *dungeon, Item ***item
         if (character_map[x][y] == this)
             character_map[x][y] = NULL;
     }
+    ResourceManager::get()->get_music("effects_damage2")->play();
     return amount;
+}
+
+Monster::~Monster() {
+    if (item) delete item;
+}
+PC::~PC() {
+    if (item) delete item;
+    for (unsigned int i = 0; i < ARRAY_SIZE(equipment); i++) {
+        if (equipment[i]) delete equipment[i];
+    }
 }
