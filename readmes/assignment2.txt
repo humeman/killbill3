@@ -85,14 +85,45 @@ Implemented controls:
       r: refresh rendering (unless there's a bug, this shouldn't be necessary)
       <enter>: dismiss the current status message
 
-Compile:
-    This requires Notcurses and SFML to be installed. In case you don't have them, there's a precompiled
-     binary included in the ZIP that works on x64 Linux. 
-    If you'd like to compile it yourself:
+--- TO THE GRADERS ---
+This assignment uses a library unavailable on Pyrite, notcurses. So that you guys can grade this,
+ I spun up a local VM with Pyrite's OS version and compiled it, then made copies of all the
+ libraries that I had to install and bundled them into a tar.gz. This version does not include 
+ SFML since it needs way too many dependencies (and wouldn't work over SSH anyway), so there is
+ no sound support with this version.
+
+If you want to use that precompiled version with Pyrite, download it:
+ - On Canvas, as senneff_camden.assignment-2-precompiled.tar.gz
+ - On my website, https://files.csenneff.com/isu/senneff_camden.assignment-2-precompiled.tar.gz
+ - It's big, 70MB. Sorry. Notcurses introduces a massive network of dependencies, and there are
+    a lot of my own image/audio assets necessary for the game.
+Extract it, then enter the senneff_camden.assignment-2-precompiled directory.
+Run: LD_LIBRARY_PATH=lib:$LD_LIBRARY_PATH ./killbill3
+
+You can, depending on what terminal you have, run Sixel graphics over SSH. If your terminal
+ doesn't support that, though, it'll fall back to character pixels, which will look bad but
+ is still playable. 
+
+If you'd like to see how the game works with all features in place, watch the brief demo at
+ https://www.youtube.com/watch?v=4tZ51IP53LU.
+
+--- TO RUN ON ANYTHING OTHER THAN PYRITE ---
+-- COMPILE --
+    This requires notcurses (for graphics) and SFML (for audio) to compile.
         apt:  sudo apt install libnotcurses++-dev libsfml-dev
         brew: brew install notcurses sfml
         anything else: see https://repology.org/project/notcurses/versions
+                           https://www.sfml-dev.org/tutorials/3.0/getting-started/linux/
 
+    ** YOUR MILEAGE MAY VARY **
+      For the best experience, use a terminal with Sixel graphics enabled (I use Tabby).
+       The VSCode terminal can do this if you turn on terminal GPU acceleration and terminal images.
+       It will fall back to regular character rendering if this isn't supported by your terminal,
+        which works, but doesn't look good.
+
+      If you have trouble with sound or don't want to hear anything, add the -q flag. Nothing sound-
+       related will be loaded if specified.
+      
     Run: make
     This will generate a `killbill3` binary.
 

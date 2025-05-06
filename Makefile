@@ -17,7 +17,7 @@ killbill3: build/dungeon.o build/pathfinding.o build/character.o build/game.o bu
 		build/decorations.o \
 		build/killbill3.o \
 		-o killbill3 \
-		-L. -Wl,-rpath=. -lm -lnotcurses-core -lnotcurses -lnotcurses++ -lsfml-audio -lsfml-system
+		-lm -lnotcurses-core -lnotcurses -lnotcurses++ -lsfml-audio -lsfml-system
 
 # OBJECT FILES
 build/killbill3.o: src/assignments/killbill3.cpp src/macros.h src/random.h src/ascii.h src/heap.h

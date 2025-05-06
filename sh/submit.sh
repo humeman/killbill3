@@ -24,10 +24,11 @@ cp "readmes/assignment$1.txt" $package_dir/README
 cp -r src $package_dir
 cp Makefile $package_dir
 cp CHANGELOG $package_dir
+cp -r assets $package_dir
 
 echo "testing compile"
 cd $package_dir
-make -s assignment$1
+make -s
 make -s clean
 cd ..
 
@@ -46,7 +47,7 @@ mkdir test
 cd test
 gzip -dc "../$package_dir.tar.gz" | tar -xvf - 1> /dev/null
 cd "$package_dir"
-make -s assignment$1
+make -s
 make -s clean
 cd ../..
 rm -r test
