@@ -69,6 +69,7 @@ ncpp::Visual *ResourceManager::get_visual(std::string name) {
 }
 
 void ResourceManager::load_music(std::string path) {
+    if (quiet) return;
     std::filesystem::path dir(path);
     if (!std::filesystem::is_directory(dir))
         throw dungeon_exception(__PRETTY_FUNCTION__, "path is not a directory");
