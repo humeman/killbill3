@@ -89,13 +89,17 @@ void ResourceManager::add_music_path(const std::filesystem::path &dir, std::stri
             if (dot != std::string::npos) {
                 filename = filename.substr(0, dot);
             }
-            sf::Music *m = new sf::Music;
-            if (!m->openFromFile(entry.path().string())) {
-                throw dungeon_exception(__PRETTY_FUNCTION__, "failed to read music file " + entry.path().string());
+            try {
+                sf::Music *m = new sf::Music;
+                if (!m->openFromFile(entry.path().string())) {
+                    throw dungeon_exception(__PRETTY_FUNCTION__, "failed to read music file " + entry.path().string());
+                }
+                m->setVolume(60);
+                music[filename] = m;
+                Logger::info(__FILE__, "loaded music " + filename);
+            } catch (...) {
+                Logger::warn(__FILE__, "an unknown error prevented loading sound (is there a sound device?)");
             }
-            m->setVolume(60);
-            music[filename] = m;
-            Logger::info(__FILE__, "loaded music " + filename);
         }
         else if (entry.is_directory()) {
             add_music_path(entry, prefix + entry.path().filename().string() + "_");
@@ -103,17 +107,22 @@ void ResourceManager::add_music_path(const std::filesystem::path &dir, std::stri
     }
 }
 
-sf::Music *ResourceManager::get_music(std::string name) {
-    if (!loaded)
-        throw dungeon_exception(__PRETTY_FUNCTION__, "no music loaded");
+void ResourceManager::play_music(std::string name) {
+    if (quiet) return;
     try {
-        return music.at(name);
-    } catch (const std::out_of_range &e) {
-        // we only want to log these once
-        if (std::find(errored_music.begin(), errored_music.end(), name) == errored_music.end()) {
-            errored_music.push_back(name);
-            Logger::warn(__FILE__, "music " + name + " does not exist");
+        if (!loaded)
+            throw dungeon_exception(__PRETTY_FUNCTION__, "no music loaded");
+        try {
+            music.at(name)->play();
+        } catch (const std::out_of_range &e) {
+            // we only want to log these once
+            if (std::find(errored_music.begin(), errored_music.end(), name) == errored_music.end()) {
+                errored_music.push_back(name);
+                Logger::warn(__FILE__, "music " + name + " does not exist");
+            }
+            music.at(DEFAULT_MUSIC)->play();
         }
-        return music.at(DEFAULT_VISUAL);
+    } catch (...) {
+        Logger::debug(__FILE__, "unknown music playback error");
     }
 }

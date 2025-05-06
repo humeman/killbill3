@@ -144,7 +144,7 @@ std::string Game::run_menu(bool skip_intro) {
         y_center = (term_y - m_height) / 2;
         logo = planes->get("menu_michaelsoft", x_center, y_center, m_width, m_height);
         NC_DRAW(logo, "ui_michaelsoft");
-        ResourceManager::get()->get_music("intro_bootup")->play();
+        ResourceManager::get()->play_music("intro_bootup");
         std::this_thread::sleep_for(std::chrono::seconds(1));
         nc->render();
         std::this_thread::sleep_for(std::chrono::seconds(5));
@@ -178,7 +178,7 @@ std::string Game::run_menu(bool skip_intro) {
             step = duration / lines.size();
             if (step == 0) throw dungeon_exception(__PRETTY_FUNCTION__, "too many characters for duration");
             Logger::debug(__FILE__, "music: " + line->music);
-            ResourceManager::get()->get_music(line->music)->play();
+            ResourceManager::get()->play_music(line->music);
             text->erase();
             y = 0;
             x = 0;

@@ -81,7 +81,7 @@ void Game::run_game() {
                 if (turn_queue.at(i)->type() == CHARACTER_TYPE_MONSTER) {
                     monst = (Monster *) turn_queue.at(i);
                     if (monst->definition->ambiance.length() > 0) {
-                        ResourceManager::get()->get_music(monst->definition->ambiance)->play();
+                        ResourceManager::get()->play_music(monst->definition->ambiance);
                         break;
                     }
                 }

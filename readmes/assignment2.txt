@@ -1,0 +1,105 @@
+COMS 3270
+Assignment 2
+Kill Bill 3
+---
+
+This final assignment is an extension to the dungeon game: Kill Bill 3.
+For context, I created Kill Bill 1 and 2 in two other classes (SE 186 and COMS 309). The series
+ is completely unrelated to the movie of the same name and each of them have been some spin
+ on a dungeon crawler at Michaelsoft H.Q. where a deranged Bill has gone crazy and decided to
+ steal all of the world's computers for his malevolent purposes. The old ones were in Java,
+ so nothing (including algorithms) got reused here.
+
+There were quite a few major changes to accomplish this -- most of the codebase ended up getting
+ partially or totally rewritten.
+
+-- Sixel Graphics --
+I wanted to draw actual graphics to the screen, and it turns out most terminal emulators let you
+ draw pictures to the terminal with a special escape sequence. I ripped out ncurses in favor of
+ Notcurses, which provides an API for this. Notcurses has very little in common with ncurses, so
+ all of the rendering logic was done from scratch.
+
+-- Sounds --
+Sound effects are included now, done through SFML. They play in the intro sequence and for various
+ in-game actions.
+
+-- Map definitions --
+Dungeons are still randomly generated, but are now stored in memory and built with a defined set
+ of rules set in a config file (same parser format we used for objects/items). This allows custom
+ maps to be built with different room sizes, enemies, items, and decorations. I used this to
+ add 3 different game difficulties.
+
+-- Decorations --
+Decorations are defined with a decoration scheme in the map config, which defines what kind of room
+ each room is (ie, lobby, server room, conference room, ...).
+
+-- Interactive menus --
+With the new rendering, I added a bunch of interactive menus. Inventory is operated entirely
+ through that menu (ARROWS, ENTER = equip/unequip, SPACE = drop, BACKSPACE = expunge). Cheats, like
+ teleport and look modes (and a bunch others I added) are in a new cheater menu (~).
+
+-- New controls --
+Completely remade the controls to fit with the other Kill Bill games.
+
+-- Lots of other miscellaneous changes --
+- Isometric walls around rooms/halls (this was way harder than I expected)
+- New monsters and items
+- New win and lose screen
+- Inventory and health rendering at the bottom of the screen
+- Forced progression (keycard required to go up, dropped when last monster dies)
+- "Look mode" to unify monster menu/targeting mode/item menu, opens a pointer and renders info
+    for anything the pointer is hovering over
+- Many bugfixes and minor improvements
+
+
+Implemented controls:
+    PC Movement:
+      w: up
+      a: left
+      s: down
+      d: right
+    Items:
+      f: pick up
+      e: open inventory menu
+            arrows: select items
+            enter: equip/unequip
+            backspace: expunge
+            space: drop
+            e: close
+            esc (twice): close 
+    Cheater:
+      `: launch cheater menu
+            up/down arrows: select
+            enter: toggle/use
+            `: close
+            esc (twice): close
+      look/teleport mode:
+            wasd: move
+            enter: confirm
+            esc (twice): cancel
+    Main menu:
+      up/down arrows: select
+      enter: start
+    General:
+      Q: quit the game
+      r: refresh rendering (unless there's a bug, this shouldn't be necessary)
+      <enter>: dismiss the current status message
+
+Compile:
+    This requires Notcurses and SFML to be installed. In case you don't have them, there's a precompiled
+     binary included in the ZIP that works on x64 Linux. 
+    If you'd like to compile it yourself:
+        apt:  sudo apt install libnotcurses++-dev libsfml-dev
+        brew: brew install notcurses sfml
+        anything else: see https://repology.org/project/notcurses/versions
+
+    Run: make
+    This will generate a `killbill3` binary.
+
+Flags:
+    -s, --skip: Skips the intro sequence.
+    -d, --debug: Prints debug messages.
+    -h, --help: Displays a help message.
+
+Run:
+    ./killbill3

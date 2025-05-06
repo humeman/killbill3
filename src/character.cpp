@@ -36,7 +36,7 @@ int Monster::damage(int amount, game_result_t &result, Dungeon *dungeon, Item **
     if (hp <= 0) {
         die(result, dungeon, character_map, item_map);
     }
-    ResourceManager::get()->get_music("effects_damage1")->play();
+    ResourceManager::get()->play_music("effects_damage1");
     return amount;
 }
 
@@ -558,7 +558,7 @@ int PC::damage(int amount, game_result_t &result, Dungeon *dungeon, Item ***item
         if (character_map[x][y] == this)
             character_map[x][y] = NULL;
     }
-    ResourceManager::get()->get_music("effects_damage2")->play();
+    ResourceManager::get()->play_music("effects_damage2");
     return amount;
 }
 

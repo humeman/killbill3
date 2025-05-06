@@ -538,7 +538,7 @@ void Game::try_move(int x_offset, int y_offset) {
         }
         throw dungeon_exception(__PRETTY_FUNCTION__, "no target floor with ID " + dungeon->options->up_staircase);
     } else {
-        ResourceManager::get()->get_music("effects_step")->play();
+        ResourceManager::get()->play_music("effects_step");
         pc.move_to((IntPair) {(uint8_t) new_x, (uint8_t) new_y}, character_map);
     }
 }

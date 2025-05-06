@@ -13,6 +13,7 @@
 #include <ncpp/Visual.hh>
 
 #define DEFAULT_VISUAL "error"
+#define DEFAULT_MUSIC "intro_0"
 
 class ResourceManager {
     private:
@@ -28,6 +29,8 @@ class ResourceManager {
             delete instance;
             instance = nullptr;
         }
+
+        bool quiet = false;
 
     private:
         std::map<std::string, ncpp::Visual *> visuals;
@@ -45,7 +48,7 @@ class ResourceManager {
         void load_visuals(std::string path);
         void load_music(std::string path);
         ncpp::Visual *get_visual(std::string name);
-        sf::Music *get_music(std::string name);
+        void play_music(std::string name);
 };
 
 #endif
